@@ -23,26 +23,27 @@ class MPMSolver:
     self.p_vol = self.dx**self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
+    self.gravity = -50
     # position
-    self.x = ti.Vector(2, dt=ti.f32, shape=self.n_particles)
+    self.x = ti.Vector(self.dim, dt=ti.f32, shape=self.n_particles)
     # velocity
-    self.v = ti.Vector(2, dt=ti.f32, shape=self.n_particles)
+    self.v = ti.Vector(self.dim, dt=ti.f32, shape=self.n_particles)
     # affine velocity field
-    self.C = ti.Matrix(2, 2, dt=ti.f32, shape=self.n_particles)
+    self.C = ti.Matrix(self.dim, self.dim, dt=ti.f32, shape=self.n_particles)
     # deformation gradient
-    self.F = ti.Matrix(2, 2, dt=ti.f32, shape=self.n_particles)
+    self.F = ti.Matrix(self.dim, self.dim, dt=ti.f32, shape=self.n_particles)
     # material id
     self.material = ti.var(dt=ti.i32, shape=self.n_particles)
     # plastic deformation
     self.Jp = ti.var(dt=ti.f32, shape=self.n_particles)
     # grid node momemtum/velocity
-    self.grid_v = ti.Vector(2, dt=ti.f32, shape=self.res)
+    self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
     # grid node mass
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
 
   @ti.classkernel
   def p2g(self):
-    for p in range(self.n_particles):
+    for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
       # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
@@ -50,7 +51,7 @@ class MPMSolver:
           0.5 * ti.sqr(1.5 - fx), 0.75 - ti.sqr(fx - 1), 0.5 * ti.sqr(fx - 0.5)
       ]
       # deformation gradient update
-      self.F[p] = (ti.Matrix.identity(ti.f32, 2) +
+      self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
                    self.dt * self.C[p]) @ self.F[p]
       # Hardening coefficient: snow gets harder when compressed
       h = ti.exp(10 * (1.0 - self.Jp[p]))
@@ -61,7 +62,7 @@ class MPMSolver:
         mu = 0.0
       U, sig, V = ti.svd(self.F[p])
       J = 1.0
-      for d in ti.static(range(2)):
+      for d in ti.static(range(self.dim)):
         new_sig = sig[d, d]
         if self.material[p] == 2:  # Snow
           new_sig = min(max(sig[d, d], 1 - 2.5e-2), 1 + 4.5e-3)  # Plasticity
@@ -70,7 +71,7 @@ class MPMSolver:
         J *= new_sig
       if self.material[p] == 0:
         # Reset deformation gradient to avoid numerical instability
-        self.F[p] = ti.Matrix.identity(ti.f32, 2) * ti.sqrt(J)
+        self.F[p] = ti.Matrix.identity(ti.f32, self.dim) * ti.sqrt(J)
       elif self.material[p] == 2:
         # Reconstruct elastic deformation gradient after plasticity
         self.F[p] = U @ sig @ V.T()
@@ -92,11 +93,11 @@ class MPMSolver:
 
   @ti.classkernel
   def grid_op(self):
-    for i, j in ti.ndrange(*self.res):
+    for i, j in self.grid_m:
       if self.grid_m[i, j] > 0:  # No need for epsilon here
         self.grid_v[i, j] = (
             1 / self.grid_m[i, j]) * self.grid_v[i, j]  # Momentum to velocity
-        self.grid_v[i, j][1] -= self.dt * 50  # gravity
+        self.grid_v[i, j][1] += self.dt * self.gravity
         if i < 3 and self.grid_v[i, j][0] < 0:
           self.grid_v[i, j][0] = 0  # Boundary conditions
         if i > self.res[0] - 3 and self.grid_v[i, j][0] > 0:
@@ -108,15 +109,15 @@ class MPMSolver:
 
   @ti.classkernel
   def g2p(self):
-    for p in range(self.n_particles):  # grid to particle (G2P)
+    for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
       w = [
           0.5 * ti.sqr(1.5 - fx), 0.75 - ti.sqr(fx - 1.0),
           0.5 * ti.sqr(fx - 0.5)
       ]
-      new_v = ti.Vector.zero(ti.f32, 2)
-      new_C = ti.Matrix.zero(ti.f32, 2, 2)
+      new_v = ti.Vector.zero(ti.f32, self.dim)
+      new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
       # loop over 3x3 grid node neighborhood
       for i, j in ti.static(ti.ndrange(3, 3)):
         dpos = ti.Vector([i, j]).cast(float) - fx
