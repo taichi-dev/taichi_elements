@@ -12,7 +12,6 @@ ti.cfg.arch = ti.cuda
 
 
 class MPMSolver:
-
   def __init__(self, res):
     self.dim = len(res)
     self.res = res
@@ -25,7 +24,7 @@ class MPMSolver:
     self.p_mass = self.p_vol * self.p_rho
     self.gravity = -50
     # position
-    self.x = ti.Vector(self.dim, dt=ti.f32, shape=self.n_particles)
+    self.x = ti.Vector(self.dim, dt=ti.f32)
     # velocity
     self.v = ti.Vector(self.dim, dt=ti.f32, shape=self.n_particles)
     # affine velocity field
@@ -40,6 +39,12 @@ class MPMSolver:
     self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
     # grid node mass
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
+
+
+    @ti.layout
+    def place():
+      ti.root.dynamic(ti.i, 2 ** 20, 512).place(self.x)
+
 
   @ti.classkernel
   def p2g(self):
@@ -147,8 +152,21 @@ class MPMSolver:
       self.F[i] = [[1, 0], [0, 1]]
       self.Jp[i] = 1
 
+  @ti.classkernel
+  def copy_x(self, np_x: ti.ext_arr()):
+    for i in self.x:
+      for j in ti.static(range(self.dim)):
+        np_x[i, j] = self.x[i][j]
+
+
+  def particle_positions(self):
+    np_x = np.ndarray((self.n_particles, self.dim), dtype=np.float32)
+    self.copy_x(np_x)
+    return np_x
+
 
 gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
+
 mpm = MPMSolver(res=(128, 128))
 mpm.init()
 
@@ -157,5 +175,5 @@ for frame in range(20000):
     mpm.substep()
   colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
   gui.circles(
-      mpm.x.to_numpy(), radius=1.5, color=colors[mpm.material.to_numpy()])
+      mpm.particle_positions(), radius=1.5, color=colors[mpm.material.to_numpy()])
   gui.show()  # Change to gui.show(f'{frame:06d}.png') to write images to disk
