@@ -2,10 +2,13 @@ import taichi as ti
 import random
 import numpy as np
 
-E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
-mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / (
-    (1 + nu) * (1 - 2 * nu))  # Lame parameters
-ti.cfg.arch = ti.cuda  # Try to run on GPU
+# TODO: make attributes per particle
+# Young's modulus and Poisson's ratio
+E, nu = 0.1e4, 0.2
+# Lame parameters
+mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))
+# Try to run on GPU
+ti.cfg.arch = ti.cuda
 
 
 class MPMSolver:
@@ -38,12 +41,7 @@ class MPMSolver:
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
 
   @ti.classkernel
-  def substep(self):
-    for i, j in ti.ndrange(*self.res):
-      self.grid_v[i, j] = [0, 0]
-      self.grid_m[i, j] = 0
-
-    # Particle state update and scatter to grid (P2G)
+  def p2g(self):
     for p in range(self.n_particles):
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
@@ -92,6 +90,8 @@ class MPMSolver:
             self.p_mass * self.v[p] + affine @ dpos)
         self.grid_m[base + offset] += weight * self.p_mass
 
+  @ti.classkernel
+  def grid_op(self):
     for i, j in ti.ndrange(*self.res):
       if self.grid_m[i, j] > 0:  # No need for epsilon here
         self.grid_v[i, j] = (
@@ -106,6 +106,8 @@ class MPMSolver:
         if j > self.res[1] - 3 and self.grid_v[i, j][1] > 0:
           self.grid_v[i, j][1] = 0
 
+  @ti.classkernel
+  def g2p(self):
     for p in range(self.n_particles):  # grid to particle (G2P)
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
@@ -115,8 +117,8 @@ class MPMSolver:
       ]
       new_v = ti.Vector.zero(ti.f32, 2)
       new_C = ti.Matrix.zero(ti.f32, 2, 2)
-      for i, j in ti.static(ti.ndrange(
-          3, 3)):  # loop over 3x3 grid node neighborhood
+      # loop over 3x3 grid node neighborhood
+      for i, j in ti.static(ti.ndrange(3, 3)):
         dpos = ti.Vector([i, j]).cast(float) - fx
         g_v = self.grid_v[base + ti.Vector([i, j])]
         weight = w[i][0] * w[j][1]
@@ -124,6 +126,13 @@ class MPMSolver:
         new_C += 4 * self.inv_dx * weight * ti.outer_product(g_v, dpos)
       self.v[p], self.C[p] = new_v, new_C
       self.x[p] += self.dt * self.v[p]  # advection
+
+  def substep(self):
+    self.grid_v.fill(0)
+    self.grid_m.fill(0)
+    self.p2g()
+    self.grid_op()
+    self.g2p()
 
   def init(self):
     group_size = self.n_particles // 3
