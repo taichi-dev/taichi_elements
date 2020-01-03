@@ -26,15 +26,15 @@ class MPMSolver:
     # position
     self.x = ti.Vector(self.dim, dt=ti.f32)
     # velocity
-    self.v = ti.Vector(self.dim, dt=ti.f32, shape=self.n_particles)
+    self.v = ti.Vector(self.dim, dt=ti.f32)
     # affine velocity field
-    self.C = ti.Matrix(self.dim, self.dim, dt=ti.f32, shape=self.n_particles)
+    self.C = ti.Matrix(self.dim, self.dim, dt=ti.f32)
     # deformation gradient
-    self.F = ti.Matrix(self.dim, self.dim, dt=ti.f32, shape=self.n_particles)
+    self.F = ti.Matrix(self.dim, self.dim, dt=ti.f32)
     # material id
-    self.material = ti.var(dt=ti.i32, shape=self.n_particles)
+    self.material = ti.var(dt=ti.i32)
     # plastic deformation
-    self.Jp = ti.var(dt=ti.f32, shape=self.n_particles)
+    self.Jp = ti.var(dt=ti.f32)
     # grid node momemtum/velocity
     self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
     # grid node mass
@@ -43,7 +43,7 @@ class MPMSolver:
 
     @ti.layout
     def place():
-      ti.root.dynamic(ti.i, 2 ** 20, 512).place(self.x)
+      ti.root.dynamic(ti.i, 2 ** 20, 512).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
 
 
   @ti.classkernel
@@ -153,16 +153,24 @@ class MPMSolver:
       self.Jp[i] = 1
 
   @ti.classkernel
-  def copy_x(self, np_x: ti.ext_arr()):
+  def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
     for i in self.x:
       for j in ti.static(range(self.dim)):
-        np_x[i, j] = self.x[i][j]
+        np_x[i, j] = input_x[i][j]
 
+  @ti.classkernel
+  def copy_dynamic(self, np_x: ti.ext_arr(), input_x: ti.template()):
+    for i in self.x:
+      np_x[i] = input_x[i]
 
-  def particle_positions(self):
+  def particle_info(self):
     np_x = np.ndarray((self.n_particles, self.dim), dtype=np.float32)
-    self.copy_x(np_x)
-    return np_x
+    self.copy_dynamic_nd(np_x, self.x)
+    np_v = np.ndarray((self.n_particles, self.dim), dtype=np.float32)
+    self.copy_dynamic_nd(np_v, self.v)
+    np_material = np.ndarray((self.n_particles,), dtype=np.int32)
+    self.copy_dynamic(np_material, self.material)
+    return np_x, np_v, np_material
 
 
 gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
@@ -174,6 +182,6 @@ for frame in range(20000):
   for s in range(int(2e-3 // mpm.dt)):
     mpm.substep()
   colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
-  gui.circles(
-      mpm.particle_positions(), radius=1.5, color=colors[mpm.material.to_numpy()])
+  np_x, np_v, np_material = mpm.particle_info()
+  gui.circles(np_x, radius=1.5, color=colors[np_material])
   gui.show()  # Change to gui.show(f'{frame:06d}.png') to write images to disk
