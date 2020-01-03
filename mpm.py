@@ -7,8 +7,6 @@ import numpy as np
 E, nu = 0.1e4, 0.2
 # Lame parameters
 mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))
-# Try to run on GPU
-ti.cfg.arch = ti.cuda
 
 
 class MPMSolver:
@@ -21,8 +19,8 @@ class MPMSolver:
     self.res = res
     self.n_particles = 0
     self.dx = 1 / res[0]
-    self.default_dt = 1e-4
     self.inv_dx = float(res[0])
+    self.default_dt = 1e-4
     self.p_vol = self.dx**self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
@@ -188,16 +186,3 @@ class MPMSolver:
     return np_x, np_v, np_material
 
 
-gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
-
-mpm = MPMSolver(res=(128, 128))
-
-for i in range(5):
-  mpm.add_cube(lower_corner=[0.2 + i * 0.1, 0.3 + i * 0.1], cube_size=[0.1, 0.1], material=MPMSolver.material_snow)
-
-for frame in range(20000):
-  mpm.step(2e-3)
-  colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
-  np_x, np_v, np_material = mpm.particle_info()
-  gui.circles(np_x, radius=1.5, color=colors[np_material])
-  gui.show()  # Change to gui.show(f'{frame:06d}.png') to write images to disk
