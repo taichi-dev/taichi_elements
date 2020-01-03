@@ -16,6 +16,7 @@ class MPMSolver:
   
   def __init__(self, res, max_num_particles=2 ** 20):
     self.dim = len(res)
+    assert self.dim in (2, 3), "MPM solver supports only 2D and 3D simulations."
     self.res = res
     self.n_particles = 0
     self.dx = 1 / res[0]
@@ -140,7 +141,7 @@ class MPMSolver:
       self.p2g(dt)
       self.grid_op(dt)
       self.g2p(dt)
-    
+      
   def add_cube(self, lower_corner, cube_size, material, sample_density=None):
     if sample_density is None:
       sample_density = 2 ** self.dim
@@ -155,8 +156,8 @@ class MPMSolver:
         pos.append(lower_corner[j] + random.random() * cube_size[j])
       self.x[i] = pos
       self.material[i] = material
-      self.v[i] = [0, 0]
-      self.F[i] = [[1, 0], [0, 1]]
+      self.v[i] = [0 for i in range(self.dim)]
+      self.F[i] = [[int(i == j) for i in range(self.dim)] for j in range(self.dim)]
       self.Jp[i] = 1
     self.n_particles += num_new_particles
 
