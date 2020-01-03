@@ -12,16 +12,21 @@ ti.cfg.arch = ti.cuda
 
 
 class MPMSolver:
-  def __init__(self, res):
+  material_water = 0
+  material_jelly = 1
+  material_snow = 2
+  
+  def __init__(self, res, max_num_particles=2 ** 20):
     self.dim = len(res)
     self.res = res
-    self.n_particles = 9000
+    self.n_particles = 0
     self.dx = 1 / res[0]
     self.dt = 1e-4
     self.inv_dx = float(res[0])
     self.p_vol = self.dx**self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
+    self.max_num_particles = max_num_particles
     self.gravity = -50
     # position
     self.x = ti.Vector(self.dim, dt=ti.f32)
@@ -43,7 +48,7 @@ class MPMSolver:
 
     @ti.layout
     def place():
-      ti.root.dynamic(ti.i, 2 ** 20, 512).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
+      ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
 
 
   @ti.classkernel
@@ -139,18 +144,18 @@ class MPMSolver:
     self.p2g()
     self.grid_op()
     self.g2p()
-
-  def init(self):
-    group_size = self.n_particles // 3
-    for i in range(self.n_particles):
-      self.x[i] = [
-          random.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
-          random.random() * 0.2 + 0.05 + 0.32 * (i // group_size)
-      ]
-      self.material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
+    
+  def add_cube(self, group_size, lower_corner, cube_size, material):
+    for i in range(self.n_particles, self.n_particles + group_size):
+      pos = []
+      for j in range(self.dim):
+        pos.append(lower_corner[j] + random.random() * cube_size[j])
+      self.x[i] = pos
+      self.material[i] = material
       self.v[i] = [0, 0]
       self.F[i] = [[1, 0], [0, 1]]
       self.Jp[i] = 1
+    self.n_particles += group_size
 
   @ti.classkernel
   def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
@@ -176,7 +181,9 @@ class MPMSolver:
 gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
 
 mpm = MPMSolver(res=(128, 128))
-mpm.init()
+
+for i in range(5):
+  mpm.add_cube(group_size=1000, lower_corner=[0.2 + i * 0.1, 0.3 + i * 0.1], cube_size=[0.1, 0.1], material=MPMSolver.material_snow)
 
 for frame in range(20000):
   for s in range(int(2e-3 // mpm.dt)):
