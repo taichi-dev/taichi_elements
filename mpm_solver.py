@@ -48,6 +48,9 @@ class MPMSolver:
     def place():
       ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
 
+  def stencil_range(self):
+    return ti.ndrange(*((3,) * self.dim))
+
   @ti.classkernel
   def p2g(self, dt: ti.f32):
     for p in self.x:
@@ -90,10 +93,11 @@ class MPMSolver:
       affine = stress + self.p_mass * self.C[p]
 
       # Loop over 3x3 grid node neighborhood
-      for i, j in ti.static(ti.ndrange(3, 3)):
-        offset = ti.Vector([i, j])
+      for offset in ti.static(ti.grouped(self.stencil_range())):
         dpos = (offset.cast(float) - fx) * self.dx
-        weight = w[i][0] * w[j][1]
+        weight = 1.0
+        for d in ti.static(range(self.dim)):
+          weight *= w[offset[d]][d]
         self.grid_v[base + offset] += weight * (
             self.p_mass * self.v[p] + affine @ dpos)
         self.grid_m[base + offset] += weight * self.p_mass
@@ -123,7 +127,7 @@ class MPMSolver:
       new_v = ti.Vector.zero(ti.f32, self.dim)
       new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
       # loop over 3x3 grid node neighborhood
-      for I in ti.static(ti.grouped(ti.ndrange(*((3,) * self.dim)))):
+      for I in ti.static(ti.grouped(self.stencil_range())):
         dpos = I.cast(float) - fx
         g_v = self.grid_v[base + I]
         weight = 1.0
