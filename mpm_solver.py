@@ -123,10 +123,12 @@ class MPMSolver:
       new_v = ti.Vector.zero(ti.f32, self.dim)
       new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
       # loop over 3x3 grid node neighborhood
-      for i, j in ti.static(ti.ndrange(3, 3)):
-        dpos = ti.Vector([i, j]).cast(float) - fx
-        g_v = self.grid_v[base + ti.Vector([i, j])]
-        weight = w[i][0] * w[j][1]
+      for I in ti.static(ti.grouped(ti.ndrange(*((3,) * self.dim)))):
+        dpos = I.cast(float) - fx
+        g_v = self.grid_v[base + I]
+        weight = 1.0
+        for d in ti.static(range(self.dim)):
+          weight *= w[I[d]][d]
         new_v += weight * g_v
         new_C += 4 * self.inv_dx * weight * ti.outer_product(g_v, dpos)
       self.v[p], self.C[p] = new_v, new_C
