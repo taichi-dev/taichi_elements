@@ -4,7 +4,8 @@ import bpy
 socket_colors = {
     'SOLVER': (0.0, 1.0, 0.0, 1.0),
     'NUMBER': (0.3, 0.3, 0.3, 1.0),
-    'STRUCT': (1.0, 0.0, 1.0, 1.0)
+    'STRUCT': (1.0, 0.0, 1.0, 1.0),
+    'ADD': (0.0, 0.0, 0.0, 0.25)
 }
 
 
@@ -97,13 +98,26 @@ class ElementsStructSocket(bpy.types.NodeSocket):
         layout.label(text=self.text)
 
 
+class ElementsAddSocket(bpy.types.NodeSocket):
+    bl_idname = 'elements_add_socket'
+
+    text: bpy.props.StringProperty(default='Add Element')
+
+    def draw_color(self, context, node):
+        return socket_colors['ADD']
+
+    def draw(self, context, layout, node, text):
+        layout.label(text=self.text)
+
+
 socket_classes = [
     ElementsIntegerSocket,
     ElementsFloatSocket,
     Elements3dVectorFloatSocket,
     ElementsMaterialSocket,
     ElementsSolverSocket,
-    ElementsStructSocket
+    ElementsStructSocket,
+    ElementsAddSocket
 ]
 
 

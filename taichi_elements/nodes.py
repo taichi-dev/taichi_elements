@@ -158,6 +158,47 @@ class ElementsGravityNode(BaseNode):
         direction_socket.value = (0.0, 0.0, -1.0)
 
 
+class ElementsSetNode(BaseNode):
+    bl_idname = 'elements_set_node'
+    bl_label = 'Set'
+
+    def add_linked_socket(self, links):
+        empty_input_socket = self.inputs.new(
+            'elements_struct_socket',
+            'Element'
+        )
+        empty_input_socket.text = 'Element'
+        node_tree = bpy.context.space_data.node_tree
+        if len(links):
+            node_tree.links.new(links[0].from_socket, empty_input_socket)
+
+    def add_empty_socket(self):
+        empty_input_socket = self.inputs.new(
+            'elements_add_socket',
+            'Add'
+        )
+
+    def init(self, context):
+        self.add_empty_socket()
+        output_socket = self.outputs.new(
+            'elements_struct_socket',
+            'Set Elements'
+        )
+        output_socket.text = 'Elements'
+
+    def update(self):
+        for input_socket in self.inputs:
+            if input_socket.bl_idname == 'elements_struct_socket':
+                if not input_socket.is_linked:
+                    self.inputs.remove(input_socket)
+        for input_socket in self.inputs:
+            if input_socket.bl_idname == 'elements_add_socket':
+                if input_socket.is_linked:
+                    self.add_linked_socket(input_socket.links)
+                    self.inputs.remove(input_socket)
+                    self.add_empty_socket()
+
+
 node_classes = [
     ElementsMpmSolverNode,
     ElementsMaterialNode,
@@ -166,7 +207,8 @@ node_classes = [
     ElementsSourceObjectNode,
     ElementsIntegerNode,
     ElementsFloatNode,
-    ElementsGravityNode
+    ElementsGravityNode,
+    ElementsSetNode
 ]
 
 

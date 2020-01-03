@@ -46,7 +46,7 @@ elements_input_category = ElementsNodeCategory(
     'Input',
     items=items
 )
-# Force Fields
+# Force Fields Category
 items = [
     nodeitems_utils.NodeItem('elements_gravity_node'),
 ]
@@ -55,13 +55,23 @@ elements_force_fields_category = ElementsNodeCategory(
     'Force Fields',
     items=items
 )
+# Struct Category
+items = [
+    nodeitems_utils.NodeItem('elements_set_node'),
+]
+elements_struct_category = ElementsNodeCategory(
+    'elements_struct_category',
+    'Struct',
+    items=items
+)
 
 node_categories = [
     elements_solvers_category,
     elements_simulation_objects_category,
     elements_source_data_category,
     elements_input_category,
-    elements_force_fields_category
+    elements_force_fields_category,
+    elements_struct_category
 ]
 
 
