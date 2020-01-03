@@ -101,7 +101,7 @@ class ElementsStructSocket(bpy.types.NodeSocket):
 class ElementsAddSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_add_socket'
 
-    text: bpy.props.StringProperty(default='Add Element')
+    text: bpy.props.StringProperty(default='')
 
     def draw_color(self, context, node):
         return socket_colors['ADD']

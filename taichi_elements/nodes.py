@@ -158,16 +158,13 @@ class ElementsGravityNode(BaseNode):
         direction_socket.value = (0.0, 0.0, -1.0)
 
 
-class ElementsSetNode(BaseNode):
-    bl_idname = 'elements_set_node'
-    bl_label = 'Set'
-
+class ElementsDynamicSocketsNode(BaseNode):
     def add_linked_socket(self, links):
         empty_input_socket = self.inputs.new(
             'elements_struct_socket',
             'Element'
         )
-        empty_input_socket.text = 'Element'
+        empty_input_socket.text = self.text
         node_tree = bpy.context.space_data.node_tree
         if len(links):
             node_tree.links.new(links[0].from_socket, empty_input_socket)
@@ -177,6 +174,7 @@ class ElementsSetNode(BaseNode):
             'elements_add_socket',
             'Add'
         )
+        empty_input_socket.text = self.text_empty_socket
 
     def init(self, context):
         self.add_empty_socket()
@@ -199,6 +197,22 @@ class ElementsSetNode(BaseNode):
                     self.add_empty_socket()
 
 
+class ElementsSetNode(ElementsDynamicSocketsNode):
+    bl_idname = 'elements_set_node'
+    bl_label = 'Set'
+
+    text: bpy.props.StringProperty(default='Element')
+    text_empty_socket: bpy.props.StringProperty(default='Add Element')
+
+
+class ElementsMergeNode(ElementsDynamicSocketsNode):
+    bl_idname = 'elements_merge_node'
+    bl_label = 'Merge'
+
+    text: bpy.props.StringProperty(default='Set')
+    text_empty_socket: bpy.props.StringProperty(default='Merge Set')
+
+
 node_classes = [
     ElementsMpmSolverNode,
     ElementsMaterialNode,
@@ -208,7 +222,8 @@ node_classes = [
     ElementsIntegerNode,
     ElementsFloatNode,
     ElementsGravityNode,
-    ElementsSetNode
+    ElementsSetNode,
+    ElementsMergeNode
 ]
 
 
