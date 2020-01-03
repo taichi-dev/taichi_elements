@@ -11,7 +11,7 @@ mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))
 
 class MPMSolver:
   material_water = 0
-  material_jelly = 1
+  material_elastic = 1
   material_snow = 2
   
   def __init__(self, res, max_num_particles=2 ** 20):
@@ -43,11 +43,9 @@ class MPMSolver:
     # grid node mass
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
 
-
     @ti.layout
     def place():
       ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
-
 
   @ti.classkernel
   def p2g(self, dt: ti.f32):
@@ -63,29 +61,29 @@ class MPMSolver:
                    dt * self.C[p]) @ self.F[p]
       # Hardening coefficient: snow gets harder when compressed
       h = ti.exp(10 * (1.0 - self.Jp[p]))
-      if self.material[p] == 1:  # jelly, make it softer
+      if self.material[p] == self.material_elastic:  # jelly, make it softer
         h = 0.3
       mu, la = mu_0 * h, lambda_0 * h
-      if self.material[p] == 0:  # liquid
+      if self.material[p] == self.material_water:  # liquid
         mu = 0.0
       U, sig, V = ti.svd(self.F[p])
       J = 1.0
       for d in ti.static(range(self.dim)):
         new_sig = sig[d, d]
-        if self.material[p] == 2:  # Snow
+        if self.material[p] == self.material_snow:  # Snow
           new_sig = min(max(sig[d, d], 1 - 2.5e-2), 1 + 4.5e-3)  # Plasticity
         self.Jp[p] *= sig[d, d] / new_sig
         sig[d, d] = new_sig
         J *= new_sig
-      if self.material[p] == 0:
+      if self.material[p] == self.material_water:
         # Reset deformation gradient to avoid numerical instability
         self.F[p] = ti.Matrix.identity(ti.f32, self.dim) * ti.sqrt(J)
-      elif self.material[p] == 2:
+      elif self.material[p] == self.material_snow:
         # Reconstruct elastic deformation gradient after plasticity
         self.F[p] = U @ sig @ V.T()
 
       stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T(
-      ) + ti.Matrix.identity(ti.f32, 2) * la * J * (
+      ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (
           J - 1)
       stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
       affine = stress + self.p_mass * self.C[p]
@@ -101,19 +99,19 @@ class MPMSolver:
 
   @ti.classkernel
   def grid_op(self, dt: ti.f32):
-    for i, j in self.grid_m:
-      if self.grid_m[i, j] > 0:  # No need for epsilon here
-        self.grid_v[i, j] = (
-            1 / self.grid_m[i, j]) * self.grid_v[i, j]  # Momentum to velocity
-        self.grid_v[i, j][1] += dt * self.gravity
-        if i < 3 and self.grid_v[i, j][0] < 0:
-          self.grid_v[i, j][0] = 0  # Boundary conditions
-        if i > self.res[0] - 3 and self.grid_v[i, j][0] > 0:
-          self.grid_v[i, j][0] = 0
-        if j < 3 and self.grid_v[i, j][1] < 0:
-          self.grid_v[i, j][1] = 0
-        if j > self.res[1] - 3 and self.grid_v[i, j][1] > 0:
-          self.grid_v[i, j][1] = 0
+    for I in ti.grouped(self.grid_m):
+      if self.grid_m[I] > 0:  # No need for epsilon here
+        self.grid_v[I] = (
+            1 / self.grid_m[I]) * self.grid_v[I]  # Momentum to velocity
+        self.grid_v[I][1] += dt * self.gravity
+        if I[0] < 3 and self.grid_v[I][0] < 0:
+          self.grid_v[I][0] = 0  # Boundary conditions
+        if I[0] > self.res[0] - 3 and self.grid_v[I][0] > 0:
+          self.grid_v[I][0] = 0
+        if I[1] < 3 and self.grid_v[I][1] < 0:
+          self.grid_v[I][1] = 0
+        if I[1] > self.res[1] - 3 and self.grid_v[I][1] > 0:
+          self.grid_v[I][1] = 0
 
   @ti.classkernel
   def g2p(self, dt: ti.f32):
