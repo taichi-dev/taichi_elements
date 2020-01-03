@@ -21,7 +21,7 @@ class MPMSolver:
     self.res = res
     self.n_particles = 0
     self.dx = 1 / res[0]
-    self.dt = 1e-4
+    self.default_dt = 1e-4
     self.inv_dx = float(res[0])
     self.p_vol = self.dx**self.dim
     self.p_rho = 1
@@ -52,7 +52,7 @@ class MPMSolver:
 
 
   @ti.classkernel
-  def p2g(self):
+  def p2g(self, dt: ti.f32):
     for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
@@ -62,7 +62,7 @@ class MPMSolver:
       ]
       # deformation gradient update
       self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
-                   self.dt * self.C[p]) @ self.F[p]
+                   dt * self.C[p]) @ self.F[p]
       # Hardening coefficient: snow gets harder when compressed
       h = ti.exp(10 * (1.0 - self.Jp[p]))
       if self.material[p] == 1:  # jelly, make it softer
@@ -89,7 +89,7 @@ class MPMSolver:
       stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T(
       ) + ti.Matrix.identity(ti.f32, 2) * la * J * (
           J - 1)
-      stress = (-self.dt * self.p_vol * 4 * self.inv_dx**2) * stress
+      stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
       affine = stress + self.p_mass * self.C[p]
 
       # Loop over 3x3 grid node neighborhood
@@ -102,12 +102,12 @@ class MPMSolver:
         self.grid_m[base + offset] += weight * self.p_mass
 
   @ti.classkernel
-  def grid_op(self):
+  def grid_op(self, dt: ti.f32):
     for i, j in self.grid_m:
       if self.grid_m[i, j] > 0:  # No need for epsilon here
         self.grid_v[i, j] = (
             1 / self.grid_m[i, j]) * self.grid_v[i, j]  # Momentum to velocity
-        self.grid_v[i, j][1] += self.dt * self.gravity
+        self.grid_v[i, j][1] += dt * self.gravity
         if i < 3 and self.grid_v[i, j][0] < 0:
           self.grid_v[i, j][0] = 0  # Boundary conditions
         if i > self.res[0] - 3 and self.grid_v[i, j][0] > 0:
@@ -118,7 +118,7 @@ class MPMSolver:
           self.grid_v[i, j][1] = 0
 
   @ti.classkernel
-  def g2p(self):
+  def g2p(self, dt: ti.f32):
     for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
       fx = self.x[p] * self.inv_dx - base.cast(float)
@@ -136,17 +136,27 @@ class MPMSolver:
         new_v += weight * g_v
         new_C += 4 * self.inv_dx * weight * ti.outer_product(g_v, dpos)
       self.v[p], self.C[p] = new_v, new_C
-      self.x[p] += self.dt * self.v[p]  # advection
+      self.x[p] += dt * self.v[p]  # advection
 
-  def substep(self):
-    self.grid_v.fill(0)
-    self.grid_m.fill(0)
-    self.p2g()
-    self.grid_op()
-    self.g2p()
+  def step(self, frame_dt):
+    substeps = int(frame_dt / self.default_dt + 1)
+    for i in range(substeps):
+      dt = frame_dt / substeps
+      self.grid_v.fill(0)
+      self.grid_m.fill(0)
+      self.p2g(dt)
+      self.grid_op(dt)
+      self.g2p(dt)
     
-  def add_cube(self, group_size, lower_corner, cube_size, material):
-    for i in range(self.n_particles, self.n_particles + group_size):
+  def add_cube(self, lower_corner, cube_size, material, sample_density=None):
+    if sample_density is None:
+      sample_density = 2 ** self.dim
+    vol = 1
+    for i in range(self.dim):
+      vol = vol * cube_size[i]
+    num_new_particles = int(sample_density * vol / self.dx ** self.dim + 1)
+    assert self.n_particles + num_new_particles <= self.max_num_particles
+    for i in range(self.n_particles, self.n_particles + num_new_particles):
       pos = []
       for j in range(self.dim):
         pos.append(lower_corner[j] + random.random() * cube_size[j])
@@ -155,7 +165,7 @@ class MPMSolver:
       self.v[i] = [0, 0]
       self.F[i] = [[1, 0], [0, 1]]
       self.Jp[i] = 1
-    self.n_particles += group_size
+    self.n_particles += num_new_particles
 
   @ti.classkernel
   def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
@@ -183,11 +193,10 @@ gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
 mpm = MPMSolver(res=(128, 128))
 
 for i in range(5):
-  mpm.add_cube(group_size=1000, lower_corner=[0.2 + i * 0.1, 0.3 + i * 0.1], cube_size=[0.1, 0.1], material=MPMSolver.material_snow)
+  mpm.add_cube(lower_corner=[0.2 + i * 0.1, 0.3 + i * 0.1], cube_size=[0.1, 0.1], material=MPMSolver.material_snow)
 
 for frame in range(20000):
-  for s in range(int(2e-3 // mpm.dt)):
-    mpm.substep()
+  mpm.step(2e-3)
   colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
   np_x, np_v, np_material = mpm.particle_info()
   gui.circles(np_x, radius=1.5, color=colors[np_material])
