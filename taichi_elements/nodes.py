@@ -1,7 +1,7 @@
 import bpy
 
 
-class BaseNode(bpy.types.ShaderNode):
+class BaseNode(bpy.types.Node):
     @classmethod
     def poll(cls, node_tree):
         return node_tree.bl_idname == 'elements_node_tree'
