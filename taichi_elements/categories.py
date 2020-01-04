@@ -65,6 +65,16 @@ elements_struct_category = ElementsNodeCategory(
     'Struct',
     items=items
 )
+# Layout Category
+items = [
+    nodeitems_utils.NodeItem('NodeFrame'),
+    nodeitems_utils.NodeItem('NodeReroute')
+]
+elements_layout_category = ElementsNodeCategory(
+    'elements_layout_category',
+    'Layout',
+    items=items
+)
 
 node_categories = [
     elements_solvers_category,
@@ -72,7 +82,8 @@ node_categories = [
     elements_source_data_category,
     elements_input_category,
     elements_force_fields_category,
-    elements_struct_category
+    elements_struct_category,
+    elements_layout_category
 ]
 
 
