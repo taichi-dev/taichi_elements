@@ -90,9 +90,9 @@ class ElementsEmitterNode(BaseNode):
         material_socket.text = 'Material'
 
 
-class ElementsSimulationHubNode(BaseNode):
-    bl_idname = 'elements_simulation_hub_node'
-    bl_label = 'Simulation Hub'
+class ElementsSimulationNode(BaseNode):
+    bl_idname = 'elements_simulation_node'
+    bl_label = 'Simulation'
 
     def init(self, context):
         simulation_data_socket = self.outputs.new(
@@ -106,6 +106,27 @@ class ElementsSimulationHubNode(BaseNode):
             'Solver'
         )
         solver_socket.text = 'Solver'
+
+        hubs_socket = self.inputs.new(
+            'elements_struct_socket',
+            'Hubs'
+        )
+        hubs_socket.text = 'Hubs'
+
+    def draw_buttons(self, context, layout):
+        layout.operator('elements.simulate_particles')
+
+
+class ElementsHubNode(BaseNode):
+    bl_idname = 'elements_hub_node'
+    bl_label = 'Hub'
+
+    def init(self, context):
+        hub_socket = self.outputs.new(
+            'elements_struct_socket',
+            'Hub Data'
+        )
+        hub_socket.text = 'Hub Data'
 
         forces_socket = self.inputs.new(
             'elements_struct_socket',
@@ -257,7 +278,8 @@ node_classes = [
     ElementsMpmSolverNode,
     ElementsMaterialNode,
     ElementsEmitterNode,
-    ElementsSimulationHubNode,
+    ElementsSimulationNode,
+    ElementsHubNode,
     ElementsSourceObjectNode,
     ElementsIntegerNode,
     ElementsFloatNode,

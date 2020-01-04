@@ -20,7 +20,8 @@ elements_solvers_category = ElementsNodeCategory(
 # Simulation Objects Category
 items = [
     nodeitems_utils.NodeItem('elements_emitter_node'),
-    nodeitems_utils.NodeItem('elements_simulation_hub_node')
+    nodeitems_utils.NodeItem('elements_hub_node'),
+    nodeitems_utils.NodeItem('elements_simulation_node')
 ]
 elements_simulation_objects_category = ElementsNodeCategory(
     'elements_simulation_objects_category',
