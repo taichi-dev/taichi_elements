@@ -5,7 +5,8 @@ socket_colors = {
     'SOLVER': (0.0, 1.0, 0.0, 1.0),
     'NUMBER': (0.3, 0.3, 0.3, 1.0),
     'STRUCT': (1.0, 0.0, 1.0, 1.0),
-    'ADD': (0.0, 0.0, 0.0, 0.25)
+    'ADD': (0.0, 0.0, 0.0, 0.25),
+    'STRING': (1.0, 0.5, 0.0, 1.0)
 }
 
 
@@ -43,10 +44,12 @@ class ElementsMaterialSocket(bpy.types.NodeSocket):
 class ElementsNumberSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_integer_socket'
 
+    split_factor = 0.6
+
     def draw(self, context, layout, node, text):
         if not len(self.links) or self.is_output:
             if self.text:
-                row = layout.split(factor=0.6)
+                row = layout.split(factor=self.split_factor)
                 row.label(text=self.text)
                 row.prop(self, 'value', text='')
             else:
@@ -110,6 +113,18 @@ class ElementsAddSocket(bpy.types.NodeSocket):
         layout.label(text=self.text)
 
 
+class ElementsFolderSocket(ElementsNumberSocket):
+    bl_idname = 'elements_folder_socket'
+
+    value: bpy.props.StringProperty(subtype='DIR_PATH')
+    text: bpy.props.StringProperty(default='Folder')
+
+    split_factor = 0.3
+
+    def draw_color(self, context, node):
+        return socket_colors['STRING']
+
+
 socket_classes = [
     ElementsIntegerSocket,
     ElementsFloatSocket,
@@ -117,7 +132,8 @@ socket_classes = [
     ElementsMaterialSocket,
     ElementsSolverSocket,
     ElementsStructSocket,
-    ElementsAddSocket
+    ElementsAddSocket,
+    ElementsFolderSocket
 ]
 
 

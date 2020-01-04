@@ -39,7 +39,8 @@ elements_source_data_category = ElementsNodeCategory(
 # Input Category
 items = [
     nodeitems_utils.NodeItem('elements_integer_node'),
-    nodeitems_utils.NodeItem('elements_float_node')
+    nodeitems_utils.NodeItem('elements_float_node'),
+    nodeitems_utils.NodeItem('elements_folder_node')
 ]
 elements_input_category = ElementsNodeCategory(
     'elements_input_category',
@@ -65,6 +66,15 @@ elements_struct_category = ElementsNodeCategory(
     'Struct',
     items=items
 )
+# Output Category
+items = [
+    nodeitems_utils.NodeItem('elements_cache_node'),
+]
+elements_output_category = ElementsNodeCategory(
+    'elements_output_category',
+    'Output',
+    items=items
+)
 # Layout Category
 items = [
     nodeitems_utils.NodeItem('NodeFrame'),
@@ -83,6 +93,7 @@ node_categories = [
     elements_input_category,
     elements_force_fields_category,
     elements_struct_category,
+    elements_output_category,
     elements_layout_category
 ]
 

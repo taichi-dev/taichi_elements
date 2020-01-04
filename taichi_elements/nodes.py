@@ -95,6 +95,12 @@ class ElementsSimulationHubNode(BaseNode):
     bl_label = 'Simulation Hub'
 
     def init(self, context):
+        simulation_data_socket = self.outputs.new(
+            'elements_struct_socket',
+            'Simulation Data'
+        )
+        simulation_data_socket.text = 'Particles'
+
         solver_socket = self.inputs.new(
             'elements_solver_socket',
             'Solver'
@@ -129,6 +135,40 @@ class ElementsSourceObjectNode(BaseNode):
 
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'object_name', bpy.data, 'objects', text='')
+
+
+class ElementsCacheNode(BaseNode):
+    bl_idname = 'elements_cache_node'
+    bl_label = 'Disk Cache'
+
+    def init(self, context):
+        self.width = 200.0
+
+        particles_input_socket = self.inputs.new(
+            'elements_struct_socket',
+            'Particles'
+        )
+        particles_input_socket.text = 'Particles'
+
+        cache_folder_input_socket = self.inputs.new(
+            'elements_folder_socket',
+            'Folder'
+        )
+        cache_folder_input_socket.text = 'Folder'
+
+
+class ElementsFolderNode(BaseNode):
+    bl_idname = 'elements_folder_node'
+    bl_label = 'Folder'
+
+    def init(self, context):
+        self.width = 250.0
+
+        cache_folder_output_socket = self.outputs.new(
+            'elements_folder_socket',
+            'Folder'
+        )
+        cache_folder_output_socket.text = ''
 
 
 class ElementsGravityNode(BaseNode):
@@ -223,7 +263,9 @@ node_classes = [
     ElementsFloatNode,
     ElementsGravityNode,
     ElementsSetNode,
-    ElementsMergeNode
+    ElementsMergeNode,
+    ElementsCacheNode,
+    ElementsFolderNode
 ]
 
 
