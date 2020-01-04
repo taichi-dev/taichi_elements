@@ -59,7 +59,7 @@ elements_force_fields_category = ElementsNodeCategory(
 )
 # Struct Category
 items = [
-    nodeitems_utils.NodeItem('elements_set_node'),
+    nodeitems_utils.NodeItem('elements_make_list_node'),
     nodeitems_utils.NodeItem('elements_merge_node')
 ]
 elements_struct_category = ElementsNodeCategory(

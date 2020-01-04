@@ -1,7 +1,7 @@
 import bpy
 
 
-class BaseNode(bpy.types.Node):
+class BaseNode(bpy.types.ShaderNode):
     @classmethod
     def poll(cls, node_tree):
         return node_tree.bl_idname == 'elements_node_tree'
@@ -258,9 +258,9 @@ class ElementsDynamicSocketsNode(BaseNode):
                     self.add_empty_socket()
 
 
-class ElementsSetNode(ElementsDynamicSocketsNode):
-    bl_idname = 'elements_set_node'
-    bl_label = 'Set'
+class ElementsMakeListNode(ElementsDynamicSocketsNode):
+    bl_idname = 'elements_make_list_node'
+    bl_label = 'Make List'
 
     text: bpy.props.StringProperty(default='Element')
     text_empty_socket: bpy.props.StringProperty(default='Add Element')
@@ -270,8 +270,8 @@ class ElementsMergeNode(ElementsDynamicSocketsNode):
     bl_idname = 'elements_merge_node'
     bl_label = 'Merge'
 
-    text: bpy.props.StringProperty(default='Set')
-    text_empty_socket: bpy.props.StringProperty(default='Merge Set')
+    text: bpy.props.StringProperty(default='List')
+    text_empty_socket: bpy.props.StringProperty(default='Merge Lists')
 
 
 node_classes = [
@@ -284,7 +284,7 @@ node_classes = [
     ElementsIntegerNode,
     ElementsFloatNode,
     ElementsGravityNode,
-    ElementsSetNode,
+    ElementsMakeListNode,
     ElementsMergeNode,
     ElementsCacheNode,
     ElementsFolderNode
