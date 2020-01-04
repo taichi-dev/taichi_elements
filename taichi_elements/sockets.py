@@ -2,49 +2,28 @@ import bpy
 
 
 socket_colors = {
-    'SOLVER': (0.0, 1.0, 0.0, 1.0),
     'NUMBER': (0.3, 0.3, 0.3, 1.0),
-    'STRUCT': (1.0, 0.0, 1.0, 1.0),
+    'STRUCT': (0.0, 1.0, 0.0, 1.0),
     'ADD': (0.0, 0.0, 0.0, 0.25),
     'STRING': (1.0, 0.5, 0.0, 1.0)
 }
 
 
-class ElementsSolverSocket(bpy.types.NodeSocket):
-    bl_idname = 'elements_solver_socket'
-
-    text: bpy.props.StringProperty(default='Solver')
-
-    def draw_color(self, context, node):
-        return socket_colors['SOLVER']
-
-    def draw(self, context, layout, node, text):
-        layout.label(text=self.text)
-
-
-class ElementsMaterialSocket(bpy.types.NodeSocket):
-    bl_idname = 'elements_material_socket'
-
-    items = [
-        ('0', 'Water', ''),
-        ('1', 'Snow', ''),
-        ('2', 'Elastic', '')
-    ]
-    value: bpy.props.EnumProperty(
-        items=items, default='0'
-    )
-
-    def draw_color(self, context, node):
-        return socket_colors['STRUCT']
-
-    def draw(self, context, layout, node, text):
-        layout.prop(self, 'value', text='')
-
-
-class ElementsNumberSocket(bpy.types.NodeSocket):
+class ElementsBaseSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_integer_socket'
 
     split_factor = 0.6
+
+    def get_value(self):
+        if not self.is_output and len(self.links):
+            from_socket = self.links[0].from_socket
+            if from_socket.bl_idname == self.bl_idname:
+                if hasattr(from_socket, 'get_value'):
+                    return from_socket.get_value()
+            else:
+                return self.value
+        else:
+            return self.value
 
     def draw(self, context, layout, node, text):
         if not len(self.links) or self.is_output:
@@ -59,7 +38,7 @@ class ElementsNumberSocket(bpy.types.NodeSocket):
             layout.label(text=self.text)
 
 
-class ElementsIntegerSocket(ElementsNumberSocket):
+class ElementsIntegerSocket(ElementsBaseSocket):
     bl_idname = 'elements_integer_socket'
 
     value: bpy.props.IntProperty(default=0)
@@ -69,7 +48,7 @@ class ElementsIntegerSocket(ElementsNumberSocket):
         return socket_colors['NUMBER']
 
 
-class ElementsFloatSocket(ElementsNumberSocket):
+class ElementsFloatSocket(ElementsBaseSocket):
     bl_idname = 'elements_float_socket'
 
     value: bpy.props.FloatProperty(default=0.0)
@@ -79,7 +58,7 @@ class ElementsFloatSocket(ElementsNumberSocket):
         return socket_colors['NUMBER']
 
 
-class Elements3dVectorFloatSocket(ElementsNumberSocket):
+class Elements3dVectorFloatSocket(ElementsBaseSocket):
     bl_idname = 'elements_3d_vector_float_socket'
 
     value: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0), size=3)
@@ -89,10 +68,20 @@ class Elements3dVectorFloatSocket(ElementsNumberSocket):
         return socket_colors['NUMBER']
 
 
-class ElementsStructSocket(bpy.types.NodeSocket):
+class ElementsStructSocket(ElementsBaseSocket):
     bl_idname = 'elements_struct_socket'
 
     text: bpy.props.StringProperty(default='Value')
+
+    def get_value(self):
+        if not self.is_output and len(self.links):
+            from_socket = self.links[0].from_socket
+            if from_socket.bl_idname == self.bl_idname:
+                return self.links[0].from_node.get_class()
+            else:
+                return None
+        else:
+            return None
 
     def draw_color(self, context, node):
         return socket_colors['STRUCT']
@@ -113,7 +102,7 @@ class ElementsAddSocket(bpy.types.NodeSocket):
         layout.label(text=self.text)
 
 
-class ElementsFolderSocket(ElementsNumberSocket):
+class ElementsFolderSocket(ElementsBaseSocket):
     bl_idname = 'elements_folder_socket'
 
     value: bpy.props.StringProperty(subtype='DIR_PATH')
@@ -129,8 +118,6 @@ socket_classes = [
     ElementsIntegerSocket,
     ElementsFloatSocket,
     Elements3dVectorFloatSocket,
-    ElementsMaterialSocket,
-    ElementsSolverSocket,
     ElementsStructSocket,
     ElementsAddSocket,
     ElementsFolderSocket
