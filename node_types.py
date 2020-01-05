@@ -54,6 +54,11 @@ class SourceObject:
         self.bpy_object = None
 
 
+class Texture:
+    def __init__(self):
+        self.bpy_texture = None
+
+
 class Material:
     def __init__(self):
         self.material_type = None

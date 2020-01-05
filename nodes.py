@@ -414,6 +414,32 @@ class ElementsDynamicSocketsNode(BaseNode):
                     self.add_empty_socket()
 
 
+class ElementsTextureNode(BaseNode):
+    bl_idname = 'elements_texture_node'
+    bl_label = 'Texture'
+
+    texture_name: bpy.props.StringProperty()
+
+    def init(self, context):
+        self.width = 250.0
+
+        texture_output = self.outputs.new(
+            'elements_struct_socket',
+            'Texture'
+        )
+        texture_output.text = 'Texture'
+
+    def draw_buttons(self, context, layout):
+        layout.prop_search(self, 'texture_name', bpy.data, 'textures', text='')
+
+    def create_class(self):
+        simulation_class = node_types.Texture()
+        texture = bpy.data.textures.get(self.texture_name, None)
+        if texture:
+            simulation_class.bpy_texture = texture
+        return simulation_class
+
+
 class ElementsMakeListNode(ElementsDynamicSocketsNode):
     bl_idname = 'elements_make_list_node'
     bl_label = 'Make List'
@@ -460,7 +486,8 @@ node_classes = [
     ElementsMakeListNode,
     ElementsMergeNode,
     ElementsCacheNode,
-    ElementsFolderNode
+    ElementsFolderNode,
+    ElementsTextureNode
 ]
 
 

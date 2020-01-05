@@ -31,6 +31,7 @@ elements_simulation_objects_category = ElementsNodeCategory(
 # Source Data Category
 items = [
     nodeitems_utils.NodeItem('elements_source_object_node'),
+    nodeitems_utils.NodeItem('elements_texture_node')
 ]
 elements_source_data_category = ElementsNodeCategory(
     'elements_source_data_category',
