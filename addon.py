@@ -1,13 +1,14 @@
 import bpy
 
-from . import tree, categories, nodes, sockets
+from . import tree, categories, nodes, sockets, operators
 
 
 addon_modules = [
     tree,
     sockets,
     nodes,
-    categories
+    categories,
+    operators
 ]
 
 
