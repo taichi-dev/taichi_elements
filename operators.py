@@ -1,5 +1,6 @@
 import bpy
 from .mpm_solver import MPMSolver
+import taichi as ti
 
 from . import node_types
 
@@ -58,6 +59,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         # TODO: list is not implemented
         
         res = simulation_class.solver.resolution
+        ti.reset()
         print(f"Creating simulation of res {res}")
         sim = MPMSolver((res, res, res))
         
@@ -70,7 +72,31 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         
         emitters = hub.emitters
         for emitter in emitters:
-            print(emitter)
+            obj = emitter.bpy_object.bpy_object
+            print(dir(obj))
+            # Note: rotation is not supported
+            center_x = obj.matrix_world[0][3]
+            center_y = obj.matrix_world[1][3]
+            center_z = obj.matrix_world[2][3]
+            scale_x = obj.matrix_world[0][0]
+            scale_y = obj.matrix_world[1][1]
+            scale_z = obj.matrix_world[2][2]
+            print(center_x)
+            print(center_y)
+            print(center_z)
+            print(obj.matrix_world)
+            material = emitter.material.material_type
+            print(material)
+            if material == 'WATER':
+                taichi_material = MPMSolver.material_water
+            elif material == 'ELASTIC':
+                taichi_material = MPMSolver.material_elastic
+            elif material == 'SNOW':
+                taichi_material = MPMSolver.material_snow
+            else:
+                assert False, material
+            sim.add_cube(lower_corner=(center_x - scale_x, center_y - scale_y, center_z - scale_z),
+                         cube_size=(2 * scale_x, 2 * scale_y, 2 * scale_z), material=taichi_material)
         
 
         return {'FINISHED'}
