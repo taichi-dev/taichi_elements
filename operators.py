@@ -106,15 +106,15 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
           taichi_gui = ti.GUI("Blender - Taichi Elements ", res=512, background_color=0x112F41)
 
         for frame in range(500):
-            sim.step(4e-3)
+            sim.step(1e-2)
             colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
             np_x, np_v, np_material = sim.particle_info()
             print(np_x)
             np_x /= size
             
             # simple camera transform
-            screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2 ** 0.5) - 0.2
-            screen_y = (np_x[:, 1])
+            screen_x = ((np_x[:, 0] + np_x[:, 1]) / 2 ** 0.5) - 0.2
+            screen_y = (np_x[:, 2])
             
             screen_pos = np.stack([screen_x, screen_y], axis=-1)
             
