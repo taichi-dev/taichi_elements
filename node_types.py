@@ -1,8 +1,33 @@
+import bpy
+
+
+def get_node_class(node_name):
+    scene = bpy.context.scene
+    node_class = scene.elements_nodes[node_name]
+    return node_class
+
+
 class Emitter:
+    @property
+    def source_geometry(self):
+        return get_node_class(self._source_geometry)
+
+    @property
+    def material(self):
+        return get_node_class(self._material)
+
+    @source_geometry.setter
+    def source_geometry(self, value):
+        self._source_geometry = value
+
+    @material.setter
+    def material(self, value):
+        self._material = value
+
     def __init__(self):
         self.emit_time = None
-        self.source_geometry = None
-        self.material = None
+        self._source_geometry = None
+        self._material = None
 
 
 class SourceObject:
@@ -16,20 +41,52 @@ class Material:
 
 
 class Hub:
+    @property
+    def forces(self):
+        return get_node_class(self._forces)
+
+    @property
+    def emitters(self):
+        return get_node_class(self._emitters)
+
+    @forces.setter
+    def forces(self, value):
+        self._forces = value
+
+    @emitters.setter
+    def emitters(self, value):
+        self._emitters = value
+
     def __init__(self):
-        self.forces = None
-        self.emitters = None
+        self._forces = None
+        self._emitters = None
 
 
 class Simulation:
+    @property
+    def solver(self):
+        return get_node_class(self._solver)
+
+    @property
+    def hubs(self):
+        return get_node_class(self._hubs)
+
+    @solver.setter
+    def solver(self, value):
+        self._solver = value
+
+    @hubs.setter
+    def hubs(self, value):
+        self._hubs = value
+
     def __init__(self):
-        self.hubs = None
-        self.solver = None
+        self._hubs = None
+        self._solver = None
 
 
 class MpmSolverSettings:
     def __init__(self):
-        self.resolution = None
+        self._resolution = None
 
 
 class GravityForceField:
@@ -51,15 +108,22 @@ class Particles:
 class List:
     def __init__(self):
         self.elements = []
+        self.offset = 0
       
     def __len__(self):
         return len(self.elements)
     
-    def __iter__(self):
-        yield from self.elements
-      
+    def __next__(self):
+        if self.offset < len(self.elements):
+            item = get_node_class(self.elements[self.offset])
+            self.offset += 1
+            return item
+        else:
+            self.offset = 0
+            raise StopIteration
+
     def __getitem__(self, item):
-        return self.elements.__getitem__(item)
+        return get_node_class(self.elements.__getitem__(item))
 
 
 class Merge:

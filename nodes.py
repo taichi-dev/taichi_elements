@@ -3,13 +3,25 @@ import bpy
 from . import node_types
 
 
+def find_node_class(node):
+    scene = bpy.context.scene
+    node_class = scene.elements_nodes.get(node.name, None)
+    if not node_class:
+        node_class = node.create_class()
+        scene.elements_nodes[node.name] = node_class
+    return node.name
+
+
 class BaseNode(bpy.types.Node):
     @classmethod
     def poll(cls, node_tree):
         return node_tree.bl_idname == 'elements_node_tree'
 
+    def find_node_class(self):
+        return find_node_class(self)
+
     def get_class(self):
-        return None
+        return self.find_node_class()
 
     def update(self):
         for input_socket in self.inputs:
@@ -44,7 +56,6 @@ class ElementsMpmSolverNode(BaseNode):
         )
         resolution.text = 'Resolution'
         resolution.value = 128
-        
         size = self.inputs.new(
             'elements_float_socket',
             'Size'
@@ -52,7 +63,7 @@ class ElementsMpmSolverNode(BaseNode):
         size.text = 'Size'
         size.value = 10.0
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.MpmSolverSettings()
         simulation_class.resolution = self.inputs['Resolution'].get_value()
         simulation_class.size = self.inputs['Size'].get_value()
@@ -82,7 +93,7 @@ class ElementsMaterialNode(BaseNode):
     def draw_buttons(self, context, layout):
         layout.prop(self, 'material', text='')
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.Material()
         simulation_class.material_type = self.material
         return simulation_class
@@ -147,10 +158,10 @@ class ElementsEmitterNode(BaseNode):
         )
         material_socket.text = 'Material'
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.Emitter()
         simulation_class.emit_time = self.inputs['Emit Time'].get_value()
-        simulation_class.bpy_object = self.inputs['Source Geometry'].get_value()
+        simulation_class.source_geometry = self.inputs['Source Geometry'].get_value()
         simulation_class.material = self.inputs['Material'].get_value()
         return simulation_class
 
@@ -190,10 +201,10 @@ class ElementsSimulationNode(BaseNode):
     def draw_buttons(self, context, layout):
         layout.operator('elements.simulate_particles')
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.Simulation()
-        simulation_class.solver = self.inputs['Solver'].get_value()
-        simulation_class.hubs = self.inputs['Hubs'].get_value()
+        simulation_class._solver = self.inputs['Solver'].get_value()
+        simulation_class._hubs = self.inputs['Hubs'].get_value()
         return simulation_class
 
     def get_output_class(self):
@@ -237,7 +248,7 @@ class ElementsHubNode(BaseNode):
         )
         emitters_socket.text = 'Emitters'
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.Hub()
         simulation_class.forces = self.inputs['Forces'].get_value()
         simulation_class.emitters = self.inputs['Emitters'].get_value()
@@ -260,7 +271,7 @@ class ElementsSourceObjectNode(BaseNode):
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'object_name', bpy.data, 'objects', text='')
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.SourceObject()
         simulation_class.bpy_object = bpy.data.objects.get(self.object_name, None)
         return simulation_class
@@ -294,7 +305,7 @@ class ElementsCacheNode(BaseNode):
         )
         cache_folder_input_socket.text = 'Folder'
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.DiskCache()
         simulation_class.output_folder = self.inputs['Particles'].from_node.get_output_class()
         simulation_class.output_folder = self.inputs['Folder'].get_value()
@@ -349,7 +360,7 @@ class ElementsGravityNode(BaseNode):
         direction_socket.text = 'Direction'
         direction_socket.value = (0.0, 0.0, -1.0)
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.GravityForceField()
         simulation_class.output_folder = self.inputs['Speed'].get_value()
         simulation_class.output_folder = self.inputs['Direction'].get_value()
@@ -402,7 +413,7 @@ class ElementsMakeListNode(ElementsDynamicSocketsNode):
     text: bpy.props.StringProperty(default='Element')
     text_empty_socket: bpy.props.StringProperty(default='Add Element')
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.List()
         for element in self.inputs:
             if element.bl_idname != 'elements_add_socket':
@@ -418,7 +429,7 @@ class ElementsMergeNode(ElementsDynamicSocketsNode):
     text: bpy.props.StringProperty(default='List')
     text_empty_socket: bpy.props.StringProperty(default='Merge Lists')
 
-    def get_class(self):
+    def create_class(self):
         simulation_class = node_types.Merge()
         for element in self.inputs:
             if element.bl_idname != 'elements_add_socket':

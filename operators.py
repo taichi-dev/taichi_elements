@@ -52,7 +52,12 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         if not simulation_node:
             return {'FINISHED'}
 
-        simulation_class = simulation_node.get_class()
+        simulation_node.get_class()
+
+        for i, j in context.scene.elements_nodes.items():
+            print(i, j)
+
+        simulation_class = context.scene.elements_nodes[simulation_node.name]
 
         print(79 * '=')
         print('simulation_class', type(simulation_class))
@@ -76,7 +81,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         
         emitters = hub.emitters
         for emitter in emitters:
-            obj = emitter.bpy_object.bpy_object
+            source_geometry = emitter.source_geometry
+            if not source_geometry:
+                continue
+            obj = emitter.source_geometry.bpy_object
             # Note: rotation is not supported
             center_x = obj.matrix_world[0][3]
             center_y = obj.matrix_world[1][3]

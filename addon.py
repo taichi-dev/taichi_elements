@@ -13,6 +13,7 @@ addon_modules = [
 
 
 def register():
+    bpy.types.Scene.elements_nodes = {}
     for addon_module in addon_modules:
         addon_module.register()
 
@@ -20,3 +21,4 @@ def register():
 def unregister():
     for addon_module in reversed(addon_modules):
         addon_module.unregister()
+    del bpy.types.Scene.elements_nodes

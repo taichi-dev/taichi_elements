@@ -9,7 +9,7 @@ parser.add_argument('-k', action='store_true', help='keep refreshing')
 addon_path = os.environ['BLENDER_USER_ADDON_PATH']
 if addon_path[:-1] == '/':
   addon_path = addon_path[:-1]
-assert addon_path.endswith('scripts/addons')
+assert addon_path.endswith('scripts\\addons')
 
 addon_folder = os.path.join(addon_path, 'taichi_elements')
 
