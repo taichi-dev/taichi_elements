@@ -95,6 +95,13 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         simulation_node.get_class()
         self.cache_folder = get_cache_folder(simulation_node)
 
+        if not self.cache_folder:
+            self.report(
+                {'WARNING'},
+                'Cache folder not specified'
+            )
+            return {'FINISHED'}
+
         for i, j in context.scene.elements_nodes.items():
             print(i, j)
 
@@ -126,6 +133,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             if not source_geometry:
                 continue
             obj = emitter.source_geometry.bpy_object
+            if not obj:
+                continue
             # Note: rotation is not supported
             center_x = obj.matrix_world[0][3]
             center_y = obj.matrix_world[1][3]
@@ -133,6 +142,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             scale_x = obj.matrix_world[0][0]
             scale_y = obj.matrix_world[1][1]
             scale_z = obj.matrix_world[2][2]
+            if not emitter.material:
+                continue
             material = emitter.material.material_type
             if material == 'WATER':
                 taichi_material = MPMSolver.material_water

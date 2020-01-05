@@ -2,6 +2,8 @@ import bpy
 
 
 def get_node_class(node_name):
+    if node_name is None:
+        return None
     scene = bpy.context.scene
     node_class = scene.elements_nodes[node_name]
     return node_class
