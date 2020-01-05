@@ -1,6 +1,6 @@
 import bpy
 
-from . import types
+from . import node_types
 
 
 class BaseNode(bpy.types.Node):
@@ -45,7 +45,7 @@ class ElementsMpmSolverNode(BaseNode):
         resolution.value = 128
 
     def get_class(self):
-        simulation_class = types.MpmSolverSettings()
+        simulation_class = node_types.MpmSolverSettings()
         simulation_class.resolution = self.inputs['Resolution'].get_value()
         return simulation_class
 
@@ -74,7 +74,7 @@ class ElementsMaterialNode(BaseNode):
         layout.prop(self, 'material', text='')
 
     def get_class(self):
-        simulation_class = types.Material()
+        simulation_class = node_types.Material()
         simulation_class.material_type = self.material
         return simulation_class
 
@@ -139,7 +139,7 @@ class ElementsEmitterNode(BaseNode):
         material_socket.text = 'Material'
 
     def get_class(self):
-        simulation_class = types.Emitter()
+        simulation_class = node_types.Emitter()
         simulation_class.emit_time = self.inputs['Emit Time'].get_value()
         simulation_class.bpy_object = self.inputs['Source Geometry'].get_value()
         simulation_class.material = self.inputs['Material'].get_value()
@@ -182,13 +182,13 @@ class ElementsSimulationNode(BaseNode):
         layout.operator('elements.simulate_particles')
 
     def get_class(self):
-        simulation_class = types.Simulation()
+        simulation_class = node_types.Simulation()
         simulation_class.solver = self.inputs['Solver'].get_value()
         simulation_class.hubs = self.inputs['Hubs'].get_value()
         return simulation_class
 
     def get_output_class(self):
-        simulation_class = types.Particles()
+        simulation_class = node_types.Particles()
         return simulation_class
 
 
@@ -229,7 +229,7 @@ class ElementsHubNode(BaseNode):
         emitters_socket.text = 'Emitters'
 
     def get_class(self):
-        simulation_class = types.Hub()
+        simulation_class = node_types.Hub()
         simulation_class.forces = self.inputs['Forces'].get_value()
         simulation_class.emitters = self.inputs['Emitters'].get_value()
         return simulation_class
@@ -252,7 +252,7 @@ class ElementsSourceObjectNode(BaseNode):
         layout.prop_search(self, 'object_name', bpy.data, 'objects', text='')
 
     def get_class(self):
-        simulation_class = types.SourceObject()
+        simulation_class = node_types.SourceObject()
         simulation_class.bpy_object = bpy.data.objects.get(self.object_name, None)
         return simulation_class
 
@@ -286,7 +286,7 @@ class ElementsCacheNode(BaseNode):
         cache_folder_input_socket.text = 'Folder'
 
     def get_class(self):
-        simulation_class = types.DiskCache()
+        simulation_class = node_types.DiskCache()
         simulation_class.output_folder = self.inputs['Particles'].from_node.get_output_class()
         simulation_class.output_folder = self.inputs['Folder'].get_value()
         return simulation_class
@@ -341,7 +341,7 @@ class ElementsGravityNode(BaseNode):
         direction_socket.value = (0.0, 0.0, -1.0)
 
     def get_class(self):
-        simulation_class = types.GravityForceField()
+        simulation_class = node_types.GravityForceField()
         simulation_class.output_folder = self.inputs['Speed'].get_value()
         simulation_class.output_folder = self.inputs['Direction'].get_value()
         return simulation_class
@@ -394,7 +394,7 @@ class ElementsMakeListNode(ElementsDynamicSocketsNode):
     text_empty_socket: bpy.props.StringProperty(default='Add Element')
 
     def get_class(self):
-        simulation_class = types.List()
+        simulation_class = node_types.List()
         for element in self.inputs:
             if element.bl_idname != 'elements_add_socket':
                 element_class = element.get_value()
@@ -410,7 +410,7 @@ class ElementsMergeNode(ElementsDynamicSocketsNode):
     text_empty_socket: bpy.props.StringProperty(default='Merge Lists')
 
     def get_class(self):
-        simulation_class = types.Merge()
+        simulation_class = node_types.Merge()
         for element in self.inputs:
             if element.bl_idname != 'elements_add_socket':
                 element_class = element.get_value()

@@ -1,6 +1,6 @@
 import bpy
 
-from . import types
+from . import node_types
 
 
 def get_simulation_nodes(operator, node_tree):
@@ -23,13 +23,13 @@ def print_simulation_info(simulation_class, offset):
     for i in dir(simulation_class):
         v = getattr(simulation_class, i, None)
         if v and i[0] != '_':
-            if type(v) in (types.List, types.Merge):
+            if type(v) in (node_types.List, node_types.Merge):
                 print(offset, i, type(v))
                 offset += ' '
                 for e in v.elements:
                     print(offset, i, type(e))
                     print_simulation_info(e, offset)
-            elif type(v) in types.elements_types:
+            elif type(v) in node_types.elements_types:
                 print(offset, i, type(v))
                 print_simulation_info(v, offset)
 
