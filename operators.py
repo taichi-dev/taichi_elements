@@ -61,10 +61,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     def run_simulation(self):
         for frame in range(100):
             self.sim.step(1e-2)
-            colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
             np_x, np_v, np_material = self.sim.particle_info()
             print(np_x)
-            np_x /= self.size
 
             if not os.path.exists(self.cache_folder):
                 os.makedirs(self.cache_folder)
@@ -135,7 +133,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             scale_x = obj.matrix_world[0][0]
             scale_y = obj.matrix_world[1][1]
             scale_z = obj.matrix_world[2][2]
-            print(obj.matrix_world)
             material = emitter.material.material_type
             if material == 'WATER':
                 taichi_material = MPMSolver.material_water
