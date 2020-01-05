@@ -1,3 +1,5 @@
+import threading, struct, os
+
 import bpy
 from .mpm_solver import MPMSolver
 import taichi as ti
@@ -5,8 +7,16 @@ import numpy as np
 
 from . import node_types
 
-# just for debugging
-taichi_gui = None
+
+def get_cache_folder(simulation_node):
+    particles_socket = simulation_node.outputs['Simulation Data']
+    if particles_socket.is_linked:
+        for link in particles_socket.links:
+            disk_cache_node = link.to_node
+            folder = disk_cache_node.inputs['Folder'].get_value()
+            folder = bpy.path.abspath(folder)
+            return folder
+
 
 def get_simulation_nodes(operator, node_tree):
     simulation_nodes = []
@@ -46,13 +56,44 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     bl_idname = "elements.simulate_particles"
     bl_label = "Simulate"
 
-    def execute(self, context):
+    thread = None
+
+    def run_simulation(self):
+        for frame in range(100):
+            self.sim.step(1e-2)
+            colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
+            np_x, np_v, np_material = self.sim.particle_info()
+            print(np_x)
+            np_x /= self.size
+
+            if not os.path.exists(self.cache_folder):
+                os.makedirs(self.cache_folder)
+
+            particles_file_path = os.path.join(
+                self.cache_folder,
+                'particles_{0:0>6}.bin'.format(frame)
+            )
+            data = bytearray()
+            particles_count = len(np_x)
+            data.extend(struct.pack('I', particles_count))
+            print(particles_count)
+            for particle_index in range(particles_count):
+                data.extend(struct.pack('3f', *np_x[particle_index]))
+
+            with open(particles_file_path, 'wb') as file:
+                file.write(data)
+
+        self.thread = None
+
+
+    def invoke(self, context, event):
         self.node_tree = context.space_data.node_tree
         simulation_node = get_simulation_nodes(self, self.node_tree)
         if not simulation_node:
             return {'FINISHED'}
 
         simulation_node.get_class()
+        self.cache_folder = get_cache_folder(simulation_node)
 
         for i, j in context.scene.elements_nodes.items():
             print(i, j)
@@ -71,7 +112,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
         sim = MPMSolver((res, res, res), size=size)
-        
+
         hub = simulation_class.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
         force = hub.forces[0].output_folder
@@ -108,28 +149,15 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(cube_size)
             sim.add_cube(lower_corner=lower, cube_size=cube_size, material=taichi_material)
 
-        global taichi_gui
-        write_to_disk = False
-        if taichi_gui is None:
-          taichi_gui = ti.GUI("Blender - Taichi Elements ", res=512, background_color=0x112F41)
-
-        for frame in range(500):
-            sim.step(1e-2)
-            colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
-            np_x, np_v, np_material = sim.particle_info()
-            print(np_x)
-            np_x /= size
-            
-            # simple camera transform
-            screen_x = ((np_x[:, 0] + np_x[:, 1]) / 2 ** 0.5) - 0.2
-            screen_y = (np_x[:, 2])
-            
-            screen_pos = np.stack([screen_x, screen_y], axis=-1)
-            
-            taichi_gui.circles(screen_pos, radius=1.5, color=colors[np_material])
-            taichi_gui.show(f'{frame:06d}.png' if write_to_disk else None)
-
-        return {'FINISHED'}
+        context.scene.frame_set(0)
+        self.size = size
+        self.sim = sim
+        self.thread = threading.Thread(
+                target=self.run_simulation, 
+                args=()
+        )
+        self.thread.start()
+        return {'RUNNING_MODAL'}
 
 
 operator_classes = [

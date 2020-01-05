@@ -1,6 +1,6 @@
 import bpy
 
-from . import tree, categories, nodes, sockets, operators
+from . import tree, categories, nodes, sockets, operators, handlers
 
 
 addon_modules = [
@@ -8,7 +8,8 @@ addon_modules = [
     sockets,
     nodes,
     categories,
-    operators
+    operators,
+    handlers
 ]
 
 

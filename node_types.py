@@ -86,7 +86,7 @@ class Simulation:
 
 class MpmSolverSettings:
     def __init__(self):
-        self._resolution = None
+        self.resolution = None
 
 
 class GravityForceField:
