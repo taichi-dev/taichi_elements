@@ -73,7 +73,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         emitters = hub.emitters
         for emitter in emitters:
             obj = emitter.bpy_object.bpy_object
-            print(dir(obj))
             # Note: rotation is not supported
             center_x = obj.matrix_world[0][3]
             center_y = obj.matrix_world[1][3]
@@ -95,8 +94,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 taichi_material = MPMSolver.material_snow
             else:
                 assert False, material
-            sim.add_cube(lower_corner=(center_x - scale_x, center_y - scale_y, center_z - scale_z),
-                         cube_size=(2 * scale_x, 2 * scale_y, 2 * scale_z), material=taichi_material)
+            lower = (center_x - scale_x, center_y - scale_y, center_z - scale_z)
+            size = (2 * scale_x, 2 * scale_y, 2 * scale_z)
+            sim.add_cube(lower_corner=lower, cube_size=size, material=taichi_material)
         
 
         return {'FINISHED'}

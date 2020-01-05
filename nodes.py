@@ -26,6 +26,7 @@ class ElementsMpmSolverNode(BaseNode):
 
     required_nodes = {
         'Resolution': ['elements_integer_node', ],
+        'Size': ['elements_float_node', ],
     }
 
     def init(self, context):
@@ -43,10 +44,18 @@ class ElementsMpmSolverNode(BaseNode):
         )
         resolution.text = 'Resolution'
         resolution.value = 128
+        
+        size = self.inputs.new(
+            'elements_float_socket',
+            'Resolution'
+        )
+        size.text = 'Size'
+        size.value = 10.0
 
     def get_class(self):
         simulation_class = node_types.MpmSolverSettings()
         simulation_class.resolution = self.inputs['Resolution'].get_value()
+        simulation_class.size = self.inputs['Size'].get_value()
         return simulation_class
 
 
