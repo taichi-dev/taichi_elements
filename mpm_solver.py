@@ -2,11 +2,6 @@ import taichi as ti
 import random
 import numpy as np
 
-# TODO: make attributes per particle
-# Young's modulus and Poisson's ratio
-E, nu = 0.1e4, 0.2
-# Lame parameters
-mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))
 
 
 class MPMSolver:
@@ -21,8 +16,8 @@ class MPMSolver:
     self.n_particles = 0
     self.dx = size / res[0]
     self.inv_dx = 1.0 / self.dx
-    self.default_dt = 1e-4
-    self.p_vol = self.dx**self.dim
+    self.default_dt = 1e-4 * size
+    self.p_vol = self.dx ** self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
     self.max_num_particles = max_num_particles
@@ -43,6 +38,11 @@ class MPMSolver:
     self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
     # grid node mass
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
+    
+    # Young's modulus and Poisson's ratio
+    self.E, self.nu = 0.1e4 * size, 0.2
+    # Lame parameters
+    self.mu_0, self.lambda_0 = self.E / (2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) * (1 - 2 * self.nu))
 
     @ti.layout
     def place():
@@ -77,7 +77,7 @@ class MPMSolver:
       h = ti.exp(10 * (1.0 - self.Jp[p]))
       if self.material[p] == self.material_elastic:  # jelly, make it softer
         h = 0.3
-      mu, la = mu_0 * h, lambda_0 * h
+      mu, la = self.mu_0 * h, self.lambda_0 * h
       if self.material[p] == self.material_water:  # liquid
         mu = 0.0
       U, sig, V = ti.svd(self.F[p])
