@@ -59,9 +59,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         # TODO: list is not implemented
         
         res = simulation_class.solver.resolution
+        size = simulation_class.solver.size
         ti.reset()
-        print(f"Creating simulation of res {res}")
-        sim = MPMSolver((res, res, res))
+        print(f"Creating simulation of res {res}, size {size}")
+        sim = MPMSolver((res, res, res), size=size)
         
         hub = simulation_class.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
@@ -80,12 +81,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             scale_x = obj.matrix_world[0][0]
             scale_y = obj.matrix_world[1][1]
             scale_z = obj.matrix_world[2][2]
-            print(center_x)
-            print(center_y)
-            print(center_z)
             print(obj.matrix_world)
             material = emitter.material.material_type
-            print(material)
             if material == 'WATER':
                 taichi_material = MPMSolver.material_water
             elif material == 'ELASTIC':
@@ -95,8 +92,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             else:
                 assert False, material
             lower = (center_x - scale_x, center_y - scale_y, center_z - scale_z)
-            size = (2 * scale_x, 2 * scale_y, 2 * scale_z)
-            sim.add_cube(lower_corner=lower, cube_size=size, material=taichi_material)
+            cube_size = (2 * scale_x, 2 * scale_y, 2 * scale_z)
+            print(lower)
+            print(cube_size)
+            sim.add_cube(lower_corner=lower, cube_size=cube_size, material=taichi_material)
         
 
         return {'FINISHED'}

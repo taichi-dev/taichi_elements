@@ -14,13 +14,13 @@ class MPMSolver:
   material_elastic = 1
   material_snow = 2
   
-  def __init__(self, res, max_num_particles=2 ** 20):
+  def __init__(self, res, size=1, max_num_particles=2 ** 20):
     self.dim = len(res)
     assert self.dim in (2, 3), "MPM solver supports only 2D and 3D simulations."
     self.res = res
     self.n_particles = 0
-    self.dx = 1 / res[0]
-    self.inv_dx = float(res[0])
+    self.dx = size / res[0]
+    self.inv_dx = 1.0 / float(res[0])
     self.default_dt = 1e-4
     self.p_vol = self.dx**self.dim
     self.p_rho = 1

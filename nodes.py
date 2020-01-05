@@ -47,7 +47,7 @@ class ElementsMpmSolverNode(BaseNode):
         
         size = self.inputs.new(
             'elements_float_socket',
-            'Resolution'
+            'Size'
         )
         size.text = 'Size'
         size.value = 10.0
