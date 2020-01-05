@@ -7,7 +7,7 @@ The short-term plan is
  - To build a reusable multimaterial (water/elastic/snow/sand/mud) simulator
  - To integrate the simulator into Blender
 
-## How to run
+## How to run (without Blender)
  - Install [Taichi](https://github.com/yuanming-hu/taichi) with pip
  - `python3 demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
@@ -24,3 +24,9 @@ The short-term plan is
   The output looks like `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81`, which means python3 is located at `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81/python/bin/python3.7`
  - Install [pip](https://pip.pypa.io/en/stable/installing/) using that Python executable
  - Install Taichi: `./python3.7m -m pip install taichi-nightly`
+
+## Installing taichi_elements (experimental) for Blender
+ - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`
+ - Execute `python3 install_blender_addo.py` to install the addon
+   - If you are doing development and wish to **k**eep refreshing the installed addon, add argument `-k`.
+ - Restart Blender to reload the addon
