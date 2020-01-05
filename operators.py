@@ -88,6 +88,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
 
     def invoke(self, context, event):
+        context.scene.elements_nodes.clear()
         self.node_tree = context.space_data.node_tree
         simulation_node = get_simulation_nodes(self, self.node_tree)
         if not simulation_node:

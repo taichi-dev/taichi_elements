@@ -7,7 +7,23 @@ def get_node_class(node_name):
     return node_class
 
 
-class Emitter:
+class BaseSimulationObject:
+    def __len__(self):
+        return 1
+
+    def __next__(self):
+        if self.offset == 0:
+            self.offset += 1
+            return self
+        else:
+            self.offset = 0
+            raise StopIteration
+
+    def __getitem__(self, item):
+        return [self, ].__getitem__(item)
+
+
+class Emitter(BaseSimulationObject):
     @property
     def source_geometry(self):
         return get_node_class(self._source_geometry)
@@ -25,6 +41,7 @@ class Emitter:
         self._material = value
 
     def __init__(self):
+        self.offset = 0
         self.emit_time = None
         self._source_geometry = None
         self._material = None
@@ -40,7 +57,7 @@ class Material:
         self.material_type = None
 
 
-class Hub:
+class Hub(BaseSimulationObject):
     @property
     def forces(self):
         return get_node_class(self._forces)
@@ -87,9 +104,10 @@ class Simulation:
 class MpmSolverSettings:
     def __init__(self):
         self.resolution = None
+        self.domain_object = None
 
 
-class GravityForceField:
+class GravityForceField(BaseSimulationObject):
     def __init__(self):
         self.speed = None
         self.direction = None

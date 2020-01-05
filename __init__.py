@@ -5,6 +5,7 @@ bl_info = {
     'category': 'Animation'
 }
 
+
 try:
     # If inside blender, act as an addon
     import bpy

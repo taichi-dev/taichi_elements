@@ -37,6 +37,7 @@ class ElementsMpmSolverNode(BaseNode):
     bl_label = 'MPM Solver'
 
     required_nodes = {
+        'Domain Object': ['elements_source_object_node', ],
         'Resolution': ['elements_integer_node', ],
         'Size': ['elements_float_node', ],
     }
@@ -49,6 +50,12 @@ class ElementsMpmSolverNode(BaseNode):
             'MPM Solver'
         )
         solver_output_socket.text = 'Solver Settings'
+
+        domain_object_socket = self.inputs.new(
+            'elements_struct_socket',
+            'Domain Object'
+        )
+        domain_object_socket.text = 'Domain Object'
 
         resolution = self.inputs.new(
             'elements_integer_socket',
@@ -65,6 +72,7 @@ class ElementsMpmSolverNode(BaseNode):
 
     def create_class(self):
         simulation_class = node_types.MpmSolverSettings()
+        simulation_class.domain_object = self.inputs['Domain Object'].get_value()
         simulation_class.resolution = self.inputs['Resolution'].get_value()
         simulation_class.size = self.inputs['Size'].get_value()
         return simulation_class
