@@ -54,6 +54,14 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         print('simulation_class', type(simulation_class))
         print_simulation_info(simulation_class, '')
         print(79 * '=')
+        
+        res = simulation_class.solver.resolution
+        print(f"Creating simulation of res {res}")
+        sim = MPMSolver((res, res, res))
+        
+        hub = simulation_class.hubs
+        force = hub.forces
+        print(force)
 
         return {'FINISHED'}
 
