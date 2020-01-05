@@ -21,7 +21,7 @@ class MPMSolver:
     self.n_particles = 0
     self.dx = size / res[0]
     self.inv_dx = 1.0 / float(res[0])
-    self.default_dt = 1e-4
+    self.default_dt = 1e-4 / size
     self.p_vol = self.dx**self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho

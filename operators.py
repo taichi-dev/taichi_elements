@@ -1,9 +1,12 @@
 import bpy
 from .mpm_solver import MPMSolver
 import taichi as ti
+import numpy as np
 
 from . import node_types
 
+# just for debugging
+taichi_gui = None
 
 def get_simulation_nodes(operator, node_tree):
     simulation_nodes = []
@@ -96,7 +99,27 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(lower)
             print(cube_size)
             sim.add_cube(lower_corner=lower, cube_size=cube_size, material=taichi_material)
-        
+
+        global taichi_gui
+        write_to_disk = False
+        if taichi_gui is None:
+          taichi_gui = ti.GUI("Blender - Taichi Elements ", res=512, background_color=0x112F41)
+
+        for frame in range(500):
+            sim.step(4e-3)
+            colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
+            np_x, np_v, np_material = sim.particle_info()
+            print(np_x)
+            np_x /= size
+            
+            # simple camera transform
+            screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2 ** 0.5) - 0.2
+            screen_y = (np_x[:, 1])
+            
+            screen_pos = np.stack([screen_x, screen_y], axis=-1)
+            
+            taichi_gui.circles(screen_pos, radius=1.5, color=colors[np_material])
+            taichi_gui.show(f'{frame:06d}.png' if write_to_disk else None)
 
         return {'FINISHED'}
 
