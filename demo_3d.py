@@ -2,7 +2,7 @@ import taichi as ti
 import numpy as np
 from mpm_solver import MPMSolver
 
-write_to_disk = True
+write_to_disk = False
 
 # Try to run on GPU
 ti.cfg.arch = ti.cuda
