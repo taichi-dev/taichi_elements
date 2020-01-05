@@ -79,6 +79,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(particles_count)
             for particle_index in range(particles_count):
                 data.extend(struct.pack('3f', *np_x[particle_index]))
+                data.extend(struct.pack('3f', *np_v[particle_index]))
 
             with open(particles_file_path, 'wb') as file:
                 file.write(data)
