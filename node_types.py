@@ -51,6 +51,15 @@ class Particles:
 class List:
     def __init__(self):
         self.elements = []
+      
+    def __len__(self):
+        return len(self.elements)
+    
+    def __iter__(self):
+        yield from self.elements
+      
+    def __getitem__(self, item):
+        return self.elements.__getitem__(item)
 
 
 class Merge:

@@ -55,16 +55,23 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         print_simulation_info(simulation_class, '')
         print(79 * '=')
         
+        # TODO: list is not implemented
+        
         res = simulation_class.solver.resolution
         print(f"Creating simulation of res {res}")
         sim = MPMSolver((res, res, res))
         
         hub = simulation_class.hubs
-        force = hub.forces.output_folder
+        assert len(hub.forces) == 1, "Only one gravity supported"
+        force = hub.forces[0].output_folder
         gravity = force[0], force[1], force[2]
         print('g =', gravity)
         sim.set_gravity(gravity)
-        # TODO:
+        
+        emitters = hub.emitters
+        for emitter in emitters:
+            print(emitter)
+        
 
         return {'FINISHED'}
 
