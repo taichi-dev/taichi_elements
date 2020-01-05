@@ -26,7 +26,7 @@ class MPMSolver:
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
     self.max_num_particles = max_num_particles
-    self.gravity = -50
+    self.gravity = ti.Vector(self.dim, dt=ti.f32, shape=())
     # position
     self.x = ti.Vector(self.dim, dt=ti.f32)
     # velocity
@@ -47,9 +47,19 @@ class MPMSolver:
     @ti.layout
     def place():
       ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
+      
+    if self.dim == 2:
+      self.set_gravity((0, -50))
+    else:
+      self.set_gravity((0, -50, 0))
 
   def stencil_range(self):
     return ti.ndrange(*((3,) * self.dim))
+  
+  def set_gravity(self, g):
+    assert isinstance(g, tuple)
+    assert len(g) == self.dim
+    self.gravity[None] = g
 
   @ti.classkernel
   def p2g(self, dt: ti.f32):
@@ -108,7 +118,7 @@ class MPMSolver:
       if self.grid_m[I] > 0:  # No need for epsilon here
         self.grid_v[I] = (
             1 / self.grid_m[I]) * self.grid_v[I]  # Momentum to velocity
-        self.grid_v[I][1] += dt * self.gravity
+        self.grid_v[I] += dt * self.gravity[None]
         for d in ti.static(range(self.dim)):
           if I[d] < 3 and self.grid_v[I][d] < 0:
             self.grid_v[I][d] = 0  # Boundary conditions
