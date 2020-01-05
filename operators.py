@@ -1,4 +1,5 @@
 import bpy
+from .mpm_solver import MPMSolver
 
 from . import node_types
 
@@ -31,6 +32,9 @@ def print_simulation_info(simulation_class, offset):
                     print_simulation_info(e, offset)
             elif type(v) in node_types.elements_types:
                 print(offset, i, type(v))
+                for key in dir(v):
+                    if key[0] != '_':
+                        print(offset, '  ', key, '=', getattr(v, key))
                 print_simulation_info(v, offset)
 
 
