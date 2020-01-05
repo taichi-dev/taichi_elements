@@ -60,8 +60,11 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         sim = MPMSolver((res, res, res))
         
         hub = simulation_class.hubs
-        force = hub.forces
-        print(force)
+        force = hub.forces.output_folder
+        gravity = force[0], force[1], force[2]
+        print('g =', gravity)
+        sim.set_gravity(gravity)
+        # TODO:
 
         return {'FINISHED'}
 
