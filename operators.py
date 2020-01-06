@@ -56,10 +56,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     bl_idname = "elements.simulate_particles"
     bl_label = "Simulate"
 
-    thread = None
+    def __init__(self):
+        self.timer = None
+        self.thread = None
+        self.is_runnig = False
+        self.is_finishing = False
 
     def run_simulation(self):
         for frame in range(100):
+            if self.event == 'ESC':
+                self.thread = None
+                self.is_runnig = False
+                self.is_finishing = True
+                return
             self.sim.step(1e-2)
             np_x, np_v, np_material = self.sim.particle_info()
             print(np_x)
@@ -82,12 +91,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             with open(particles_file_path, 'wb') as file:
                 file.write(data)
 
-        self.thread = None
-
-
-    def invoke(self, context, event):
-        context.scene.elements_nodes.clear()
-        self.node_tree = context.space_data.node_tree
+    def init_simulation(self):
+        self.scene.elements_nodes.clear()
         simulation_node = get_simulation_nodes(self, self.node_tree)
         if not simulation_node:
             return {'FINISHED'}
@@ -102,10 +107,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             )
             return {'FINISHED'}
 
-        for i, j in context.scene.elements_nodes.items():
+        for i, j in self.scene.elements_nodes.items():
             print(i, j)
 
-        simulation_class = context.scene.elements_nodes[simulation_node.name]
+        simulation_class = self.scene.elements_nodes[simulation_node.name]
 
         print(79 * '=')
         print('simulation_class', type(simulation_class))
@@ -159,15 +164,52 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(cube_size)
             sim.add_cube(lower_corner=lower, cube_size=cube_size, material=taichi_material)
 
-        context.scene.frame_set(0)
         self.size = size
         self.sim = sim
-        self.thread = threading.Thread(
-                target=self.run_simulation, 
-                args=()
+        self.run_simulation()
+
+    def update_status(self):
+        if self.thread:
+            self.is_runnig = True
+        else:
+            self.is_runnig = False
+
+    def modal(self, context, event):
+        self.event = event
+
+        if not self.is_runnig:
+            self.thread = threading.Thread(
+                    target=self.init_simulation, 
+                    args=()
+            )
+            self.thread.start()
+            self.is_runnig = True
+
+        if event.type == 'TIMER':
+            self.update_status()
+
+        if self.is_finishing:
+            self.cancel(context)
+            return {'FINISHED'}
+
+        return {'PASS_THROUGH'}
+
+    def execute(self, context):
+        self.node_tree = context.space_data.node_tree
+        self.scene = context.scene
+        context.window_manager.modal_handler_add(self)
+        self.timer = context.window_manager.event_timer_add(
+            0.1, window=context.window
         )
-        self.thread.start()
         return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        if self.timer:
+            context.window_manager.event_timer_remove(self.timer)
+            self.timer = None
+        self.thread = None
+        self.is_runnig = False
+        self.is_finishing = True
 
 
 operator_classes = [
