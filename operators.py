@@ -61,13 +61,15 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.thread = None
         self.is_runnig = False
         self.is_finishing = False
+        self.event_type = 'DEFAULT'
 
     def run_simulation(self):
         for frame in range(100):
-            if self.event == 'ESC':
+            if self.event_type == 'ESC':
+                print('STOP SIMULATION')
                 self.thread = None
-                self.is_runnig = False
                 self.is_finishing = True
+                self.cancel(bpy.context)
                 return
             self.sim.step(1e-2)
             np_x, np_v, np_material = self.sim.particle_info()
@@ -92,6 +94,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 file.write(data)
 
     def init_simulation(self):
+        self.is_runnig = True
         self.scene.elements_nodes.clear()
         simulation_node = get_simulation_nodes(self, self.node_tree)
         if not simulation_node:
@@ -168,25 +171,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.sim = sim
         self.run_simulation()
 
-    def update_status(self):
-        if self.thread:
-            self.is_runnig = True
-        else:
-            self.is_runnig = False
+    def launch_simulation(self):
+        self.thread = threading.Thread(
+                target=self.init_simulation, 
+                args=()
+        )
+        self.thread.start()
 
     def modal(self, context, event):
-        self.event = event
+        if event.type == 'ESC':
+            self.event_type = 'ESC'
 
         if not self.is_runnig:
-            self.thread = threading.Thread(
-                    target=self.init_simulation, 
-                    args=()
-            )
-            self.thread.start()
-            self.is_runnig = True
-
-        if event.type == 'TIMER':
-            self.update_status()
+            self.launch_simulation()
 
         if self.is_finishing:
             self.cancel(context)
@@ -199,7 +196,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.scene = context.scene
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(
-            0.1, window=context.window
+            1.0, window=context.window
         )
         return {'RUNNING_MODAL'}
 
@@ -208,7 +205,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             context.window_manager.event_timer_remove(self.timer)
             self.timer = None
         self.thread = None
-        self.is_runnig = False
         self.is_finishing = True
 
 
