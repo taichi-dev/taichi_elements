@@ -1,6 +1,18 @@
+import inspect
+
 import bpy
 
 from . import node_types
+
+
+CATEGORY_SOLVERS_NAME = 'Solvers'
+CATEGORY_SIMULATION_OBJECTS_NAME = 'Simulation Objects'
+CATEGORY_SOURCE_DATA_NAME = 'Source Data'
+CATEGORY_INPUTS_NAME = 'Inputs'
+CATEGORY_FORCE_FIELDS_NAME = 'Force Fields'
+CATEGORY_STRUCT_NAME = 'Struct'
+CATEGORY_OUTPUT_NAME = 'Output'
+CATEGORY_LAYOUT_NAME = 'Layout'
 
 
 def find_node_class(node):
@@ -41,6 +53,7 @@ class ElementsMpmSolverNode(BaseNode):
         'Resolution': ['elements_integer_node', ],
         'Size': ['elements_float_node', ],
     }
+    category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
         self.width = 175.0
@@ -90,6 +103,7 @@ class ElementsMaterialNode(BaseNode):
     material: bpy.props.EnumProperty(
         items=items, default='WATER'
     )
+    category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
         material_output_socket = self.outputs.new(
@@ -111,6 +125,8 @@ class ElementsIntegerNode(BaseNode):
     bl_idname = 'elements_integer_node'
     bl_label = 'Integer'
 
+    category = CATEGORY_INPUTS_NAME
+
     def init(self, context):
         integer_socket = self.outputs.new(
             'elements_integer_socket',
@@ -122,6 +138,8 @@ class ElementsIntegerNode(BaseNode):
 class ElementsFloatNode(BaseNode):
     bl_idname = 'elements_float_node'
     bl_label = 'Float'
+
+    category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
         float_socket = self.outputs.new(
@@ -140,6 +158,8 @@ class ElementsEmitterNode(BaseNode):
         'Source Geometry': ['elements_source_object_node', ],
         'Material': ['elements_material_node', ]
     }
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
         emitter_output_socket = self.outputs.new(
@@ -186,6 +206,8 @@ class ElementsSimulationNode(BaseNode):
             'elements_merge_node'
         ]
     }
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
         simulation_data_socket = self.outputs.new(
@@ -237,6 +259,8 @@ class ElementsHubNode(BaseNode):
         ],
     }
 
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
+
     def init(self, context):
         hub_socket = self.outputs.new(
             'elements_struct_socket',
@@ -268,6 +292,7 @@ class ElementsSourceObjectNode(BaseNode):
     bl_label = 'Source Object'
 
     object_name: bpy.props.StringProperty()
+    category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
         object_output_socket = self.outputs.new(
@@ -298,6 +323,8 @@ class ElementsCacheNode(BaseNode):
         ],
     }
 
+    category = CATEGORY_OUTPUT_NAME
+
     def init(self, context):
         self.width = 200.0
 
@@ -324,6 +351,8 @@ class ElementsFolderNode(BaseNode):
     bl_idname = 'elements_folder_node'
     bl_label = 'Folder'
 
+    category = CATEGORY_INPUTS_NAME
+
     def init(self, context):
         self.width = 250.0
 
@@ -345,6 +374,8 @@ class ElementsGravityNode(BaseNode):
         ],
         'Direction': [],
     }
+
+    category = CATEGORY_FORCE_FIELDS_NAME
 
     def init(self, context):
         self.width = 175.0
@@ -375,7 +406,7 @@ class ElementsGravityNode(BaseNode):
         return simulation_class
 
 
-class ElementsDynamicSocketsNode(BaseNode):
+class ElementsDynamicSocketsNode():
     def add_linked_socket(self, links):
         empty_input_socket = self.inputs.new(
             'elements_struct_socket',
@@ -419,6 +450,7 @@ class ElementsTextureNode(BaseNode):
     bl_label = 'Texture'
 
     texture_name: bpy.props.StringProperty()
+    category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
         self.width = 250.0
@@ -440,12 +472,13 @@ class ElementsTextureNode(BaseNode):
         return simulation_class
 
 
-class ElementsMakeListNode(ElementsDynamicSocketsNode):
+class ElementsMakeListNode(BaseNode, ElementsDynamicSocketsNode):
     bl_idname = 'elements_make_list_node'
     bl_label = 'Make List'
 
     text: bpy.props.StringProperty(default='Element')
     text_empty_socket: bpy.props.StringProperty(default='Add Element')
+    category = CATEGORY_STRUCT_NAME
 
     def create_class(self):
         simulation_class = node_types.List()
@@ -456,12 +489,13 @@ class ElementsMakeListNode(ElementsDynamicSocketsNode):
         return simulation_class
 
 
-class ElementsMergeNode(ElementsDynamicSocketsNode):
+class ElementsMergeNode(BaseNode, ElementsDynamicSocketsNode):
     bl_idname = 'elements_merge_node'
     bl_label = 'Merge'
 
     text: bpy.props.StringProperty(default='List')
     text_empty_socket: bpy.props.StringProperty(default='Merge Lists')
+    category = CATEGORY_STRUCT_NAME
 
     def create_class(self):
         simulation_class = node_types.Merge()
@@ -473,22 +507,13 @@ class ElementsMergeNode(ElementsDynamicSocketsNode):
         return simulation_class
 
 
-node_classes = [
-    ElementsMpmSolverNode,
-    ElementsMaterialNode,
-    ElementsEmitterNode,
-    ElementsSimulationNode,
-    ElementsHubNode,
-    ElementsSourceObjectNode,
-    ElementsIntegerNode,
-    ElementsFloatNode,
-    ElementsGravityNode,
-    ElementsMakeListNode,
-    ElementsMergeNode,
-    ElementsCacheNode,
-    ElementsFolderNode,
-    ElementsTextureNode
-]
+node_classes = []
+glabal_variables = globals().copy()
+for variable_name, variable_object in glabal_variables.items():
+    if hasattr(variable_object, '__mro__'):
+        object_mro = inspect.getmro(variable_object)
+        if BaseNode in object_mro and variable_object != BaseNode:
+            node_classes.append(variable_object)
 
 
 def register():
