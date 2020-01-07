@@ -6,12 +6,18 @@ bl_info = {
 }
 
 
+use_blender = False
+
 try:
     # If inside blender, act as an addon
     import bpy
 
-    from . import addon
+    use_blender = True
+except:
+    pass
 
+if use_blender:
+    from . import addon
 
     def register():
         addon.register()
@@ -19,7 +25,6 @@ try:
 
     def unregister():
         addon.unregister()
-except:
-    pass
+
 
 # Otherwise act as a PyPI package
