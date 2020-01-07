@@ -23,12 +23,14 @@ def get_simulation_nodes(operator, node_tree):
     for node in node_tree.nodes:
         if node.bl_idname == 'elements_simulation_node':
             simulation_nodes.append(node)
-    if len(simulation_nodes) != 1:
-        operator.report(
-            {'WARNING'},
-            'The node tree must not contain more than 1 "Simulation" node.'
-        )
-        return
+    simulation_nodes_count = len(simulation_nodes)
+    if simulation_nodes_count != 1:
+        if simulation_nodes_count > 1:
+            operator.report(
+                {'WARNING'},
+                'The node tree must not contain more than 1 "Simulation" node.'
+            )
+            return
     else:
         return simulation_nodes[0]
 

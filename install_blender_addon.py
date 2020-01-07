@@ -21,6 +21,7 @@ def install():
   os.mkdir(addon_folder)
   for f in os.listdir('.'):
     if f.endswith('.py'):
+      print(f)
       shutil.copy(f, os.path.join(addon_folder, f))
   print("Done.")
   

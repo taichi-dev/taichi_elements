@@ -17,8 +17,9 @@ def get_node_tree():
         for area in screen.areas:
             for space in area.spaces:
                 if space.type == 'NODE_EDITOR':
-                    if space.node_tree.bl_idname == 'elements_node_tree':
-                        return space.node_tree
+                    if space.node_tree:
+                        if space.node_tree.bl_idname == 'elements_node_tree':
+                            return space.node_tree
 
 
 def get_particles():
@@ -29,7 +30,11 @@ def get_particles():
         return particles, velocities
     fake_operator = FakeOperator()
     simulation_node = operators.get_simulation_nodes(fake_operator, node_tree)
+    if not simulation_node:
+        return particles, velocities
     cache_folder = operators.get_cache_folder(simulation_node)
+    if not cache_folder:
+        return particles, velocities
     particles_file_name = 'particles_{0:0>6}.bin'.format(bpy.context.scene.frame_current)
     abs_particles_path = os.path.join(cache_folder, particles_file_name)
     if os.path.exists(abs_particles_path):
@@ -123,6 +128,8 @@ def update_particle_system_object(particle_system_object, particles_locations, p
 @bpy.app.handlers.persistent
 def import_simulation_data(scene):
     particles_locations, particles_velocity = get_particles()
+    if not particles_locations:
+        return
     particles_object = bpy.data.objects.get('elements_particles_object', None)
     if not particles_object:
         particles_object = create_particles_object()
