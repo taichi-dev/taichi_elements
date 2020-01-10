@@ -5,8 +5,6 @@ from .mpm_solver import MPMSolver
 import taichi as ti
 import numpy as np
 
-from . import node_types
-
 
 def get_cache_folder(simulation_node):
     particles_socket = simulation_node.outputs['Simulation Data']
@@ -33,25 +31,6 @@ def get_simulation_nodes(operator, node_tree):
             return
     else:
         return simulation_nodes[0]
-
-
-def print_simulation_info(simulation_class, offset):
-    offset += ' '
-    for i in dir(simulation_class):
-        v = getattr(simulation_class, i, None)
-        if v and i[0] != '_':
-            if type(v) in (node_types.List, node_types.Merge):
-                print(offset, i, type(v))
-                offset += ' '
-                for e in v.elements:
-                    print(offset, i, type(e))
-                    print_simulation_info(e, offset)
-            elif type(v) in node_types.elements_types:
-                print(offset, i, type(v))
-                for key in dir(v):
-                    if key[0] != '_':
-                        print(offset, '  ', key, '=', getattr(v, key))
-                print_simulation_info(v, offset)
 
 
 class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
@@ -103,6 +82,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             return {'FINISHED'}
 
         simulation_node.get_class()
+        simulation_class = self.scene.elements_nodes[simulation_node.name]
+        print('#' * 79)
+        print(dir(simulation_class.hubs))
+        print('#' * 79)
         self.cache_folder = get_cache_folder(simulation_node)
 
         if not self.cache_folder:
@@ -116,11 +99,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(i, j)
 
         simulation_class = self.scene.elements_nodes[simulation_node.name]
-
-        print(79 * '=')
-        print('simulation_class', type(simulation_class))
-        print_simulation_info(simulation_class, '')
-        print(79 * '=')
         
         # TODO: list is not implemented
         
@@ -132,8 +110,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         hub = simulation_class.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
-        force = hub.forces[0].output_folder
-        gravity = force[0], force[1], force[2]
+        gravity_direction = hub.forces[0].direction
+        gravity = gravity_direction[0], gravity_direction[1], gravity_direction[2]
         print('g =', gravity)
         sim.set_gravity(gravity)
         
@@ -142,7 +120,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             source_geometry = emitter.source_geometry
             if not source_geometry:
                 continue
-            obj = emitter.source_geometry.bpy_object
+            obj_name = emitter.source_geometry.bpy_object_name
+            obj = bpy.data.objects.get(obj_name)
             if not obj:
                 continue
             # Note: rotation is not supported

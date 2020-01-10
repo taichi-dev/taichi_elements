@@ -10,7 +10,7 @@ socket_colors = {
 
 
 class ElementsBaseSocket(bpy.types.NodeSocket):
-    bl_idname = 'elements_integer_socket'
+    bl_idname = 'elements_base_socket'
 
     split_factor = 0.6
 
