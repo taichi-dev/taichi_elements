@@ -83,9 +83,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         simulation_node.get_class()
         simulation_class = self.scene.elements_nodes[simulation_node.name]
-        print('#' * 79)
-        print(dir(simulation_class.hubs))
-        print('#' * 79)
         self.cache_folder = get_cache_folder(simulation_node)
 
         if not self.cache_folder:
