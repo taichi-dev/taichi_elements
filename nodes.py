@@ -1,13 +1,132 @@
+import inspect
+
 import bpy
 
-from . import node_types
+
+CATEGORY_SOLVERS_NAME = 'Solvers'
+CATEGORY_SIMULATION_OBJECTS_NAME = 'Simulation Objects'
+CATEGORY_SOURCE_DATA_NAME = 'Source Data'
+CATEGORY_INPUTS_NAME = 'Inputs'
+CATEGORY_FORCE_FIELDS_NAME = 'Force Fields'
+CATEGORY_STRUCT_NAME = 'Struct'
+CATEGORY_OUTPUT_NAME = 'Output'
+CATEGORY_LAYOUT_NAME = 'Layout'
+
+
+def create_class(node):
+    node_class_name = ''.join(
+        map(lambda part: part.capitalize(), node.bl_label.split(' '))
+    )
+    node_class_attributes = {}
+    node_params_attributes = {}
+    node_elements = []
+
+    for input_socket_name, input_socket in node.inputs.items():
+        if input_socket.bl_idname != 'elements_add_socket':
+            attribute_name = '_'.join(
+                map(lambda part: part.lower(), input_socket.text.split(' '))
+            )
+            if input_socket.bl_idname == 'elements_struct_socket':
+                if node.bl_idname == 'elements_make_list_node':
+                    node_elements.append(input_socket.get_value())
+                elif node.bl_idname == 'elements_merge_node':
+                    node_elements.extend(input_socket.get_value().elements)
+                else:
+                    input_object = input_socket.get_value()
+                    node_class_attributes[attribute_name] = input_object
+            else:
+                input_value = input_socket.get_value()
+                node_params_attributes[attribute_name] = input_value
+
+    if hasattr(node, '__annotations__'):
+        for annotation_name in node.__annotations__.keys():
+            node_params_attributes[annotation_name] = getattr(node, annotation_name)
+
+    def node_init_function(self):
+        self.is_list = False
+        self.params = {}
+        self.inputs = {}
+        self.elements = []
+        self.offset = 0
+
+        for attribute_name, attribute_value in node_class_attributes.items():
+            self.inputs[attribute_name] = attribute_value
+
+        for attribute_name, attribute_value in node_params_attributes.items():
+            self.params[attribute_name] = attribute_value
+
+        if len(node_elements):
+            self.is_list = True
+            for element in node_elements:
+                self.elements.append(element)
+        else:
+            self.elements.append(self)
+
+    def get_attribute_function(self, name):
+        params = object.__getattribute__(self, 'params')
+        inputs = object.__getattribute__(self, 'inputs')
+        elements = object.__getattribute__(self, 'elements')
+        is_list = object.__getattribute__(self, 'is_list')
+        if name == 'params':
+            return params
+        elif name == 'inputs':
+            return inputs
+        elif name == 'elements':
+            return elements
+        elif name == 'is_list':
+            return is_list
+        else:
+            if self.is_list:
+                attribute = bpy.context.scene.elements_nodes.get(
+                        name, None
+                    )
+                return attribute
+            else:
+                attribute = params.get(name, None)
+                if not attribute:
+                    attribute_name = inputs.get(name, None)
+                    if attribute_name is None:
+                        raise BaseException('Cannot find attibute: {}'.format(name))
+                    attribute = bpy.context.scene.elements_nodes.get(
+                        attribute_name, None
+                    )
+                return attribute
+
+    def node_len_function(self):
+       return len(self.elements)
+
+    def node_next_function(self):
+        if self.offset < len(self.elements):
+            item = self.elements[self.offset]
+            self.offset += 1
+            return item
+        else:
+            self.offset = 0
+            raise StopIteration
+
+    def node_getitem_function(self, item):
+        return getattr(self, (self.elements.__getitem__(item)))
+
+    node_class = type(
+        node_class_name,
+        (),
+        {
+            '__init__': node_init_function,
+            '__getattribute__': get_attribute_function,
+            '__len__': node_len_function,
+            '__next__': node_next_function,
+            '__getitem__': node_getitem_function
+        }
+    )
+
+    return node_class()
 
 
 def find_node_class(node):
     scene = bpy.context.scene
     node_class = scene.elements_nodes.get(node.name, None)
     if not node_class:
-        node_class = node.create_class()
+        node_class = create_class(node)
         scene.elements_nodes[node.name] = node_class
     return node.name
 
@@ -17,11 +136,8 @@ class BaseNode(bpy.types.Node):
     def poll(cls, node_tree):
         return node_tree.bl_idname == 'elements_node_tree'
 
-    def find_node_class(self):
-        return find_node_class(self)
-
     def get_class(self):
-        return self.find_node_class()
+        return find_node_class(self)
 
     def update(self):
         for input_socket in self.inputs:
@@ -41,6 +157,7 @@ class ElementsMpmSolverNode(BaseNode):
         'Resolution': ['elements_integer_node', ],
         'Size': ['elements_float_node', ],
     }
+    category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
         self.width = 175.0
@@ -70,13 +187,6 @@ class ElementsMpmSolverNode(BaseNode):
         size.text = 'Size'
         size.value = 10.0
 
-    def create_class(self):
-        simulation_class = node_types.MpmSolverSettings()
-        simulation_class.domain_object = self.inputs['Domain Object'].get_value()
-        simulation_class.resolution = self.inputs['Resolution'].get_value()
-        simulation_class.size = self.inputs['Size'].get_value()
-        return simulation_class
-
 
 class ElementsMaterialNode(BaseNode):
     bl_idname = 'elements_material_node'
@@ -87,9 +197,10 @@ class ElementsMaterialNode(BaseNode):
         ('SNOW', 'Snow', ''),
         ('ELASTIC', 'Elastic', '')
     ]
-    material: bpy.props.EnumProperty(
+    material_type: bpy.props.EnumProperty(
         items=items, default='WATER'
     )
+    category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
         material_output_socket = self.outputs.new(
@@ -99,17 +210,14 @@ class ElementsMaterialNode(BaseNode):
         material_output_socket.text = 'Material Settings'
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, 'material', text='')
-
-    def create_class(self):
-        simulation_class = node_types.Material()
-        simulation_class.material_type = self.material
-        return simulation_class
+        layout.prop(self, 'material_type', text='')
 
 
 class ElementsIntegerNode(BaseNode):
     bl_idname = 'elements_integer_node'
     bl_label = 'Integer'
+
+    category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
         integer_socket = self.outputs.new(
@@ -122,6 +230,8 @@ class ElementsIntegerNode(BaseNode):
 class ElementsFloatNode(BaseNode):
     bl_idname = 'elements_float_node'
     bl_label = 'Float'
+
+    category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
         float_socket = self.outputs.new(
@@ -140,6 +250,8 @@ class ElementsEmitterNode(BaseNode):
         'Source Geometry': ['elements_source_object_node', ],
         'Material': ['elements_material_node', ]
     }
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
         emitter_output_socket = self.outputs.new(
@@ -166,13 +278,6 @@ class ElementsEmitterNode(BaseNode):
         )
         material_socket.text = 'Material'
 
-    def create_class(self):
-        simulation_class = node_types.Emitter()
-        simulation_class.emit_time = self.inputs['Emit Time'].get_value()
-        simulation_class.source_geometry = self.inputs['Source Geometry'].get_value()
-        simulation_class.material = self.inputs['Material'].get_value()
-        return simulation_class
-
 
 class ElementsSimulationNode(BaseNode):
     bl_idname = 'elements_simulation_node'
@@ -186,6 +291,8 @@ class ElementsSimulationNode(BaseNode):
             'elements_merge_node'
         ]
     }
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
         simulation_data_socket = self.outputs.new(
@@ -209,16 +316,6 @@ class ElementsSimulationNode(BaseNode):
     def draw_buttons(self, context, layout):
         layout.operator('elements.simulate_particles')
 
-    def create_class(self):
-        simulation_class = node_types.Simulation()
-        simulation_class._solver = self.inputs['Solver'].get_value()
-        simulation_class._hubs = self.inputs['Hubs'].get_value()
-        return simulation_class
-
-    def get_output_class(self):
-        simulation_class = node_types.Particles()
-        return simulation_class
-
 
 class ElementsHubNode(BaseNode):
     bl_idname = 'elements_hub_node'
@@ -236,6 +333,8 @@ class ElementsHubNode(BaseNode):
             'elements_merge_node'
         ],
     }
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
         hub_socket = self.outputs.new(
@@ -256,18 +355,13 @@ class ElementsHubNode(BaseNode):
         )
         emitters_socket.text = 'Emitters'
 
-    def create_class(self):
-        simulation_class = node_types.Hub()
-        simulation_class.forces = self.inputs['Forces'].get_value()
-        simulation_class.emitters = self.inputs['Emitters'].get_value()
-        return simulation_class
-
 
 class ElementsSourceObjectNode(BaseNode):
     bl_idname = 'elements_source_object_node'
     bl_label = 'Source Object'
 
-    object_name: bpy.props.StringProperty()
+    bpy_object_name: bpy.props.StringProperty()
+    category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
         object_output_socket = self.outputs.new(
@@ -277,12 +371,7 @@ class ElementsSourceObjectNode(BaseNode):
         object_output_socket.text = 'Source Geometry'
 
     def draw_buttons(self, context, layout):
-        layout.prop_search(self, 'object_name', bpy.data, 'objects', text='')
-
-    def create_class(self):
-        simulation_class = node_types.SourceObject()
-        simulation_class.bpy_object = bpy.data.objects.get(self.object_name, None)
-        return simulation_class
+        layout.prop_search(self, 'bpy_object_name', bpy.data, 'objects', text='')
 
 
 class ElementsCacheNode(BaseNode):
@@ -297,6 +386,8 @@ class ElementsCacheNode(BaseNode):
             'elements_folder_node',
         ],
     }
+
+    category = CATEGORY_OUTPUT_NAME
 
     def init(self, context):
         self.width = 200.0
@@ -313,16 +404,12 @@ class ElementsCacheNode(BaseNode):
         )
         cache_folder_input_socket.text = 'Folder'
 
-    def create_class(self):
-        simulation_class = node_types.DiskCache()
-        simulation_class.output_folder = self.inputs['Particles'].from_node.get_output_class()
-        simulation_class.output_folder = self.inputs['Folder'].get_value()
-        return simulation_class
-
 
 class ElementsFolderNode(BaseNode):
     bl_idname = 'elements_folder_node'
     bl_label = 'Folder'
+
+    category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
         self.width = 250.0
@@ -346,6 +433,8 @@ class ElementsGravityNode(BaseNode):
         'Direction': [],
     }
 
+    category = CATEGORY_FORCE_FIELDS_NAME
+
     def init(self, context):
         self.width = 175.0
 
@@ -368,14 +457,8 @@ class ElementsGravityNode(BaseNode):
         direction_socket.text = 'Direction'
         direction_socket.value = (0.0, 0.0, -1.0)
 
-    def create_class(self):
-        simulation_class = node_types.GravityForceField()
-        simulation_class.output_folder = self.inputs['Speed'].get_value()
-        simulation_class.output_folder = self.inputs['Direction'].get_value()
-        return simulation_class
 
-
-class ElementsDynamicSocketsNode(BaseNode):
+class ElementsDynamicSocketsNode():
     def add_linked_socket(self, links):
         empty_input_socket = self.inputs.new(
             'elements_struct_socket',
@@ -419,6 +502,7 @@ class ElementsTextureNode(BaseNode):
     bl_label = 'Texture'
 
     texture_name: bpy.props.StringProperty()
+    category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
         self.width = 250.0
@@ -432,63 +516,32 @@ class ElementsTextureNode(BaseNode):
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'texture_name', bpy.data, 'textures', text='')
 
-    def create_class(self):
-        simulation_class = node_types.Texture()
-        texture = bpy.data.textures.get(self.texture_name, None)
-        if texture:
-            simulation_class.bpy_texture = texture
-        return simulation_class
 
-
-class ElementsMakeListNode(ElementsDynamicSocketsNode):
+class ElementsMakeListNode(BaseNode, ElementsDynamicSocketsNode):
     bl_idname = 'elements_make_list_node'
     bl_label = 'Make List'
 
     text: bpy.props.StringProperty(default='Element')
     text_empty_socket: bpy.props.StringProperty(default='Add Element')
-
-    def create_class(self):
-        simulation_class = node_types.List()
-        for element in self.inputs:
-            if element.bl_idname != 'elements_add_socket':
-                element_class = element.get_value()
-                simulation_class.elements.append(element_class)
-        return simulation_class
+    category = CATEGORY_STRUCT_NAME
 
 
-class ElementsMergeNode(ElementsDynamicSocketsNode):
+class ElementsMergeNode(BaseNode, ElementsDynamicSocketsNode):
     bl_idname = 'elements_merge_node'
     bl_label = 'Merge'
 
     text: bpy.props.StringProperty(default='List')
     text_empty_socket: bpy.props.StringProperty(default='Merge Lists')
-
-    def create_class(self):
-        simulation_class = node_types.Merge()
-        for element in self.inputs:
-            if element.bl_idname != 'elements_add_socket':
-                element_class = element.get_value()
-                if hasattr(element_class, 'elements'):
-                    simulation_class.elements.extend(element_class.elements)
-        return simulation_class
+    category = CATEGORY_STRUCT_NAME
 
 
-node_classes = [
-    ElementsMpmSolverNode,
-    ElementsMaterialNode,
-    ElementsEmitterNode,
-    ElementsSimulationNode,
-    ElementsHubNode,
-    ElementsSourceObjectNode,
-    ElementsIntegerNode,
-    ElementsFloatNode,
-    ElementsGravityNode,
-    ElementsMakeListNode,
-    ElementsMergeNode,
-    ElementsCacheNode,
-    ElementsFolderNode,
-    ElementsTextureNode
-]
+node_classes = []
+glabal_variables = globals().copy()
+for variable_name, variable_object in glabal_variables.items():
+    if hasattr(variable_object, '__mro__'):
+        object_mro = inspect.getmro(variable_object)
+        if BaseNode in object_mro and variable_object != BaseNode:
+            node_classes.append(variable_object)
 
 
 def register():
