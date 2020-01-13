@@ -143,9 +143,10 @@ class BaseNode(bpy.types.Node):
         for input_socket in self.inputs:
             if len(input_socket.links):
                 for link in input_socket.links:
-                    socket_nodes = self.required_nodes.get(input_socket.name, None)
-                    if not link.from_node.bl_idname in socket_nodes:
-                        bpy.context.space_data.node_tree.links.remove(link)
+                    if hasattr(self, 'required_nodes'):
+                        socket_nodes = self.required_nodes.get(input_socket.name, None)
+                        if not link.from_node.bl_idname in socket_nodes:
+                            bpy.context.space_data.node_tree.links.remove(link)
 
 
 class ElementsMpmSolverNode(BaseNode):
@@ -517,7 +518,7 @@ class ElementsTextureNode(BaseNode):
         layout.prop_search(self, 'texture_name', bpy.data, 'textures', text='')
 
 
-class ElementsMakeListNode(BaseNode, ElementsDynamicSocketsNode):
+class ElementsMakeListNode(ElementsDynamicSocketsNode, BaseNode):
     bl_idname = 'elements_make_list_node'
     bl_label = 'Make List'
 
@@ -526,7 +527,7 @@ class ElementsMakeListNode(BaseNode, ElementsDynamicSocketsNode):
     category = CATEGORY_STRUCT_NAME
 
 
-class ElementsMergeNode(BaseNode, ElementsDynamicSocketsNode):
+class ElementsMergeNode(ElementsDynamicSocketsNode, BaseNode):
     bl_idname = 'elements_merge_node'
     bl_label = 'Merge'
 
