@@ -1,4 +1,6 @@
-import threading, struct, os
+import threading
+import struct
+import os
 
 import bpy
 from .mpm_solver import MPMSolver
@@ -52,8 +54,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 self.is_finishing = True
                 self.cancel(bpy.context)
                 return
-            self.sim.step(1e-2)
+            # generate simulation state at t = 0
             np_x, np_v, np_material = self.sim.particle_info()
+            # and then start time stepping
+            self.sim.step(1 / 24.0)
             print(np_x)
 
             if not os.path.exists(self.cache_folder):
@@ -70,9 +74,17 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             for particle_index in range(particles_count):
                 data.extend(struct.pack('3f', *np_x[particle_index]))
                 data.extend(struct.pack('3f', *np_v[particle_index]))
+              
+            write_obj = True
+            if write_obj:
+              with open(particles_file_path + '.obj', 'w') as f:
+                for i in range(particles_count):
+                  x = np_x[i]
+                  print(f'v {x[0]} {x[1]} {x[2]}', file=f)
 
             with open(particles_file_path, 'wb') as file:
                 file.write(data)
+            
 
     def init_simulation(self):
         self.is_runnig = True
@@ -141,8 +153,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 assert False, material
             lower = (center_x - scale_x, center_y - scale_y, center_z - scale_z)
             cube_size = (2 * scale_x, 2 * scale_y, 2 * scale_z)
-            print(lower)
-            print(cube_size)
             sim.add_cube(lower_corner=lower, cube_size=cube_size, material=taichi_material)
 
         self.size = size

@@ -2,7 +2,7 @@ import taichi as ti
 import random
 import numpy as np
 
-
+ti.require_version(0, 3, 24)
 
 class MPMSolver:
   material_water = 0
@@ -16,12 +16,13 @@ class MPMSolver:
     self.n_particles = 0
     self.dx = size / res[0]
     self.inv_dx = 1.0 / self.dx
-    self.default_dt = 1e-4 * size
+    self.default_dt = 1e-3 * self.dx * size
     self.p_vol = self.dx ** self.dim
     self.p_rho = 1
     self.p_mass = self.p_vol * self.p_rho
     self.max_num_particles = max_num_particles
     self.gravity = ti.Vector(self.dim, dt=ti.f32, shape=())
+    self.source_bound = ti.Vector(self.dim, dt=ti.f32, shape=2)
     # position
     self.x = ti.Vector(self.dim, dt=ti.f32)
     # velocity
@@ -40,7 +41,7 @@ class MPMSolver:
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
     
     # Young's modulus and Poisson's ratio
-    self.E, self.nu = 0.1e4 * size, 0.2
+    self.E, self.nu = 1e3 * size, 0.2
     # Lame parameters
     self.mu_0, self.lambda_0 = self.E / (2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) * (1 - 2 * self.nu))
 
@@ -49,9 +50,9 @@ class MPMSolver:
       ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
       
     if self.dim == 2:
-      self.set_gravity((0, -50))
+      self.set_gravity((0, -9.8))
     else:
-      self.set_gravity((0, -50, 0))
+      self.set_gravity((0, -9.8, 0))
 
   def stencil_range(self):
     return ti.ndrange(*((3,) * self.dim))
@@ -96,9 +97,8 @@ class MPMSolver:
         # Reconstruct elastic deformation gradient after plasticity
         self.F[p] = U @ sig @ V.T()
 
-      stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T(
-      ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (
-          J - 1)
+      stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T() + ti.Matrix.identity(
+        ti.f32, self.dim) * la * J * (J - 1)
       stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
       affine = stress + self.p_mass * self.C[p]
 
@@ -149,7 +149,7 @@ class MPMSolver:
       self.x[p] += dt * self.v[p]  # advection
 
   def step(self, frame_dt):
-    substeps = int(frame_dt / self.default_dt + 1)
+    substeps = int(frame_dt / self.default_dt) + 1
     for i in range(substeps):
       dt = frame_dt / substeps
       self.grid_v.fill(0)
@@ -157,6 +157,16 @@ class MPMSolver:
       self.p2g(dt)
       self.grid_op(dt)
       self.g2p(dt)
+      
+  @ti.classkernel
+  def seed(self, num_original_particles: ti.i32, new_particles: ti.i32, new_material:ti.i32):
+    for i in range(num_original_particles, num_original_particles + new_particles):
+      self.material[i] = new_material
+      for k in ti.static(range(self.dim)):
+        self.x[i][k] = self.source_bound[0][k] + ti.random() * self.source_bound[1][k]
+      self.v[i] = ti.Vector.zero(ti.f32, self.dim)
+      self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
+      self.Jp[i] = 1
       
   def add_cube(self, lower_corner, cube_size, material, sample_density=None):
     if sample_density is None:
@@ -166,15 +176,12 @@ class MPMSolver:
       vol = vol * cube_size[i]
     num_new_particles = int(sample_density * vol / self.dx ** self.dim + 1)
     assert self.n_particles + num_new_particles <= self.max_num_particles
-    for i in range(self.n_particles, self.n_particles + num_new_particles):
-      pos = []
-      for j in range(self.dim):
-        pos.append(lower_corner[j] + random.random() * cube_size[j])
-      self.x[i] = pos
-      self.material[i] = material
-      self.v[i] = [0 for i in range(self.dim)]
-      self.F[i] = [[int(i == j) for i in range(self.dim)] for j in range(self.dim)]
-      self.Jp[i] = 1
+    
+    for i in range(self.dim):
+      self.source_bound[0][i] = lower_corner[i]
+      self.source_bound[1][i] = cube_size[i]
+      
+    self.seed(self.n_particles, num_new_particles, material)
     self.n_particles += num_new_particles
 
   @ti.classkernel
