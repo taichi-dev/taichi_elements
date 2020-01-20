@@ -92,7 +92,9 @@ class MPMSolver:
         J *= new_sig
       if self.material[p] == self.material_water:
         # Reset deformation gradient to avoid numerical instability
-        self.F[p] = ti.Matrix.identity(ti.f32, self.dim) * ti.sqrt(J)
+        new_F = ti.Matrix.identity(ti.f32, self.dim)
+        new_F[0, 0] = J
+        self.F[p] = new_F
       elif self.material[p] == self.material_snow:
         # Reconstruct elastic deformation gradient after plasticity
         self.F[p] = U @ sig @ V.T()
