@@ -75,7 +75,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 data.extend(struct.pack('3f', *np_x[particle_index]))
                 data.extend(struct.pack('3f', *np_v[particle_index]))
               
-            write_obj = True
+            write_obj = False
             if write_obj:
               with open(particles_file_path + '.obj', 'w') as f:
                 for i in range(particles_count):
