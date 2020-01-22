@@ -128,8 +128,6 @@ def update_particle_system_object(particle_system_object, particles_locations, p
 @bpy.app.handlers.persistent
 def import_simulation_data(scene):
     particles_locations, particles_velocity = get_particles()
-    if not particles_locations:
-        return
     particles_object = bpy.data.objects.get('elements_particles_object', None)
     if not particles_object:
         particles_object = create_particles_object()
