@@ -105,7 +105,10 @@ def create_class(node):
             raise StopIteration
 
     def node_getitem_function(self, item):
-        return self.elements.__getitem__(item)
+        if self.is_list:
+            return getattr(self, self.elements.__getitem__(item))
+        else:
+            return self.elements.__getitem__(item)
 
     node_class = type(
         node_class_name,
