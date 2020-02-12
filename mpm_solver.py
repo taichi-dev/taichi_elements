@@ -8,7 +8,7 @@ class MPMSolver:
   material_water = 0
   material_elastic = 1
   material_snow = 2
-  
+
   def __init__(self, res, size=1, max_num_particles=2 ** 20):
     self.dim = len(res)
     assert self.dim in (2, 3), "MPM solver supports only 2D and 3D simulations."
@@ -39,7 +39,7 @@ class MPMSolver:
     self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
     # grid node mass
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
-    
+
     # Young's modulus and Poisson's ratio
     self.E, self.nu = 1e3 * size, 0.2
     # Lame parameters
@@ -48,7 +48,7 @@ class MPMSolver:
     @ti.layout
     def place():
       ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
-      
+
     if self.dim == 2:
       self.set_gravity((0, -9.8))
     else:
@@ -56,7 +56,7 @@ class MPMSolver:
 
   def stencil_range(self):
     return ti.ndrange(*((3,) * self.dim))
-  
+
   def set_gravity(self, g):
     assert isinstance(g, tuple)
     assert len(g) == self.dim
@@ -159,7 +159,7 @@ class MPMSolver:
       self.p2g(dt)
       self.grid_op(dt)
       self.g2p(dt)
-      
+
   @ti.classkernel
   def seed(self, num_original_particles: ti.i32, new_particles: ti.i32, new_material:ti.i32):
     for i in range(num_original_particles, num_original_particles + new_particles):
@@ -169,7 +169,7 @@ class MPMSolver:
       self.v[i] = ti.Vector.zero(ti.f32, self.dim)
       self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
       self.Jp[i] = 1
-      
+
   def add_cube(self, lower_corner, cube_size, material, sample_density=None):
     if sample_density is None:
       sample_density = 2 ** self.dim
@@ -178,11 +178,11 @@ class MPMSolver:
       vol = vol * cube_size[i]
     num_new_particles = int(sample_density * vol / self.dx ** self.dim + 1)
     assert self.n_particles + num_new_particles <= self.max_num_particles
-    
+
     for i in range(self.dim):
       self.source_bound[0][i] = lower_corner[i]
       self.source_bound[1][i] = cube_size[i]
-      
+
     self.seed(self.n_particles, num_new_particles, material)
     self.n_particles += num_new_particles
 
@@ -206,4 +206,17 @@ class MPMSolver:
     self.copy_dynamic(np_material, self.material)
     return np_x, np_v, np_material
 
+  @ti.classkernel
+  def _add_particle2D(self, x: ti.f32, y: ti.f32, material:ti.i32):
+      i = self.n_particles
+      self.material[i] = material
+      self.x[i][0] = x
+      self.x[i][1] = y
+      self.v[i] = ti.Vector.zero(ti.f32, self.dim)
+      self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
+      self.Jp[i] = 1
+
+  def add_particle2D(self, x, y, material):
+      self._add_particle2D(ti.cast(x, ti.f32), ti.cast(y, ti.f32), material)
+      self.n_particles += 1
 
