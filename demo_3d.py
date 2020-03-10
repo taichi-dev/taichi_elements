@@ -5,17 +5,19 @@ from mpm_solver import MPMSolver
 write_to_disk = False
 
 # Try to run on GPU
-ti.cfg.arch = ti.cuda
+ti.init(arch=ti.cuda)
 
 gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
 
 mpm = MPMSolver(res=(64, 64, 64), size=10)
 
-mpm.add_cube(lower_corner=[2, 4, 3], cube_size=[1, 1, 3], material=MPMSolver.material_elastic)
+mpm.add_cube(lower_corner=[2, 4, 3], cube_size=[1, 1, 3], material=MPMSolver.material_snow)
+mpm.add_cube(lower_corner=[2, 6, 3], cube_size=[1, 1, 3], material=MPMSolver.material_elastic)
+mpm.add_cube(lower_corner=[2, 8, 3], cube_size=[1, 1, 3], material=MPMSolver.material_water)
 
 mpm.set_gravity((0, -50, 0))
 
-for frame in range(500):
+for frame in range(1500):
   mpm.step(4e-3)
   colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
   np_x, np_v, np_material = mpm.particle_info()

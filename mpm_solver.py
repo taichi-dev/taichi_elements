@@ -2,8 +2,9 @@ import taichi as ti
 import random
 import numpy as np
 
-ti.require_version(0, 3, 24)
+ti.require_version(0, 5, 7)
 
+@ti.data_oriented
 class MPMSolver:
   material_water = 0
   material_elastic = 1
@@ -16,9 +17,9 @@ class MPMSolver:
     self.n_particles = 0
     self.dx = size / res[0]
     self.inv_dx = 1.0 / self.dx
-    self.default_dt = 1e-3 * self.dx * size
+    self.default_dt = 2e-2 * self.dx / size
     self.p_vol = self.dx ** self.dim
-    self.p_rho = 1
+    self.p_rho = 1000
     self.p_mass = self.p_vol * self.p_rho
     self.max_num_particles = max_num_particles
     self.gravity = ti.Vector(self.dim, dt=ti.f32, shape=())
@@ -41,13 +42,11 @@ class MPMSolver:
     self.grid_m = ti.var(dt=ti.f32, shape=self.res)
     
     # Young's modulus and Poisson's ratio
-    self.E, self.nu = 1e3 * size, 0.2
+    self.E, self.nu = 1e6 * size, 0.2
     # Lame parameters
     self.mu_0, self.lambda_0 = self.E / (2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) * (1 - 2 * self.nu))
 
-    @ti.layout
-    def place():
-      ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
+    ti.root.dynamic(ti.i, max_num_particles, 8192).place(self.x, self.v, self.C, self.F, self.material, self.Jp)
       
     if self.dim == 2:
       self.set_gravity((0, -9.8))
@@ -62,7 +61,7 @@ class MPMSolver:
     assert len(g) == self.dim
     self.gravity[None] = g
 
-  @ti.classkernel
+  @ti.kernel
   def p2g(self, dt: ti.f32):
     for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
@@ -114,7 +113,7 @@ class MPMSolver:
             self.p_mass * self.v[p] + affine @ dpos)
         self.grid_m[base + offset] += weight * self.p_mass
 
-  @ti.classkernel
+  @ti.kernel
   def grid_op(self, dt: ti.f32):
     for I in ti.grouped(self.grid_m):
       if self.grid_m[I] > 0:  # No need for epsilon here
@@ -127,7 +126,7 @@ class MPMSolver:
           if I[d] > self.res[d] - 3 and self.grid_v[I][d] > 0:
             self.grid_v[I][d] = 0
 
-  @ti.classkernel
+  @ti.kernel
   def g2p(self, dt: ti.f32):
     for p in self.x:
       base = (self.x[p] * self.inv_dx - 0.5).cast(int)
@@ -160,7 +159,7 @@ class MPMSolver:
       self.grid_op(dt)
       self.g2p(dt)
       
-  @ti.classkernel
+  @ti.kernel
   def seed(self, num_original_particles: ti.i32, new_particles: ti.i32, new_material:ti.i32):
     for i in range(num_original_particles, num_original_particles + new_particles):
       self.material[i] = new_material
@@ -186,13 +185,13 @@ class MPMSolver:
     self.seed(self.n_particles, num_new_particles, material)
     self.n_particles += num_new_particles
 
-  @ti.classkernel
+  @ti.kernel
   def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
     for i in self.x:
       for j in ti.static(range(self.dim)):
         np_x[i, j] = input_x[i][j]
 
-  @ti.classkernel
+  @ti.kernel
   def copy_dynamic(self, np_x: ti.ext_arr(), input_x: ti.template()):
     for i in self.x:
       np_x[i] = input_x[i]
