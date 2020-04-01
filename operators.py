@@ -2,7 +2,7 @@ import threading
 import struct
 import os
 
-import bpy
+import bpy, bmesh
 from .mpm_solver import MPMSolver
 import taichi as ti
 import numpy as np
@@ -133,6 +133,18 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             obj = bpy.data.objects.get(obj_name)
             if not obj:
                 continue
+            if obj.type != 'MESH':
+                continue
+            b_mesh = bmesh.new()
+            b_mesh.from_mesh(obj.data)
+            bmesh.ops.triangulate(b_mesh, faces=b_mesh.faces)
+            triangles = []
+            for face in b_mesh.faces:
+                triangle = []
+                for vertex in face.verts:
+                    triangle.append(vertex.co.copy())
+                triangles.append(triangle)
+            b_mesh.clear()
             # Note: rotation is not supported
             center_x = obj.matrix_world[0][3]
             center_y = obj.matrix_world[1][3]
