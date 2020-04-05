@@ -1,10 +1,5 @@
 # necessary for Blender to detect this addon
-bl_info = {
-    'name': 'Elements',
-    'blender': (2, 81, 0),
-    'category': 'Animation'
-}
-
+bl_info = {'name': 'Elements', 'blender': (2, 81, 0), 'category': 'Animation'}
 
 use_blender = False
 
@@ -21,7 +16,6 @@ if use_blender:
 
     def register():
         addon.register()
-
 
     def unregister():
         addon.unregister()

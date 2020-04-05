@@ -2,7 +2,6 @@ import inspect
 
 import bpy
 
-
 CATEGORY_SOLVERS_NAME = 'Solvers'
 CATEGORY_SIMULATION_OBJECTS_NAME = 'Simulation Objects'
 CATEGORY_SOURCE_DATA_NAME = 'Source Data'
@@ -15,8 +14,7 @@ CATEGORY_LAYOUT_NAME = 'Layout'
 
 def create_class(node):
     node_class_name = ''.join(
-        map(lambda part: part.capitalize(), node.bl_label.split(' '))
-    )
+        map(lambda part: part.capitalize(), node.bl_label.split(' ')))
     node_class_attributes = {}
     node_params_attributes = {}
     node_elements = []
@@ -24,8 +22,7 @@ def create_class(node):
     for input_socket_name, input_socket in node.inputs.items():
         if input_socket.bl_idname != 'elements_add_socket':
             attribute_name = '_'.join(
-                map(lambda part: part.lower(), input_socket.text.split(' '))
-            )
+                map(lambda part: part.lower(), input_socket.text.split(' ')))
             if input_socket.bl_idname == 'elements_struct_socket':
                 if node.bl_idname == 'elements_make_list_node':
                     node_elements.append(input_socket.get_value())
@@ -40,7 +37,8 @@ def create_class(node):
 
     if hasattr(node, '__annotations__'):
         for annotation_name in node.__annotations__.keys():
-            node_params_attributes[annotation_name] = getattr(node, annotation_name)
+            node_params_attributes[annotation_name] = getattr(
+                node, annotation_name)
 
     def node_init_function(self):
         self.is_list = False
@@ -77,23 +75,21 @@ def create_class(node):
             return is_list
         else:
             if self.is_list:
-                attribute = bpy.context.scene.elements_nodes.get(
-                        name, None
-                    )
+                attribute = bpy.context.scene.elements_nodes.get(name, None)
                 return attribute
             else:
                 attribute = params.get(name, None)
                 if not attribute:
                     attribute_name = inputs.get(name, None)
                     if attribute_name is None:
-                        raise BaseException('Cannot find attibute: {}'.format(name))
+                        raise BaseException(
+                            'Cannot find attibute: {}'.format(name))
                     attribute = bpy.context.scene.elements_nodes.get(
-                        attribute_name, None
-                    )
+                        attribute_name, None)
                 return attribute
 
     def node_len_function(self):
-       return len(self.elements)
+        return len(self.elements)
 
     def node_next_function(self):
         if self.offset < len(self.elements):
@@ -111,16 +107,13 @@ def create_class(node):
             return self.elements.__getitem__(item)
 
     node_class = type(
-        node_class_name,
-        (),
-        {
+        node_class_name, (), {
             '__init__': node_init_function,
             '__getattribute__': get_attribute_function,
             '__len__': node_len_function,
             '__next__': node_next_function,
             '__getitem__': node_getitem_function
-        }
-    )
+        })
 
     return node_class()
 
@@ -147,7 +140,8 @@ class BaseNode(bpy.types.Node):
             if len(input_socket.links):
                 for link in input_socket.links:
                     if hasattr(self, 'required_nodes'):
-                        socket_nodes = self.required_nodes.get(input_socket.name, None)
+                        socket_nodes = self.required_nodes.get(
+                            input_socket.name, None)
                         if not link.from_node.bl_idname in socket_nodes:
                             bpy.context.space_data.node_tree.links.remove(link)
 
@@ -157,37 +151,33 @@ class ElementsMpmSolverNode(BaseNode):
     bl_label = 'MPM Solver'
 
     required_nodes = {
-        'Domain Object': ['elements_source_object_node', ],
-        'Resolution': ['elements_integer_node', ],
-        'Size': ['elements_float_node', ],
+        'Domain Object': [
+            'elements_source_object_node',
+        ],
+        'Resolution': [
+            'elements_integer_node',
+        ],
+        'Size': [
+            'elements_float_node',
+        ],
     }
     category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
         self.width = 175.0
 
-        solver_output_socket = self.outputs.new(
-            'elements_struct_socket',
-            'MPM Solver'
-        )
+        solver_output_socket = self.outputs.new('elements_struct_socket',
+                                                'MPM Solver')
         solver_output_socket.text = 'Solver Settings'
 
-        domain_object_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Domain Object'
-        )
+        domain_object_socket = self.inputs.new('elements_struct_socket',
+                                               'Domain Object')
         domain_object_socket.text = 'Domain Object'
 
-        resolution = self.inputs.new(
-            'elements_integer_socket',
-            'Resolution'
-        )
+        resolution = self.inputs.new('elements_integer_socket', 'Resolution')
         resolution.text = 'Resolution'
         resolution.value = 128
-        size = self.inputs.new(
-            'elements_float_socket',
-            'Size'
-        )
+        size = self.inputs.new('elements_float_socket', 'Size')
         size.text = 'Size'
         size.value = 10.0
 
@@ -196,21 +186,14 @@ class ElementsMaterialNode(BaseNode):
     bl_idname = 'elements_material_node'
     bl_label = 'Material'
 
-    items = [
-        ('WATER', 'Water', ''),
-        ('SNOW', 'Snow', ''),
-        ('ELASTIC', 'Elastic', '')
-    ]
-    material_type: bpy.props.EnumProperty(
-        items=items, default='WATER'
-    )
+    items = [('WATER', 'Water', ''), ('SNOW', 'Snow', ''),
+             ('ELASTIC', 'Elastic', '')]
+    material_type: bpy.props.EnumProperty(items=items, default='WATER')
     category = CATEGORY_SOLVERS_NAME
 
     def init(self, context):
-        material_output_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Material'
-        )
+        material_output_socket = self.outputs.new('elements_struct_socket',
+                                                  'Material')
         material_output_socket.text = 'Material Settings'
 
     def draw_buttons(self, context, layout):
@@ -224,10 +207,7 @@ class ElementsIntegerNode(BaseNode):
     category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
-        integer_socket = self.outputs.new(
-            'elements_integer_socket',
-            'Integer'
-        )
+        integer_socket = self.outputs.new('elements_integer_socket', 'Integer')
         integer_socket.text = ''
 
 
@@ -238,10 +218,7 @@ class ElementsFloatNode(BaseNode):
     category = CATEGORY_INPUTS_NAME
 
     def init(self, context):
-        float_socket = self.outputs.new(
-            'elements_float_socket',
-            'Float'
-        )
+        float_socket = self.outputs.new('elements_float_socket', 'Float')
         float_socket.text = ''
 
 
@@ -250,36 +227,33 @@ class ElementsEmitterNode(BaseNode):
     bl_label = 'Emitter'
 
     required_nodes = {
-        'Emit Time': ['elements_integer_node', ],
-        'Source Geometry': ['elements_source_object_node', ],
-        'Material': ['elements_material_node', ]
+        'Emit Time': [
+            'elements_integer_node',
+        ],
+        'Source Geometry': [
+            'elements_source_object_node',
+        ],
+        'Material': [
+            'elements_material_node',
+        ]
     }
 
     category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
-        emitter_output_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Emitter'
-        )
+        emitter_output_socket = self.outputs.new('elements_struct_socket',
+                                                 'Emitter')
         emitter_output_socket.text = 'Emitter'
 
-        emit_time_socket = self.inputs.new(
-            'elements_integer_socket',
-            'Emit Time'
-        )
+        emit_time_socket = self.inputs.new('elements_integer_socket',
+                                           'Emit Time')
         emit_time_socket.text = 'Emit Time'
 
-        source_geometry_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Source Geometry'
-        )
+        source_geometry_socket = self.inputs.new('elements_struct_socket',
+                                                 'Source Geometry')
         source_geometry_socket.text = 'Source Geometry'
 
-        material_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Material'
-        )
+        material_socket = self.inputs.new('elements_struct_socket', 'Material')
         material_socket.text = 'Material'
 
 
@@ -288,10 +262,11 @@ class ElementsSimulationNode(BaseNode):
     bl_label = 'Simulation'
 
     required_nodes = {
-        'Solver': ['elements_mpm_solver_node', ],
+        'Solver': [
+            'elements_mpm_solver_node',
+        ],
         'Hubs': [
-            'elements_hub_node',
-            'elements_make_list_node',
+            'elements_hub_node', 'elements_make_list_node',
             'elements_merge_node'
         ]
     }
@@ -299,22 +274,14 @@ class ElementsSimulationNode(BaseNode):
     category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
-        simulation_data_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Simulation Data'
-        )
+        simulation_data_socket = self.outputs.new('elements_struct_socket',
+                                                  'Simulation Data')
         simulation_data_socket.text = 'Particles'
 
-        solver_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Solver'
-        )
+        solver_socket = self.inputs.new('elements_struct_socket', 'Solver')
         solver_socket.text = 'Solver'
 
-        hubs_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Hubs'
-        )
+        hubs_socket = self.inputs.new('elements_struct_socket', 'Hubs')
         hubs_socket.text = 'Hubs'
 
     def draw_buttons(self, context, layout):
@@ -327,13 +294,11 @@ class ElementsHubNode(BaseNode):
 
     required_nodes = {
         'Forces': [
-            'elements_gravity_node',
-            'elements_make_list_node',
+            'elements_gravity_node', 'elements_make_list_node',
             'elements_merge_node'
         ],
         'Emitters': [
-            'elements_emitter_node',
-            'elements_make_list_node',
+            'elements_emitter_node', 'elements_make_list_node',
             'elements_merge_node'
         ],
     }
@@ -341,22 +306,13 @@ class ElementsHubNode(BaseNode):
     category = CATEGORY_SIMULATION_OBJECTS_NAME
 
     def init(self, context):
-        hub_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Hub Data'
-        )
+        hub_socket = self.outputs.new('elements_struct_socket', 'Hub Data')
         hub_socket.text = 'Hub Data'
 
-        forces_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Forces'
-        )
+        forces_socket = self.inputs.new('elements_struct_socket', 'Forces')
         forces_socket.text = 'Forces'
 
-        emitters_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Emitters'
-        )
+        emitters_socket = self.inputs.new('elements_struct_socket', 'Emitters')
         emitters_socket.text = 'Emitters'
 
 
@@ -368,14 +324,16 @@ class ElementsSourceObjectNode(BaseNode):
     category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
-        object_output_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Object'
-        )
+        object_output_socket = self.outputs.new('elements_struct_socket',
+                                                'Object')
         object_output_socket.text = 'Source Geometry'
 
     def draw_buttons(self, context, layout):
-        layout.prop_search(self, 'bpy_object_name', bpy.data, 'objects', text='')
+        layout.prop_search(self,
+                           'bpy_object_name',
+                           bpy.data,
+                           'objects',
+                           text='')
 
 
 class ElementsCacheNode(BaseNode):
@@ -396,16 +354,12 @@ class ElementsCacheNode(BaseNode):
     def init(self, context):
         self.width = 200.0
 
-        particles_input_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Particles'
-        )
+        particles_input_socket = self.inputs.new('elements_struct_socket',
+                                                 'Particles')
         particles_input_socket.text = 'Particles'
 
-        cache_folder_input_socket = self.inputs.new(
-            'elements_folder_socket',
-            'Folder'
-        )
+        cache_folder_input_socket = self.inputs.new('elements_folder_socket',
+                                                    'Folder')
         cache_folder_input_socket.text = 'Folder'
 
 
@@ -418,10 +372,8 @@ class ElementsFolderNode(BaseNode):
     def init(self, context):
         self.width = 250.0
 
-        cache_folder_output_socket = self.outputs.new(
-            'elements_folder_socket',
-            'Folder'
-        )
+        cache_folder_output_socket = self.outputs.new('elements_folder_socket',
+                                                      'Folder')
         cache_folder_output_socket.text = ''
 
 
@@ -430,10 +382,7 @@ class ElementsGravityNode(BaseNode):
     bl_label = 'Gravity'
 
     required_nodes = {
-        'Speed': [
-            'elements_float_node',
-            'elements_integer_node'
-        ],
+        'Speed': ['elements_float_node', 'elements_integer_node'],
         'Direction': [],
     }
 
@@ -442,50 +391,35 @@ class ElementsGravityNode(BaseNode):
     def init(self, context):
         self.width = 175.0
 
-        gravity_output = self.outputs.new(
-            'elements_struct_socket',
-            'Gravity'
-        )
+        gravity_output = self.outputs.new('elements_struct_socket', 'Gravity')
         gravity_output.text = 'Gravity Force'
-        speed_socket = self.inputs.new(
-            'elements_float_socket',
-            'Speed'
-        )
+        speed_socket = self.inputs.new('elements_float_socket', 'Speed')
         speed_socket.text = 'Speed'
         speed_socket.value = 9.8
 
-        direction_socket = self.inputs.new(
-            'elements_3d_vector_float_socket',
-            'Direction'
-        )
+        direction_socket = self.inputs.new('elements_3d_vector_float_socket',
+                                           'Direction')
         direction_socket.text = 'Direction'
         direction_socket.value = (0.0, 0.0, -1.0)
 
 
 class ElementsDynamicSocketsNode():
     def add_linked_socket(self, links):
-        empty_input_socket = self.inputs.new(
-            'elements_struct_socket',
-            'Element'
-        )
+        empty_input_socket = self.inputs.new('elements_struct_socket',
+                                             'Element')
         empty_input_socket.text = self.text
         node_tree = bpy.context.space_data.node_tree
         if len(links):
             node_tree.links.new(links[0].from_socket, empty_input_socket)
 
     def add_empty_socket(self):
-        empty_input_socket = self.inputs.new(
-            'elements_add_socket',
-            'Add'
-        )
+        empty_input_socket = self.inputs.new('elements_add_socket', 'Add')
         empty_input_socket.text = self.text_empty_socket
 
     def init(self, context):
         self.add_empty_socket()
-        output_socket = self.outputs.new(
-            'elements_struct_socket',
-            'Set Elements'
-        )
+        output_socket = self.outputs.new('elements_struct_socket',
+                                         'Set Elements')
         output_socket.text = 'Elements'
 
     def update(self):
@@ -511,10 +445,7 @@ class ElementsTextureNode(BaseNode):
     def init(self, context):
         self.width = 250.0
 
-        texture_output = self.outputs.new(
-            'elements_struct_socket',
-            'Texture'
-        )
+        texture_output = self.outputs.new('elements_struct_socket', 'Texture')
         texture_output.text = 'Texture'
 
     def draw_buttons(self, context, layout):
