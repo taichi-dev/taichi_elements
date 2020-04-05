@@ -20,18 +20,15 @@ for category_name, nodes_ids in node_categories_data.items():
     category_items = []
     for node_id in nodes_ids:
         category_items.append(nodeitems_utils.NodeItem(node_id))
-    category = ElementsNodeCategory(
-        category_name.lower().replace(' ', '_'),
-        category_name,
-        items=category_items
-    )
+    category = ElementsNodeCategory(category_name.lower().replace(' ', '_'),
+                                    category_name,
+                                    items=category_items)
     node_categories.append(category)
 
 
 def register():
-    nodeitems_utils.register_node_categories(
-        'elements_node_tree', node_categories
-    )
+    nodeitems_utils.register_node_categories('elements_node_tree',
+                                             node_categories)
 
 
 def unregister():

@@ -1,6 +1,5 @@
 import bpy
 
-
 socket_colors = {
     'NUMBER': (0.3, 0.3, 0.3, 1.0),
     'STRUCT': (0.0, 1.0, 0.0, 1.0),
@@ -115,12 +114,8 @@ class ElementsFolderSocket(ElementsBaseSocket):
 
 
 socket_classes = [
-    ElementsIntegerSocket,
-    ElementsFloatSocket,
-    Elements3dVectorFloatSocket,
-    ElementsStructSocket,
-    ElementsAddSocket,
-    ElementsFolderSocket
+    ElementsIntegerSocket, ElementsFloatSocket, Elements3dVectorFloatSocket,
+    ElementsStructSocket, ElementsAddSocket, ElementsFolderSocket
 ]
 
 
