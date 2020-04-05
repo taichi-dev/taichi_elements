@@ -136,8 +136,15 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             for face in b_mesh.faces:
                 triangle = []
                 for vertex in face.verts:
-                    triangle.append(vertex.co.copy())
+                    v = vertex.co.copy()
+                    for k in range(3):
+                        triangle.append(v[k])
                 triangles.append(triangle)
+                
+            triangles = np.array(triangles, dtype=np.float32)
+            print('num_triangles', len(triangles))
+            triangles.tofile('triangles.npy')
+            
             b_mesh.clear()
             # Note: rotation is not supported
             center_x = obj.matrix_world[0][3]

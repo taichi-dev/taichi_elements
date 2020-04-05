@@ -8,10 +8,10 @@ def cross2d(a, b):
 
 
 @ti.func
-def inside(p, a, b, c):
-    return cross2d(a - p, b - p) >= 0 and cross2d(
-        b - p, c - p) >= 0 and cross2d(c - p, a - p) >= 0
-
+def inside_ccw(p, a, b, c):
+    eps = 1e-10
+    return cross2d(a - p, b - p) >= -eps and cross2d(
+        b - p, c - p) >= -eps and cross2d(c - p, a - p) >= -eps
 
 @ti.data_oriented
 class Voxelizer:
@@ -48,21 +48,27 @@ class Voxelizer:
             q_max = int(ti.floor(bound_max[1] * self.inv_dx)) + 1
 
             normal = ti.normalized(ti.cross(b - a, c - a))
+            
+            if abs(normal[2]) > 1e-8:
 
-            a_proj = ti.Vector([a[0], a[1]])
-            b_proj = ti.Vector([b[0], b[1]])
-            c_proj = ti.Vector([c[0], c[1]])
+                a_proj = ti.Vector([a[0], a[1]])
+                b_proj = ti.Vector([b[0], b[1]])
+                c_proj = ti.Vector([c[0], c[1]])
 
-            for p in range(p_min, p_max):
-                for q in range(q_min, q_max):
-                    pos2d = ti.Vector([p * self.dx, q * self.dx])
-                    if inside(pos2d, a_proj, b_proj, c_proj):
-                        height = int(
-                            ti.dot(
-                                normal,
-                                ti.Vector([p * self.dx, q * self.dx, 0]) - a) /
-                            -normal[2] * self.inv_dx)
-                        self.fill(p, q, height, 1)
+                for p in range(p_min, p_max):
+                    for q in range(q_min, q_max):
+                        pos2d = ti.Vector([p * self.dx, q * self.dx])
+                        if inside_ccw(pos2d, a_proj, b_proj, c_proj) or inside_ccw(pos2d, a_proj, c_proj, b_proj):
+                            base_voxel = ti.Vector([p * self.dx, q * self.dx, 0])
+                            height = int(
+                                -ti.dot(normal, base_voxel - a) /
+                                normal[2] * self.inv_dx)
+                            inc = 0
+                            if normal[2] > 0:
+                                inc = 1
+                            else:
+                                inc = -1
+                            self.fill(p, q, height, inc)
 
     def voxelize(self, triangles):
         assert isinstance(triangles, np.ndarray)
@@ -76,14 +82,21 @@ class Voxelizer:
 
 
 if __name__ == '__main__':
-    vox = Voxelizer((128, 128, 128), 1.0 / 128)
-    triangle = np.array([[0.1, 0.1, 0.1, 0.6, 0.2, 0.1, 0.5, 0.7,
-                          0.7]]).astype(np.float32)
+    n = 256
+    vox = Voxelizer((n, n, n), 1.0 / n)
+    # triangle = np.array([[0.1, 0.1, 0.1, 0.6, 0.2, 0.1, 0.5, 0.7,
+    #                       0.7]]).astype(np.float32)
+    triangle = np.fromfile('triangles.npy', dtype=np.float32)
+    triangle = np.reshape(triangle, (len(triangle) // 9, 9)) * 0.306 + 0.501
+    print(triangle.shape)
+    print(triangle.max())
+    print(triangle.min())
 
     vox.voxelize(triangle)
 
     voxels = vox.voxels.to_numpy().astype(np.float32)
-    gui = ti.GUI('cross section', (128, 128))
-    for i in range(128):
+
+    gui = ti.GUI('cross section', (n, n))
+    for i in range(n):
         gui.set_image(voxels[:, :, i])
-        gui.show()
+        gui.show(f'outputs/{i:04d}.png')
