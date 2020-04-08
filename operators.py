@@ -154,7 +154,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 continue
             material = emitter.material.material_type
             taichi_material = MPMSolver.materials.get(material, None)
-            if not taichi_material:
+            if taichi_material is None:
                 assert False, material
             sim.add_mesh(
                 triangles=triangles,
