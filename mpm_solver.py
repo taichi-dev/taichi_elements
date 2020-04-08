@@ -1,7 +1,7 @@
 import taichi as ti
 import numpy as np
 import math
-from voxelizer import Voxelizer
+from .voxelizer import Voxelizer
 
 ti.require_version(0, 5, 10)
 

@@ -46,18 +46,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.event_type = 'DEFAULT'
 
     def run_simulation(self):
-        for frame in range(100):
+        for frame in range(self.frame_start, self.frame_end, 1):
             if self.event_type == 'ESC':
                 print('STOP SIMULATION')
                 self.thread = None
                 self.is_finishing = True
                 self.cancel(bpy.context)
                 return
+            print('Frame: {}'.format(frame))
             # generate simulation state at t = 0
             particles = self.sim.particle_info()
             np_x, np_v, np_material = particles['position'], particles['velocity'], particles['material']
             # and then start time stepping
-            self.sim.step(1 / 24.0)
+            self.sim.step(1 / self.fps)
             print(np_x)
 
             if not os.path.exists(self.cache_folder):
@@ -103,6 +104,11 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         simulation_class = self.scene.elements_nodes[simulation_node.name]
 
+        # simulation_class.frame_start - not working! Why? To figure out.
+        self.frame_start = simulation_class.params['frame_start']
+        self.frame_end = simulation_class.frame_end
+        self.fps = simulation_class.fps
+
         # TODO: list is not implemented
 
         res = simulation_class.solver.resolution
@@ -114,10 +120,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         hub = simulation_class.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
         gravity_direction = hub.forces[0].direction
-        gravity = gravity_direction[0], gravity_direction[
-            1], gravity_direction[2]
-        print('g =', gravity)
-        sim.set_gravity(gravity)
+        print('g =', gravity_direction)
+        sim.set_gravity(tuple(gravity_direction))
 
         emitters = hub.emitters
         for emitter in emitters:
@@ -137,23 +141,14 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             for face in b_mesh.faces:
                 triangle = []
                 for vertex in face.verts:
-                    v = vertex.co.copy()
-                    for k in range(3):
-                        triangle.append(v[k])
+                    v = obj.matrix_world @ vertex.co
+                    triangle.extend(v)
                 triangles.append(triangle)
                 
             triangles = np.array(triangles, dtype=np.float32)
-            print('num_triangles', len(triangles))
-            triangles.tofile('triangles.npy')
-            
+            print('Object "{0}": {1} tris'.format(obj.name, len(triangles)))
+
             b_mesh.clear()
-            # Note: rotation is not supported
-            center_x = obj.matrix_world[0][3]
-            center_y = obj.matrix_world[1][3]
-            center_z = obj.matrix_world[2][3]
-            scale_x = obj.matrix_world[0][0]
-            scale_y = obj.matrix_world[1][1]
-            scale_z = obj.matrix_world[2][2]
             if not emitter.material:
                 continue
             material = emitter.material.material_type
@@ -165,12 +160,11 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 taichi_material = MPMSolver.material_snow
             else:
                 assert False, material
-            lower = (center_x - scale_x, center_y - scale_y,
-                     center_z - scale_z)
-            cube_size = (2 * scale_x, 2 * scale_y, 2 * scale_z)
-            sim.add_cube(lower_corner=lower,
-                         cube_size=cube_size,
-                         material=taichi_material)
+            sim.add_mesh(
+                triangles=triangles,
+                material=taichi_material,
+                color=0xFFFF00
+            )
 
         self.size = size
         self.sim = sim
