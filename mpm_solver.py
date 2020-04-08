@@ -1,7 +1,7 @@
 import taichi as ti
 import numpy as np
 import math
-from voxelizer import Voxelizer
+from .voxelizer import Voxelizer
 
 ti.require_version(0, 5, 10)
 
@@ -12,6 +12,12 @@ class MPMSolver:
     material_elastic = 1
     material_snow = 2
     material_sand = 3
+    materials = {
+        'WATER': material_water,
+        'ELASTIC': material_elastic,
+        'SNOW': material_snow,
+        'SAND': material_sand
+    }
 
     def __init__(self, res, size=1, max_num_particles=2**20):
         self.dim = len(res)
