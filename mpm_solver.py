@@ -1,8 +1,8 @@
 import taichi as ti
-import random
 import numpy as np
+import math
 
-ti.require_version(0, 5, 7)
+ti.require_version(0, 5, 10)
 
 
 @ti.data_oriented
@@ -10,6 +10,7 @@ class MPMSolver:
     material_water = 0
     material_elastic = 1
     material_snow = 2
+    material_sand = 3
 
     def __init__(self, res, size=1, max_num_particles=2**20):
         self.dim = len(res)
@@ -36,6 +37,7 @@ class MPMSolver:
         self.F = ti.Matrix(self.dim, self.dim, dt=ti.f32)
         # material id
         self.material = ti.var(dt=ti.i32)
+        self.color = ti.var(dt=ti.i32)
         # plastic deformation
         self.Jp = ti.var(dt=ti.f32)
         # grid node momemtum/velocity
@@ -49,15 +51,22 @@ class MPMSolver:
         self.mu_0, self.lambda_0 = self.E / (
             2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) *
                                                     (1 - 2 * self.nu))
+        
+        # Sand parameters
+        friction_angle = math.radians(45)
+        sin_phi = math.sin(friction_angle)
+        self.alpha = math.sqrt(2 / 3) * 2 * sin_phi / (3 - sin_phi)
 
         ti.root.dynamic(ti.i, max_num_particles,
                         8192).place(self.x, self.v, self.C, self.F,
-                                    self.material, self.Jp)
+                                    self.material, self.color, self.Jp)
 
         if self.dim == 2:
             self.set_gravity((0, -9.8))
         else:
             self.set_gravity((0, -9.8, 0))
+            
+        self.grid_postprocess = []
 
     def stencil_range(self):
         return ti.ndrange(*((3, ) * self.dim))
@@ -66,6 +75,27 @@ class MPMSolver:
         assert isinstance(g, tuple)
         assert len(g) == self.dim
         self.gravity[None] = g
+        
+    @ti.func
+    def sand_projection(self, sigma, p):
+        sigma_out = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+        epsilon = ti.Vector.zero(ti.f32, self.dim)
+        for i in ti.static(range(self.dim)):
+            epsilon[i] = ti.log(max(abs(sigma[i, i]), 1e-4))
+            sigma_out[i, i] = 1
+        tr = epsilon.sum() + self.Jp[p]
+        epsilon_hat = epsilon - tr / self.dim
+        epsilon_hat_norm = epsilon_hat.norm() + 1e-20
+        if tr >= 0.0:
+            self.Jp[p] = tr
+        else:
+            self.Jp[p] = 0.0
+            delta_gamma = epsilon_hat_norm + (self.dim * self.lambda_0 + 2 * self.mu_0) / (2 * self.mu_0) * tr * self.alpha
+            for i in ti.static(range(self.dim)):
+                sigma_out[i, i] = ti.exp(epsilon[i] -
+                                    max(0, delta_gamma) / epsilon_hat_norm * epsilon_hat[i])
+
+        return sigma_out
 
     @ti.kernel
     def p2g(self, dt: ti.f32):
@@ -90,14 +120,15 @@ class MPMSolver:
                 mu = 0.0
             U, sig, V = ti.svd(self.F[p])
             J = 1.0
-            for d in ti.static(range(self.dim)):
-                new_sig = sig[d, d]
-                if self.material[p] == self.material_snow:  # Snow
-                    new_sig = min(max(sig[d, d], 1 - 2.5e-2),
-                                  1 + 4.5e-3)  # Plasticity
-                self.Jp[p] *= sig[d, d] / new_sig
-                sig[d, d] = new_sig
-                J *= new_sig
+            if self.material[p] != self.material_sand:
+                for d in ti.static(range(self.dim)):
+                    new_sig = sig[d, d]
+                    if self.material[p] == self.material_snow:  # Snow
+                        new_sig = min(max(sig[d, d], 1 - 2.5e-2),
+                                      1 + 4.5e-3)  # Plasticity
+                    self.Jp[p] *= sig[d, d] / new_sig
+                    sig[d, d] = new_sig
+                    J *= new_sig
             if self.material[p] == self.material_water:
                 # Reset deformation gradient to avoid numerical instability
                 new_F = ti.Matrix.identity(ti.f32, self.dim)
@@ -107,8 +138,23 @@ class MPMSolver:
                 # Reconstruct elastic deformation gradient after plasticity
                 self.F[p] = U @ sig @ V.T()
 
-            stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T(
-            ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
+            stress = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+            
+            if self.material[p] != self.material_sand:
+                stress = 2 * mu * (self.F[p] - U @ V.T()) @ self.F[p].T(
+                    ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
+            else:
+                sig = self.sand_projection(sig, p)
+                self.F[p] = U @ sig @ V.T()
+                log_sig_sum = 0.0
+                center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+                for i in ti.static(range(self.dim)):
+                    log_sig_sum += ti.log(sig[i, i])
+                    center[i, i] = 2.0 * self.mu_0 * ti.log(sig[i, i]) * (1 / sig[i, i])
+                for i in ti.static(range(self.dim)):
+                    center[i, i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
+                stress = U @ center @ V.T() @ self.F[p].T()
+                
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             affine = stress + self.p_mass * self.C[p]
 
@@ -167,22 +213,29 @@ class MPMSolver:
             self.grid_m.fill(0)
             self.p2g(dt)
             self.grid_op(dt)
+            for p in self.grid_postprocess:
+                p(dt)
             self.g2p(dt)
 
     @ti.kernel
     def seed(self, num_original_particles: ti.i32, new_particles: ti.i32,
-             new_material: ti.i32):
+             new_material: ti.i32, color: ti.i32):
         for i in range(num_original_particles,
                        num_original_particles + new_particles):
             self.material[i] = new_material
+            self.color[i] = color
             for k in ti.static(range(self.dim)):
                 self.x[i][k] = self.source_bound[0][k] + ti.random(
                 ) * self.source_bound[1][k]
             self.v[i] = ti.Vector.zero(ti.f32, self.dim)
             self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
-            self.Jp[i] = 1
+            
+            if new_material == self.material_sand:
+                self.Jp[i] = 0
+            else:
+                self.Jp[i] = 1
 
-    def add_cube(self, lower_corner, cube_size, material, sample_density=None):
+    def add_cube(self, lower_corner, cube_size, material, color=0xFFFFFF, sample_density=None):
         if sample_density is None:
             sample_density = 2**self.dim
         vol = 1
@@ -195,7 +248,7 @@ class MPMSolver:
             self.source_bound[0][i] = lower_corner[i]
             self.source_bound[1][i] = cube_size[i]
 
-        self.seed(self.n_particles, num_new_particles, material)
+        self.seed(self.n_particles, num_new_particles, material, color)
         self.n_particles += num_new_particles
 
     @ti.kernel
@@ -216,4 +269,7 @@ class MPMSolver:
         self.copy_dynamic_nd(np_v, self.v)
         np_material = np.ndarray((self.n_particles, ), dtype=np.int32)
         self.copy_dynamic(np_material, self.material)
-        return np_x, np_v, np_material
+        np_color = np.ndarray((self.n_particles, ), dtype=np.int32)
+        self.copy_dynamic(np_color, self.color)
+        return {
+            'position': np_x, 'velocity': np_v, 'material': np_material, 'color': np_color}

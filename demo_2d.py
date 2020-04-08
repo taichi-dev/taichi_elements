@@ -17,6 +17,10 @@ for i in range(3):
 
 for frame in range(500):
     mpm.step(8e-3)
+    if frame < 100 and frame % 2 == 0:
+        mpm.add_cube(lower_corner=[0.1, 0.4],
+                     cube_size=[0.05, 0.01],
+                     material=MPMSolver.material_sand)
     if 10 < frame < 100 and frame % 2 == 0:
         mpm.add_cube(lower_corner=[0.4, 0.7],
                      cube_size=[0.2, 0.01],
@@ -26,7 +30,7 @@ for frame in range(500):
             lower_corner=[0.4 + frame * 0.001, 0.6 + frame // 40 * 0.02],
             cube_size=[0.2, 0.1],
             material=MPMSolver.material_snow)
-    colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
-    np_x, np_v, np_material = mpm.particle_info()
-    gui.circles(np_x, radius=1.5, color=colors[np_material])
+    colors = np.array([0x068587, 0xED553B, 0xEEEEF0, 0xFFFF00], dtype=np.uint32)
+    particles = mpm.particle_info()
+    gui.circles(particles['position'], radius=1.5, color=colors[particles['material']])
     gui.show(f'{frame:06d}.png' if write_to_disk else None)

@@ -26,8 +26,8 @@ mpm.set_gravity((0, -50, 0))
 for frame in range(1500):
     mpm.step(4e-3)
     colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
-    np_x, np_v, np_material = mpm.particle_info()
-    np_x = np_x / 10.0
+    particles = mpm.particle_info()
+    np_x = particles['position'] / 10.0
 
     # simple camera transform
     screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2**0.5) - 0.2
@@ -35,5 +35,5 @@ for frame in range(1500):
 
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 
-    gui.circles(screen_pos, radius=1.5, color=colors[np_material])
+    gui.circles(screen_pos, radius=1.5, color=colors[particles['material']])
     gui.show(f'{frame:06d}.png' if write_to_disk else None)
