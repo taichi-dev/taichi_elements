@@ -19,13 +19,13 @@ mpm.add_cube(lower_corner=[2, 6, 3],
              material=MPMSolver.material_elastic)
 mpm.add_cube(lower_corner=[2, 8, 3],
              cube_size=[1, 1, 3],
-             material=MPMSolver.material_water)
+             material=MPMSolver.material_sand)
 
 mpm.set_gravity((0, -50, 0))
 
 for frame in range(1500):
     mpm.step(4e-3)
-    colors = np.array([0x068587, 0xED553B, 0xEEEEF0], dtype=np.uint32)
+    colors = np.array([0x068587, 0xED553B, 0xEEEEF0, 0xFFFF00], dtype=np.uint32)
     particles = mpm.particle_info()
     np_x = particles['position'] / 10.0
 

@@ -16,10 +16,10 @@ def inside_ccw(p, a, b, c):
 @ti.data_oriented
 class Voxelizer:
     def __init__(self, res, dx):
+        assert len(res) == 3
         self.res = res
         self.dx = dx
         self.inv_dx = 1 / self.dx
-        assert len(res) == 3
         self.voxels = ti.var(ti.i32, shape=res)
 
     @ti.func
@@ -63,6 +63,7 @@ class Voxelizer:
                             height = int(
                                 -ti.dot(normal, base_voxel - a) /
                                 normal[2] * self.inv_dx)
+                            height = min(height, self.res[1] - 1)
                             inc = 0
                             if normal[2] > 0:
                                 inc = 1
@@ -86,13 +87,13 @@ if __name__ == '__main__':
     vox = Voxelizer((n, n, n), 1.0 / n)
     # triangle = np.array([[0.1, 0.1, 0.1, 0.6, 0.2, 0.1, 0.5, 0.7,
     #                       0.7]]).astype(np.float32)
-    triangle = np.fromfile('triangles.npy', dtype=np.float32)
-    triangle = np.reshape(triangle, (len(triangle) // 9, 9)) * 0.306 + 0.501
-    print(triangle.shape)
-    print(triangle.max())
-    print(triangle.min())
+    triangles = np.fromfile('triangles.npy', dtype=np.float32)
+    triangles = np.reshape(triangles, (len(triangles) // 9, 9)) * 0.306 + 0.501
+    print(triangles.shape)
+    print(triangles.max())
+    print(triangles.min())
 
-    vox.voxelize(triangle)
+    vox.voxelize(triangles)
 
     voxels = vox.voxels.to_numpy().astype(np.float32)
 

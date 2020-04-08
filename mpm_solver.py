@@ -1,6 +1,7 @@
 import taichi as ti
 import numpy as np
 import math
+from voxelizer import Voxelizer
 
 ti.require_version(0, 5, 10)
 
@@ -17,7 +18,7 @@ class MPMSolver:
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
         self.res = res
-        self.n_particles = 0
+        self.n_particles = ti.var(ti.i32, shape=())
         self.dx = size / res[0]
         self.inv_dx = 1.0 / self.dx
         self.default_dt = 2e-2 * self.dx / size
@@ -44,6 +45,8 @@ class MPMSolver:
         self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
         # grid node mass
         self.grid_m = ti.var(dt=ti.f32, shape=self.res)
+        
+        self.padding = 3
 
         # Young's modulus and Poisson's ratio
         self.E, self.nu = 1e6 * size, 0.2
@@ -60,10 +63,12 @@ class MPMSolver:
         ti.root.dynamic(ti.i, max_num_particles,
                         8192).place(self.x, self.v, self.C, self.F,
                                     self.material, self.color, self.Jp)
-
+        
         if self.dim == 2:
+            self.voxelizer = None
             self.set_gravity((0, -9.8))
         else:
+            self.voxelizer = Voxelizer(self.res, self.dx)
             self.set_gravity((0, -9.8, 0))
             
         self.grid_postprocess = []
@@ -168,7 +173,7 @@ class MPMSolver:
                             offset] += weight * (self.p_mass * self.v[p] +
                                                  affine @ dpos)
                 self.grid_m[base + offset] += weight * self.p_mass
-
+                
     @ti.kernel
     def grid_op(self, dt: ti.f32):
         for I in ti.grouped(self.grid_m):
@@ -177,9 +182,9 @@ class MPMSolver:
                                   ) * self.grid_v[I]  # Momentum to velocity
                 self.grid_v[I] += dt * self.gravity[None]
                 for d in ti.static(range(self.dim)):
-                    if I[d] < 3 and self.grid_v[I][d] < 0:
+                    if I[d] < self.padding and self.grid_v[I][d] < 0:
                         self.grid_v[I][d] = 0  # Boundary conditions
-                    if I[d] > self.res[d] - 3 and self.grid_v[I][d] > 0:
+                    if I[d] > self.res[d] - self.padding and self.grid_v[I][d] > 0:
                         self.grid_v[I][d] = 0
 
     @ti.kernel
@@ -216,6 +221,19 @@ class MPMSolver:
             for p in self.grid_postprocess:
                 p(dt)
             self.g2p(dt)
+            
+    @ti.func
+    def seed_particle(self, i, x, material, color):
+        self.x[i] = x
+        self.v[i] = ti.Vector.zero(ti.f32, self.dim)
+        self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
+        self.color[i] = color
+        self.material[i] = material
+    
+        if material == self.material_sand:
+            self.Jp[i] = 0
+        else:
+            self.Jp[i] = 1
 
     @ti.kernel
     def seed(self, num_original_particles: ti.i32, new_particles: ti.i32,
@@ -223,17 +241,11 @@ class MPMSolver:
         for i in range(num_original_particles,
                        num_original_particles + new_particles):
             self.material[i] = new_material
-            self.color[i] = color
+            x = ti.Vector.zero(ti.f32, self.dim)
             for k in ti.static(range(self.dim)):
-                self.x[i][k] = self.source_bound[0][k] + ti.random(
+                x[k] = self.source_bound[0][k] + ti.random(
                 ) * self.source_bound[1][k]
-            self.v[i] = ti.Vector.zero(ti.f32, self.dim)
-            self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
-            
-            if new_material == self.material_sand:
-                self.Jp[i] = 0
-            else:
-                self.Jp[i] = 1
+            self.seed_particle(i, x, new_material, color)
 
     def add_cube(self, lower_corner, cube_size, material, color=0xFFFFFF, sample_density=None):
         if sample_density is None:
@@ -242,14 +254,36 @@ class MPMSolver:
         for i in range(self.dim):
             vol = vol * cube_size[i]
         num_new_particles = int(sample_density * vol / self.dx**self.dim + 1)
-        assert self.n_particles + num_new_particles <= self.max_num_particles
+        assert self.n_particles[None] + num_new_particles <= self.max_num_particles
 
         for i in range(self.dim):
             self.source_bound[0][i] = lower_corner[i]
             self.source_bound[1][i] = cube_size[i]
 
-        self.seed(self.n_particles, num_new_particles, material, color)
-        self.n_particles += num_new_particles
+        self.seed(self.n_particles[None], num_new_particles, material, color)
+        self.n_particles[None] += num_new_particles
+        
+    @ti.kernel
+    def seed_from_voxels(self, material: ti.i32, color: ti.i32, sample_density: ti.i32):
+        for i, j, k in self.voxelizer.voxels:
+            inside = 1
+            for d in ti.static(range(3)):
+                inside = inside and self.padding <= i and i < self.res[d] - self.padding
+            if inside and self.voxelizer.voxels[i, j, k] > 0:
+                for l in range(sample_density):
+                    x = ti.Vector([ti.random() + i, ti.random() + j, ti.random() + k]) * self.dx
+                    p = ti.atomic_add(self.n_particles[None], 1)
+                    self.seed_particle(p, x, material, color)
+                    
+        
+    def add_mesh(self, triangles, material, color=0xFFFFFF, sample_density=None):
+        assert self.dim == 3
+        if sample_density is None:
+            sample_density = 2**self.dim
+            
+        self.voxelizer.voxelize(triangles)
+        self.seed_from_voxels(material, color, sample_density)
+        
 
     @ti.kernel
     def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
@@ -263,13 +297,13 @@ class MPMSolver:
             np_x[i] = input_x[i]
 
     def particle_info(self):
-        np_x = np.ndarray((self.n_particles, self.dim), dtype=np.float32)
+        np_x = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
         self.copy_dynamic_nd(np_x, self.x)
-        np_v = np.ndarray((self.n_particles, self.dim), dtype=np.float32)
+        np_v = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
         self.copy_dynamic_nd(np_v, self.v)
-        np_material = np.ndarray((self.n_particles, ), dtype=np.int32)
+        np_material = np.ndarray((self.n_particles[None], ), dtype=np.int32)
         self.copy_dynamic(np_material, self.material)
-        np_color = np.ndarray((self.n_particles, ), dtype=np.int32)
+        np_color = np.ndarray((self.n_particles[None], ), dtype=np.int32)
         self.copy_dynamic(np_color, self.color)
         return {
             'position': np_x, 'velocity': np_v, 'material': np_material, 'color': np_color}
