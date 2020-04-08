@@ -54,7 +54,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 self.cancel(bpy.context)
                 return
             # generate simulation state at t = 0
-            np_x, np_v, np_material = self.sim.particle_info()
+            particles = self.sim.particle_info()
+            np_x, np_v, np_material = particles['position'], particles['velocity'], particles['material']
             # and then start time stepping
             self.sim.step(1 / 24.0)
             print(np_x)
