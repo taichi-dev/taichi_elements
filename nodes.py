@@ -79,7 +79,7 @@ def create_class(node):
                 return attribute
             else:
                 attribute = params.get(name, None)
-                if not attribute:
+                if attribute is None:
                     attribute_name = inputs.get(name, None)
                     if attribute_name is None:
                         raise BaseException(

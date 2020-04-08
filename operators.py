@@ -106,7 +106,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         simulation_class = self.scene.elements_nodes[simulation_node.name]
 
         # simulation_class.frame_start - not working! Why? To figure out.
-        self.frame_start = simulation_class.params['frame_start']
+        self.frame_start = simulation_class.frame_start
         self.frame_end = simulation_class.frame_end
         self.fps = simulation_class.fps
 
