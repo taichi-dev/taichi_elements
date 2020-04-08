@@ -256,6 +256,9 @@ class ElementsEmitterNode(BaseNode):
         material_socket = self.inputs.new('elements_struct_socket', 'Material')
         material_socket.text = 'Material'
 
+        color_socket = self.inputs.new('elements_color_socket', 'Color')
+        color_socket.text = 'Color'
+
 
 class ElementsSimulationNode(BaseNode):
     bl_idname = 'elements_simulation_node'

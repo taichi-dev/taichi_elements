@@ -57,7 +57,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print('Frame: {}'.format(frame))
             # generate simulation state at t = 0
             particles = self.sim.particle_info()
-            np_x, np_v, np_material = particles['position'], particles['velocity'], particles['material']
+            np_x = particles['position']
+            np_v = particles['velocity']
+            np_material = particles['material']
+            np_color = particles['color']
             # and then start time stepping
             self.sim.step(1 / self.fps)
             print(np_x)
@@ -74,6 +77,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             for particle_index in range(particles_count):
                 data.extend(struct.pack('3f', *np_x[particle_index]))
                 data.extend(struct.pack('3f', *np_v[particle_index]))
+                data.extend(struct.pack('I', np_color[particle_index]))
 
             write_obj = False
             if write_obj:
@@ -155,10 +159,14 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             taichi_material = MPMSolver.materials.get(material, None)
             if taichi_material is None:
                 assert False, material
+            red = int(emitter.color.r * 255) << 16
+            green = int(emitter.color.g * 255) << 8
+            blue = int(emitter.color.b * 255)
+            color = red | green | blue
             sim.add_mesh(
                 triangles=triangles,
                 material=taichi_material,
-                color=0xFFFF00
+                color=color
             )
 
         self.size = size

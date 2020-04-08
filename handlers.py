@@ -26,15 +26,16 @@ def get_particles():
     node_tree = get_node_tree()
     particles = []
     velocities = []
+    colors = []
     if not node_tree:
-        return particles, velocities
+        return particles, velocities, colors
     fake_operator = FakeOperator()
     simulation_node = operators.get_simulation_nodes(fake_operator, node_tree)
     if not simulation_node:
-        return particles, velocities
+        return particles, velocities, colors
     cache_folder = operators.get_cache_folder(simulation_node)
     if not cache_folder:
-        return particles, velocities
+        return particles, velocities, colors
     particles_file_name = 'particles_{0:0>6}.bin'.format(
         bpy.context.scene.frame_current)
     abs_particles_path = os.path.join(cache_folder, particles_file_name)
@@ -51,7 +52,10 @@ def get_particles():
             particle_velocity = struct.unpack('3f', data[pos:pos + 12])
             pos += 12
             velocities.extend(particle_velocity)
-    return particles, velocities
+            particle_color = struct.unpack('I', data[pos:pos + 4])[0]
+            pos += 4
+            colors.append(particle_color)
+    return particles, velocities, colors
 
 
 def update_particles_mesh(particles_object, particles_locations):
@@ -108,12 +112,15 @@ def create_particle_system_object():
 
 
 def update_particle_system_object(particle_system_object, particles_locations,
-                                  particles_velocity):
+                                  particles_velocity, particles_color):
     particle_sys_modifier = particle_system_object.modifiers[
         'Elements Particles']
 
     particle_system_object.particle_systems[0].settings.count = len(
         particles_locations) // 3
+    particle_system_object.particle_systems[0].settings.use_rotations = True
+    particle_system_object.particle_systems[0].settings.rotation_mode = 'NONE'
+    particle_system_object.particle_systems[0].settings.angular_velocity_mode = 'NONE'
 
     degp = bpy.context.evaluated_depsgraph_get()
 
@@ -122,13 +129,20 @@ def update_particle_system_object(particle_system_object, particles_locations,
     particle_system = particle_systems[0]
     particle_system.particles.foreach_set('location', particles_locations)
     particle_system.particles.foreach_set('velocity', particles_velocity)
+    particles_color_float = []
+    for particle_color in particles_color:
+        particles_color_float.extend((
+            ((particle_color >> 16) & 0xFF) / 0xFF,
+            ((particle_color >> 8) & 0xFF) / 0xFF,
+            (particle_color & 0xFF) / 0xFF
+        ))
+    particle_system.particles.foreach_set('angular_velocity', particles_color_float)
     particle_system_object.particle_systems[0].settings.frame_end = 0
-    print(len(particles_locations))
 
 
 @bpy.app.handlers.persistent
 def import_simulation_data(scene):
-    particles_locations, particles_velocity = get_particles()
+    particles_locations, particles_velocity, particles_color = get_particles()
     particles_object = bpy.data.objects.get('elements_particles_object', None)
     if not particles_object:
         particles_object = create_particles_object()
@@ -138,12 +152,14 @@ def import_simulation_data(scene):
     if not particle_system_object:
         particle_system_object = create_particle_system_object()
     update_particle_system_object(particle_system_object, particles_locations,
-                                  particles_velocity)
+                                  particles_velocity, particles_color)
 
 
 def register():
     bpy.app.handlers.frame_change_pre.append(import_simulation_data)
+    bpy.app.handlers.render_init.append(import_simulation_data)
 
 
 def unregister():
+    bpy.app.handlers.render_init.remove(import_simulation_data)
     bpy.app.handlers.frame_change_pre.remove(import_simulation_data)
