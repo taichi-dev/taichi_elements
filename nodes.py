@@ -187,7 +187,7 @@ class ElementsMaterialNode(BaseNode):
     bl_label = 'Material'
 
     items = [('WATER', 'Water', ''), ('SNOW', 'Snow', ''),
-             ('ELASTIC', 'Elastic', '')]
+             ('ELASTIC', 'Elastic', ''), ('SAND', 'Sand', '')]
     material_type: bpy.props.EnumProperty(items=items, default='WATER')
     category = CATEGORY_SOLVERS_NAME
 

@@ -12,6 +12,12 @@ class MPMSolver:
     material_elastic = 1
     material_snow = 2
     material_sand = 3
+    materials = {
+        'WATER': 0,
+        'ELASTIC': 1,
+        'SNOW': 2,
+        'SAND': 3
+    }
 
     def __init__(self, res, size=1, max_num_particles=2**20):
         self.dim = len(res)

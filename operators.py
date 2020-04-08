@@ -46,7 +46,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.event_type = 'DEFAULT'
 
     def run_simulation(self):
-        for frame in range(self.frame_start, self.frame_end, 1):
+        # self.frame_end + 1 - this means include the last frame in the range
+        for frame in range(self.frame_start, self.frame_end + 1, 1):
             if self.event_type == 'ESC':
                 print('STOP SIMULATION')
                 self.thread = None
@@ -152,13 +153,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             if not emitter.material:
                 continue
             material = emitter.material.material_type
-            if material == 'WATER':
-                taichi_material = MPMSolver.material_water
-            elif material == 'ELASTIC':
-                taichi_material = MPMSolver.material_elastic
-            elif material == 'SNOW':
-                taichi_material = MPMSolver.material_snow
-            else:
+            taichi_material = MPMSolver.materials.get(material, None)
+            if not taichi_material:
                 assert False, material
             sim.add_mesh(
                 triangles=triangles,
