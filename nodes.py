@@ -227,7 +227,7 @@ class ElementsEmitterNode(BaseNode):
     bl_label = 'Emitter'
 
     required_nodes = {
-        'Emit Time': [
+        'Emit Frame': [
             'elements_integer_node',
         ],
         'Source Geometry': [
@@ -245,9 +245,9 @@ class ElementsEmitterNode(BaseNode):
                                                  'Emitter')
         emitter_output_socket.text = 'Emitter'
 
-        emit_time_socket = self.inputs.new('elements_integer_socket',
-                                           'Emit Time')
-        emit_time_socket.text = 'Emit Time'
+        emit_frame_socket = self.inputs.new('elements_integer_socket',
+                                           'Emit Frame')
+        emit_frame_socket.text = 'Emit Frame'
 
         source_geometry_socket = self.inputs.new('elements_struct_socket',
                                                  'Source Geometry')
@@ -258,6 +258,7 @@ class ElementsEmitterNode(BaseNode):
 
         color_socket = self.inputs.new('elements_color_socket', 'Color')
         color_socket.text = 'Color'
+        color_socket.value = (0.8, 0.8, 0.8)
 
 
 class ElementsSimulationNode(BaseNode):

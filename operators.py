@@ -34,6 +34,48 @@ def get_simulation_nodes(operator, node_tree):
         return simulation_nodes[0]
 
 
+def create_emitter(sim, emitter):
+    source_geometry = emitter.source_geometry
+    if not source_geometry:
+        return
+    obj_name = emitter.source_geometry.bpy_object_name
+    obj = bpy.data.objects.get(obj_name)
+    if not obj:
+        return
+    if obj.type != 'MESH':
+        return
+    if not emitter.material:
+        return
+    b_mesh = bmesh.new()
+    b_mesh.from_mesh(obj.data)
+    bmesh.ops.triangulate(b_mesh, faces=b_mesh.faces)
+    triangles = []
+    for face in b_mesh.faces:
+        triangle = []
+        for vertex in face.verts:
+            v = obj.matrix_world @ vertex.co
+            triangle.extend(v)
+        triangles.append(triangle)
+
+    triangles = np.array(triangles, dtype=np.float32)
+    print('Object "{0}": {1} tris'.format(obj.name, len(triangles)))
+
+    b_mesh.clear()
+    material = emitter.material.material_type
+    taichi_material = MPMSolver.materials.get(material, None)
+    if taichi_material is None:
+        assert False, material
+    red = int(emitter.color.r * 255) << 16
+    green = int(emitter.color.g * 255) << 8
+    blue = int(emitter.color.b * 255)
+    color = red | green | blue
+    sim.add_mesh(
+        triangles=triangles,
+        material=taichi_material,
+        color=color
+    )
+
+
 class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     bl_idname = "elements.simulate_particles"
     bl_label = "Simulate"
@@ -55,6 +97,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 self.cancel(bpy.context)
                 return
             print('Frame: {}'.format(frame))
+            for emitter in self.emitters:
+                if emitter.emit_frame == frame:
+                    create_emitter(self.sim, emitter)
             # generate simulation state at t = 0
             particles = self.sim.particle_info()
             np_x = particles['position']
@@ -127,48 +172,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         print('g =', gravity_direction)
         sim.set_gravity(tuple(gravity_direction))
 
-        emitters = hub.emitters
-        for emitter in emitters:
-            source_geometry = emitter.source_geometry
-            if not source_geometry:
-                continue
-            obj_name = emitter.source_geometry.bpy_object_name
-            obj = bpy.data.objects.get(obj_name)
-            if not obj:
-                continue
-            if obj.type != 'MESH':
-                continue
-            b_mesh = bmesh.new()
-            b_mesh.from_mesh(obj.data)
-            bmesh.ops.triangulate(b_mesh, faces=b_mesh.faces)
-            triangles = []
-            for face in b_mesh.faces:
-                triangle = []
-                for vertex in face.verts:
-                    v = obj.matrix_world @ vertex.co
-                    triangle.extend(v)
-                triangles.append(triangle)
-                
-            triangles = np.array(triangles, dtype=np.float32)
-            print('Object "{0}": {1} tris'.format(obj.name, len(triangles)))
-
-            b_mesh.clear()
-            if not emitter.material:
-                continue
-            material = emitter.material.material_type
-            taichi_material = MPMSolver.materials.get(material, None)
-            if taichi_material is None:
-                assert False, material
-            red = int(emitter.color.r * 255) << 16
-            green = int(emitter.color.g * 255) << 8
-            blue = int(emitter.color.b * 255)
-            color = red | green | blue
-            sim.add_mesh(
-                triangles=triangles,
-                material=taichi_material,
-                color=color
-            )
-
+        self.emitters = hub.emitters
         self.size = size
         self.sim = sim
         self.run_simulation()
