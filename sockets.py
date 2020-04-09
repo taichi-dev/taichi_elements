@@ -4,7 +4,8 @@ socket_colors = {
     'NUMBER': (0.3, 0.3, 0.3, 1.0),
     'STRUCT': (0.0, 1.0, 0.0, 1.0),
     'ADD': (0.0, 0.0, 0.0, 0.25),
-    'STRING': (1.0, 0.5, 0.0, 1.0)
+    'STRING': (1.0, 0.5, 0.0, 1.0),
+    'COLOR': (1.0, 1.0, 0.0, 1.0)
 }
 
 
@@ -113,9 +114,19 @@ class ElementsFolderSocket(ElementsBaseSocket):
         return socket_colors['STRING']
 
 
+class ElementsColorSocket(ElementsBaseSocket):
+    bl_idname = 'elements_color_socket'
+
+    value: bpy.props.FloatVectorProperty(subtype='COLOR', min=0.0, max=1.0, size=3)
+    text: bpy.props.StringProperty(default='Float')
+
+    def draw_color(self, context, node):
+        return socket_colors['COLOR']
+
+
 socket_classes = [
     ElementsIntegerSocket, ElementsFloatSocket, Elements3dVectorFloatSocket,
-    ElementsStructSocket, ElementsAddSocket, ElementsFolderSocket
+    ElementsStructSocket, ElementsAddSocket, ElementsFolderSocket, ElementsColorSocket
 ]
 
 
