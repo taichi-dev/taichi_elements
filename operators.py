@@ -14,8 +14,10 @@ def get_cache_folder(simulation_node):
         for link in particles_socket.links:
             disk_cache_node = link.to_node
             folder = disk_cache_node.inputs['Folder'].get_value()
+            par_sys = disk_cache_node.create_particles_system
+            par_mesh = disk_cache_node.create_particles_mesh
             folder = bpy.path.abspath(folder)
-            return folder
+            return folder, par_sys, par_mesh
 
 
 def get_simulation_nodes(operator, node_tree):

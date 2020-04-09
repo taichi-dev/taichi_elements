@@ -28,14 +28,16 @@ def get_particles():
     velocities = []
     colors = []
     if not node_tree:
-        return particles, velocities, colors
+        return particles, velocities, colors, False, False
     fake_operator = FakeOperator()
     simulation_node = operators.get_simulation_nodes(fake_operator, node_tree)
     if not simulation_node:
-        return particles, velocities, colors
-    cache_folder = operators.get_cache_folder(simulation_node)
+        return particles, velocities, colors, False, False
+    cache_folder, par_sys, par_mesh = operators.get_cache_folder(simulation_node)
+    if not par_sys and not par_mesh:
+        return particles, velocities, colors, False, False
     if not cache_folder:
-        return particles, velocities, colors
+        return particles, velocities, colors, False, False
     particles_file_name = 'particles_{0:0>6}.bin'.format(
         bpy.context.scene.frame_current)
     abs_particles_path = os.path.join(cache_folder, particles_file_name)
@@ -55,7 +57,7 @@ def get_particles():
             particle_color = struct.unpack('I', data[pos:pos + 4])[0]
             pos += 4
             colors.append(particle_color)
-    return particles, velocities, colors
+    return particles, velocities, colors, par_sys, par_mesh
 
 
 def update_particles_mesh(particles_object, particles_locations):
@@ -142,17 +144,26 @@ def update_particle_system_object(particle_system_object, particles_locations,
 
 @bpy.app.handlers.persistent
 def import_simulation_data(scene):
-    particles_locations, particles_velocity, particles_color = get_particles()
-    particles_object = bpy.data.objects.get('elements_particles_object', None)
-    if not particles_object:
-        particles_object = create_particles_object()
-    update_particles_mesh(particles_object, particles_locations)
-    particle_system_object = bpy.data.objects.get(
-        'elements_particle_system_object', None)
-    if not particle_system_object:
-        particle_system_object = create_particle_system_object()
-    update_particle_system_object(particle_system_object, particles_locations,
-                                  particles_velocity, particles_color)
+    (
+        particles_locations, particles_velocity, particles_color,
+        create_particles_system, create_particles_mesh
+    ) = get_particles()
+
+    # create particles mesh
+    if create_particles_mesh:
+        particles_object = bpy.data.objects.get('elements_particles_object', None)
+        if not particles_object:
+            particles_object = create_particles_object()
+        update_particles_mesh(particles_object, particles_locations)
+
+    # create particles system
+    if create_particles_system:
+        particle_system_object = bpy.data.objects.get(
+            'elements_particle_system_object', None)
+        if not particle_system_object:
+            particle_system_object = create_particle_system_object()
+        update_particle_system_object(particle_system_object, particles_locations,
+                                    particles_velocity, particles_color)
 
 
 def register():

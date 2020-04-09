@@ -373,6 +373,12 @@ class ElementsCacheNode(BaseNode):
             'elements_folder_node',
         ],
     }
+    create_particles_system: bpy.props.BoolProperty(
+        default=False, name='Particles System'
+    )
+    create_particles_mesh: bpy.props.BoolProperty(
+        default=True, name='Particles Mesh'
+    )
 
     category = CATEGORY_OUTPUT_NAME
 
@@ -386,6 +392,11 @@ class ElementsCacheNode(BaseNode):
         cache_folder_input_socket = self.inputs.new('elements_folder_socket',
                                                     'Folder')
         cache_folder_input_socket.text = 'Folder'
+
+    def draw_buttons(self, context, layout):
+        layout.label(text='Create:')
+        layout.prop(self, 'create_particles_system', expand=True)
+        layout.prop(self, 'create_particles_mesh', expand=True)
 
 
 class ElementsFolderNode(BaseNode):
