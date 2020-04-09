@@ -145,7 +145,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         simulation_node.get_class()
         simulation_class = self.scene.elements_nodes[simulation_node.name]
-        self.cache_folder = get_cache_folder(simulation_node)
+        self.cache_folder, _, _ = get_cache_folder(simulation_node)
 
         if not self.cache_folder:
             self.report({'WARNING'}, 'Cache folder not specified')
