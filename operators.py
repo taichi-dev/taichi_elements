@@ -103,8 +103,22 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 return
             print('Frame: {}'.format(frame))
             for emitter in self.emitters:
-                if emitter.emit_frame == frame:
-                    create_emitter(self.sim, emitter)
+                if emitter.emitter_type == 'EMITTER':
+                    if emitter.emit_frame == frame:
+                        create_emitter(self.sim, emitter)
+                elif emitter.emitter_type == 'INFLOW':
+                    enable = emitter.enable_fcurve
+                    action = bpy.data.actions.get(enable.action_name, None)
+                    if action is None:
+                        create_emitter(self.sim, emitter)
+                        continue
+                    if len(action.fcurves) > enable.fcurve_index:
+                        fcurve = action.fcurves[enable.fcurve_index]
+                        enable_value = bool(int(fcurve.evaluate(frame)))
+                        if enable_value:
+                            create_emitter(self.sim, emitter)
+                    else:
+                        create_emitter(self.sim, emitter)
             # generate simulation state at t = 0
             particles = self.sim.particle_info()
             np_x = particles['position']
