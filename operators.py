@@ -3,9 +3,12 @@ import struct
 import os
 
 import bpy, bmesh
-from .mpm_solver import MPMSolver
+from . import mpm_solver
 import taichi as ti
 import numpy as np
+
+
+mpm_solver.USE_IN_BLENDER = True
 
 
 def get_cache_folder(simulation_node):
@@ -64,7 +67,7 @@ def create_emitter(sim, emitter):
 
     b_mesh.clear()
     material = emitter.material.material_type
-    taichi_material = MPMSolver.materials.get(material, None)
+    taichi_material = mpm_solver.MPMSolver.materials.get(material, None)
     if taichi_material is None:
         assert False, material
     red = int(emitter.color.r * 255) << 16
@@ -166,7 +169,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         size = simulation_class.solver.size
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
-        sim = MPMSolver((res, res, res), size=size)
+        sim = mpm_solver.MPMSolver((res, res, res), size=size)
 
         hub = simulation_class.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"

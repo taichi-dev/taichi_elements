@@ -1,7 +1,8 @@
 import taichi as ti
 import numpy as np
 import math
-from .voxelizer import Voxelizer
+
+USE_IN_BLENDER = False
 
 ti.require_version(0, 5, 10)
 
@@ -74,6 +75,10 @@ class MPMSolver:
             self.voxelizer = None
             self.set_gravity((0, -9.8))
         else:
+            if USE_IN_BLENDER:
+                from .voxelizer import Voxelizer
+            else:
+                from voxelizer import Voxelizer
             self.voxelizer = Voxelizer(self.res, self.dx)
             self.set_gravity((0, -9.8, 0))
             
