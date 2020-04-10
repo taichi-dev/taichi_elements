@@ -229,8 +229,34 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = True
 
 
+class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
+    bl_idname = "elements.stable_render_animation"
+    bl_label = "Stable Render Animation"
+
+    def execute(self, context):
+        scene = context.scene
+        scene.render.image_settings.file_format = 'PNG'
+        output_folder = scene.render.filepath
+        for frame in range(scene.frame_start, scene.frame_end + 1):
+            print('Render Frame:', frame)
+            scene.frame_set(frame)
+            bpy.ops.render.render(animation=False)
+            for image in bpy.data.images:
+                if image.type == 'RENDER_RESULT':
+                    image.save_render(
+                        os.path.join(
+                            output_folder,
+                            '{0:0>6}.png'.format(frame)
+                        ),
+                        scene=scene
+                    )
+                    bpy.data.images.remove(image)
+        return {'FINISHED'}
+
+
 operator_classes = [
     ELEMENTS_OT_SimulateParticles,
+    ELEMENTS_OT_StableRenderAnimation
 ]
 
 
