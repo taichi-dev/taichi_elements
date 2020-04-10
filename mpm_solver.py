@@ -20,9 +20,15 @@ class MPMSolver:
         'SAND': material_sand
     }
     
+    # Surface boundary conditions
+    
+    # Stick to the boundary
     surface_sticky = 0
+    # Slippy boundary
     surface_slip = 1
+    # Slippy and free to separate
     surface_separate = 2
+    
     surfaces = {
         'STICKY': surface_sticky,
         'SLIP': surface_slip,
