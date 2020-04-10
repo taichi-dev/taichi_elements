@@ -15,6 +15,7 @@ for node in nodes.node_classes:
         node_categories_data[node.category] = []
     node_categories_data[node.category].append(node.bl_idname)
 
+node_categories_data['Layout'] = ['NodeFrame', 'NodeReroute']
 node_categories = []
 for category_name, nodes_ids in node_categories_data.items():
     category_items = []
