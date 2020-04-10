@@ -103,8 +103,22 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 return
             print('Frame: {}'.format(frame))
             for emitter in self.emitters:
-                if emitter.emit_frame == frame:
-                    create_emitter(self.sim, emitter)
+                if emitter.emitter_type == 'EMITTER':
+                    if emitter.emit_frame == frame:
+                        create_emitter(self.sim, emitter)
+                elif emitter.emitter_type == 'INFLOW':
+                    enable = emitter.enable_fcurve
+                    action = bpy.data.actions.get(enable.action_name, None)
+                    if action is None:
+                        create_emitter(self.sim, emitter)
+                        continue
+                    if len(action.fcurves) > enable.fcurve_index:
+                        fcurve = action.fcurves[enable.fcurve_index]
+                        enable_value = bool(int(fcurve.evaluate(frame)))
+                        if enable_value:
+                            create_emitter(self.sim, emitter)
+                    else:
+                        create_emitter(self.sim, emitter)
             # generate simulation state at t = 0
             particles = self.sim.particle_info()
             np_x = particles['position']
@@ -215,8 +229,41 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = True
 
 
+def draw_render_operator(self, context):
+    if context.space_data.node_tree:
+        if context.space_data.node_tree.bl_idname == 'elements_node_tree':
+            self.layout.operator('elements.stable_render_animation')
+
+
+class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
+    bl_idname = "elements.stable_render_animation"
+    bl_label = "Stable Render Animation"
+
+    @classmethod
+    def poll(cls, context):
+        if context.space_data.node_tree:
+            return context.space_data.node_tree.bl_idname == 'elements_node_tree'
+
+    def execute(self, context):
+        scene = context.scene
+        scene.render.image_settings.file_format = 'PNG'
+        output_folder = scene.render.filepath
+        for frame in range(scene.frame_start, scene.frame_end + 1):
+            file_path = os.path.join(bpy.path.abspath(output_folder), '{0:0>4}.png'.format(frame))
+            if scene.render.use_overwrite or not os.path.exists(file_path): 
+                print('Render Frame:', frame)
+                scene.frame_set(frame)
+                bpy.ops.render.render(animation=False)
+                for image in bpy.data.images:
+                    if image.type == 'RENDER_RESULT':
+                        image.save_render(file_path, scene=scene)
+                        bpy.data.images.remove(image)
+        return {'FINISHED'}
+
+
 operator_classes = [
     ELEMENTS_OT_SimulateParticles,
+    ELEMENTS_OT_StableRenderAnimation
 ]
 
 

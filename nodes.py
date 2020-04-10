@@ -237,6 +237,7 @@ class ElementsEmitterNode(BaseNode):
             'elements_material_node',
         ]
     }
+    emitter_type: bpy.props.StringProperty(default='EMITTER')
 
     category = CATEGORY_SIMULATION_OBJECTS_NAME
 
@@ -248,6 +249,46 @@ class ElementsEmitterNode(BaseNode):
         emit_frame_socket = self.inputs.new('elements_integer_socket',
                                            'Emit Frame')
         emit_frame_socket.text = 'Emit Frame'
+
+        source_geometry_socket = self.inputs.new('elements_struct_socket',
+                                                 'Source Geometry')
+        source_geometry_socket.text = 'Source Geometry'
+
+        material_socket = self.inputs.new('elements_struct_socket', 'Material')
+        material_socket.text = 'Material'
+
+        color_socket = self.inputs.new('elements_color_socket', 'Color')
+        color_socket.text = 'Color'
+        color_socket.value = (0.8, 0.8, 0.8)
+
+
+class ElementsInflowNode(BaseNode):
+    bl_idname = 'elements_inflow_node'
+    bl_label = 'Inflow'
+
+    required_nodes = {
+        'Source Geometry': [
+            'elements_source_object_node',
+        ],
+        'Material': [
+            'elements_material_node',
+        ],
+        'Enable FCurve': ['elements_fcurve_node']
+    }
+    emitter_type: bpy.props.StringProperty(default='INFLOW')
+
+    category = CATEGORY_SIMULATION_OBJECTS_NAME
+
+    def init(self, context):
+        output_socket = self.outputs.new('elements_struct_socket',
+                                         'Inflow')
+        output_socket.text = 'Inflow'
+
+        enable_socket = self.inputs.new(
+            'elements_struct_socket',
+            'Enable FCurve'
+        )
+        enable_socket.text = 'Enable FCurve'
 
         source_geometry_socket = self.inputs.new('elements_struct_socket',
                                                  'Source Geometry')
@@ -324,7 +365,7 @@ class ElementsHubNode(BaseNode):
         ],
         'Emitters': [
             'elements_emitter_node', 'elements_make_list_node',
-            'elements_merge_node'
+            'elements_merge_node', 'elements_inflow_node'
         ],
     }
 
@@ -359,6 +400,32 @@ class ElementsSourceObjectNode(BaseNode):
                            bpy.data,
                            'objects',
                            text='')
+
+
+class ElementsFCurveNode(BaseNode):
+    bl_idname = 'elements_fcurve_node'
+    bl_label = 'FCurve'
+
+    action_name: bpy.props.StringProperty()
+    fcurve_index: bpy.props.IntProperty(min=0)
+    category = CATEGORY_SOURCE_DATA_NAME
+
+    def init(self, context):
+        output_socket = self.outputs.new(
+            'elements_struct_socket',
+            'FCurve Values'
+        )
+        output_socket.text = 'FCurve Values'
+
+    def draw_buttons(self, context, layout):
+        layout.prop_search(
+            self, 'action_name', bpy.data, 'actions', text='Action'
+        )
+        action = bpy.data.actions.get(self.action_name, None)
+        if action:
+            layout.prop(self, 'fcurve_index')
+            if len(action.fcurves) > self.fcurve_index:
+                layout.label(text=action.fcurves[self.fcurve_index].data_path)
 
 
 class ElementsCacheNode(BaseNode):
