@@ -74,3 +74,81 @@ Inputs
 Outputs
 """""""
 **Material Settings** - This output is material settings. At the moment, from the settings there is only the type of material.
+
+
+
+
+
+----------------------------
+
+Integer
+~~~~~~~
+.. tip:: Location: ``Add > Inputs > Integer``
+
+Description
+"""""""""""
+This is a simple input node that provides an integer value.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**Integer Value** - an integer value that can be connected to any other integer socket.
+
+
+
+
+
+----------------------------
+
+Float
+~~~~~
+.. tip:: Location: ``Add > Inputs > Float``
+
+Description
+"""""""""""
+This node represents a floating point number.
+
+Parameters
+""""""
+`It has no parameters.`
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**Float Value** - this socket provides a floating point number that can be connected to any float socket.
+
+
+
+
+
+----------------------------
+
+Folder
+~~~~~~
+.. tip:: Location: ``Add > Inputs > Folder``
+
+Description
+"""""""""""
+Using this node, you can specify the folder.
+
+Parameters
+""""""
+`It has no parameters.`
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**String Value** - this output is a string that indicates the folder. 
