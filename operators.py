@@ -249,7 +249,7 @@ class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
         scene.render.image_settings.file_format = 'PNG'
         output_folder = scene.render.filepath
         for frame in range(scene.frame_start, scene.frame_end + 1):
-            file_path = os.path.join(bpy.path.abspath(output_folder), '{0:0>6}.png'.format(frame))
+            file_path = os.path.join(bpy.path.abspath(output_folder), '{0:0>4}.png'.format(frame))
             if scene.render.use_overwrite or not os.path.exists(file_path): 
                 print('Render Frame:', frame)
                 scene.frame_set(frame)
