@@ -229,28 +229,35 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = True
 
 
+def draw_render_operator(self, context):
+    if context.space_data.node_tree:
+        if context.space_data.node_tree.bl_idname == 'elements_node_tree':
+            self.layout.operator('elements.stable_render_animation')
+
+
 class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
     bl_idname = "elements.stable_render_animation"
     bl_label = "Stable Render Animation"
+
+    @classmethod
+    def poll(cls, context):
+        if context.space_data.node_tree:
+            return context.space_data.node_tree.bl_idname == 'elements_node_tree'
 
     def execute(self, context):
         scene = context.scene
         scene.render.image_settings.file_format = 'PNG'
         output_folder = scene.render.filepath
         for frame in range(scene.frame_start, scene.frame_end + 1):
-            print('Render Frame:', frame)
-            scene.frame_set(frame)
-            bpy.ops.render.render(animation=False)
-            for image in bpy.data.images:
-                if image.type == 'RENDER_RESULT':
-                    image.save_render(
-                        os.path.join(
-                            output_folder,
-                            '{0:0>6}.png'.format(frame)
-                        ),
-                        scene=scene
-                    )
-                    bpy.data.images.remove(image)
+            file_path = os.path.join(bpy.path.abspath(output_folder), '{0:0>6}.png'.format(frame))
+            if scene.render.use_overwrite or not os.path.exists(file_path): 
+                print('Render Frame:', frame)
+                scene.frame_set(frame)
+                bpy.ops.render.render(animation=False)
+                for image in bpy.data.images:
+                    if image.type == 'RENDER_RESULT':
+                        image.save_render(file_path, scene=scene)
+                        bpy.data.images.remove(image)
         return {'FINISHED'}
 
 
