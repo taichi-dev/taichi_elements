@@ -1,6 +1,9 @@
 Blender nodes for Taichi elements
 =================================
 
+.. contents:: Contents
+   :depth: 3
+
 Node System
 -----------
 (TODO)
