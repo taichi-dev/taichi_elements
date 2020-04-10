@@ -17,7 +17,7 @@ mpm = MPMSolver(res=(64, 64, 64), size=1)
 
 mpm.set_gravity((0, -20, 0))
 
-mpm.add_sphere_collider(center=(0.5, 0.5, 0.5), radius=0.1)
+mpm.add_sphere_collider(center=(0.5, 0.5, 0.5), radius=0.1, surface=mpm.surface_separate)
 
 for frame in range(1500):
     mpm.add_cube((0.45, 0.8, 0.45), (0.1, 0.03, 0.1), mpm.material_water)

@@ -19,6 +19,15 @@ class MPMSolver:
         'SNOW': material_snow,
         'SAND': material_sand
     }
+    
+    surface_sticky = 0
+    surface_slip = 1
+    surface_separate = 2
+    surfaces = {
+        'STICKY': surface_sticky,
+        'SLIP': surface_slip,
+        'SEPARATE': surface_separate
+    }
 
     def __init__(self, res, size=1, max_num_particles=2**20):
         self.dim = len(res)
@@ -203,7 +212,7 @@ class MPMSolver:
                     self.grid_v[I][d] = 0
 
 
-    def add_sphere_collider(self, center, radius):
+    def add_sphere_collider(self, center, radius, surface=surface_sticky):
         center = list(center)
         
         @ti.kernel
@@ -211,7 +220,21 @@ class MPMSolver:
             for I in ti.grouped(self.grid_m):
                 offset = I * self.dx - ti.Vector(center)
                 if offset.norm_sqr() < radius * radius:
-                    self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
+                    if ti.static(surface == self.surface_sticky):
+                        self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
+                    else:
+                        v = self.grid_v[I]
+                        normal = ti.Vector.normalized(offset, eps=1e-5)
+                        normal_component = ti.dot(normal, v)
+                        
+                        if ti.static(surface == self.surface_slip):
+                            # Project out all normal component
+                            v = v - normal * normal_component
+                        else:
+                            # Project out only inward normal component
+                            v = v - normal * min(normal_component, 0)
+                            
+                        self.grid_v[I] = v
             
         self.grid_postprocess.append(collide)
         
