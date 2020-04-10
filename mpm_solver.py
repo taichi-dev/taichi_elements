@@ -186,17 +186,35 @@ class MPMSolver:
                 self.grid_m[base + offset] += weight * self.p_mass
                 
     @ti.kernel
-    def grid_op(self, dt: ti.f32):
+    def grid_normalization_and_gravity(self, dt: ti.f32):
         for I in ti.grouped(self.grid_m):
             if self.grid_m[I] > 0:  # No need for epsilon here
                 self.grid_v[I] = (1 / self.grid_m[I]
                                   ) * self.grid_v[I]  # Momentum to velocity
                 self.grid_v[I] += dt * self.gravity[None]
-                for d in ti.static(range(self.dim)):
-                    if I[d] < self.padding and self.grid_v[I][d] < 0:
-                        self.grid_v[I][d] = 0  # Boundary conditions
-                    if I[d] > self.res[d] - self.padding and self.grid_v[I][d] > 0:
-                        self.grid_v[I][d] = 0
+                
+    @ti.kernel
+    def grid_bounding_box(self):
+        for I in ti.grouped(self.grid_m):
+            for d in ti.static(range(self.dim)):
+                if I[d] < self.padding and self.grid_v[I][d] < 0:
+                    self.grid_v[I][d] = 0  # Boundary conditions
+                if I[d] > self.res[d] - self.padding and self.grid_v[I][d] > 0:
+                    self.grid_v[I][d] = 0
+
+
+    def add_sphere_collider(self, center, radius):
+        center = list(center)
+        
+        @ti.kernel
+        def collide(dt: ti.f32):
+            for I in ti.grouped(self.grid_m):
+                offset = I * self.dx - ti.Vector(center)
+                if offset.norm_sqr() < radius * radius:
+                    self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
+            
+        self.grid_postprocess.append(collide)
+        
 
     @ti.kernel
     def g2p(self, dt: ti.f32):
@@ -228,9 +246,10 @@ class MPMSolver:
             self.grid_v.fill(0)
             self.grid_m.fill(0)
             self.p2g(dt)
-            self.grid_op(dt)
+            self.grid_normalization_and_gravity(dt)
             for p in self.grid_postprocess:
                 p(dt)
+            self.grid_bounding_box()
             self.g2p(dt)
             
     @ti.func
