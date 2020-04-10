@@ -18,6 +18,7 @@ def create_class(node):
     node_class_attributes = {}
     node_params_attributes = {}
     node_elements = []
+    scene = bpy.context.scene
 
     for input_socket_name, input_socket in node.inputs.items():
         if input_socket.bl_idname != 'elements_add_socket':
@@ -27,7 +28,10 @@ def create_class(node):
                 if node.bl_idname == 'elements_make_list_node':
                     node_elements.append(input_socket.get_value())
                 elif node.bl_idname == 'elements_merge_node':
-                    node_elements.extend(input_socket.get_value().elements)
+                    node_name = input_socket.get_value()
+                    node_class = scene.elements_nodes.get(node_name, None)
+                    if node_class:
+                        node_elements.extend(node_class.elements)
                 else:
                     input_object = input_socket.get_value()
                     node_class_attributes[attribute_name] = input_object
