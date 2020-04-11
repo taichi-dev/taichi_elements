@@ -23,8 +23,6 @@ Nodes
 
 
 
-----------------------------
-
 MPM Solver
 ~~~~~~~~~~
 .. tip:: Location: ``Add > Solvers > MPM Solver``
@@ -116,7 +114,7 @@ Description
 This node represents a floating point number.
 
 Parameters
-""""""
+""""""""""
 `It has no parameters.`
 
 Inputs
@@ -142,7 +140,7 @@ Description
 Using this node, you can specify the folder.
 
 Parameters
-""""""
+""""""""""
 `It has no parameters.`
 
 Inputs
@@ -152,3 +150,67 @@ Inputs
 Outputs
 """""""
 **String Value** - this output is a string that indicates the folder. 
+
+
+
+
+
+----------------------------
+
+Emitter
+~~~~~~~
+.. tip:: Location: ``Add > Simulation Objects > Emitter``
+
+Description
+"""""""""""
+Using this node, you can add an emitter to the simulation. Emitter is a mesh object that emits particles from its volume once.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Emit Frame** - indicates the frame number in the timeline in which particles will be emitted.
+
+**Source Geometry** - indicates a mesh object that will emit particles from its volume.
+
+**Material** - this socket accepts material parameters (water, snow, sand, elastic).
+
+**Color** - particle color.
+
+Outputs
+"""""""
+**Emitter** - this socket is a structure that stores the settings of the emitter.
+
+
+
+
+
+----------------------------
+
+Inflow
+~~~~~~~
+.. tip:: Location: ``Add > Simulation Objects > Inflow``
+
+Description
+"""""""""""
+This type of object emits particles like a faucet. An Inflow object can continuously emit particles, and can also stop the emission of particles, and then continue to emit particles.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Enable FCurve** - This socket accepts an input animation curve that will indicate the enable value for the inflow object. If you want particles to be emitted throughout the simulation, you can omit the animation curve, but the socket must be connected to the FCurve node. But if you need to turn on and off the inflow object during the simulation, you need to specify the animation curve in the FCurve node. At a value of 0.0, inflow will not emit particles, and at a value of 1.0, continuous emission of particles will occur.
+
+**Source Geometry** - indicates a mesh object that will emit particles from its volume.
+
+**Material** - this socket accepts material parameters (water, snow, sand, elastic).
+
+**Color** - particle color.
+
+Outputs
+"""""""
+**Inflow** - this socket is a structure that stores the settings of the inflow object.
