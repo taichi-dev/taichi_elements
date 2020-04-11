@@ -226,6 +226,17 @@ class ElementsFloatNode(BaseNode):
         float_socket.text = ''
 
 
+class ElementsColorNode(BaseNode):
+    bl_idname = 'elements_color_node'
+    bl_label = 'Color'
+
+    category = CATEGORY_INPUTS_NAME
+
+    def init(self, context):
+        float_socket = self.outputs.new('elements_color_socket', 'Color')
+        float_socket.text = ''
+
+
 class ElementsEmitterNode(BaseNode):
     bl_idname = 'elements_emitter_node'
     bl_label = 'Emitter'
@@ -239,7 +250,8 @@ class ElementsEmitterNode(BaseNode):
         ],
         'Material': [
             'elements_material_node',
-        ]
+        ],
+        'Color': ['elements_color_node']
     }
     emitter_type: bpy.props.StringProperty(default='EMITTER')
 
@@ -263,7 +275,6 @@ class ElementsEmitterNode(BaseNode):
 
         color_socket = self.inputs.new('elements_color_socket', 'Color')
         color_socket.text = 'Color'
-        color_socket.value = (0.8, 0.8, 0.8)
 
 
 class ElementsInflowNode(BaseNode):
@@ -277,7 +288,8 @@ class ElementsInflowNode(BaseNode):
         'Material': [
             'elements_material_node',
         ],
-        'Enable FCurve': ['elements_fcurve_node']
+        'Enable FCurve': ['elements_fcurve_node', ],
+        'Color': ['elements_color_node']
     }
     emitter_type: bpy.props.StringProperty(default='INFLOW')
 

@@ -117,7 +117,9 @@ class ElementsFolderSocket(ElementsBaseSocket):
 class ElementsColorSocket(ElementsBaseSocket):
     bl_idname = 'elements_color_socket'
 
-    value: bpy.props.FloatVectorProperty(subtype='COLOR', min=0.0, max=1.0, size=3)
+    value: bpy.props.FloatVectorProperty(
+        subtype='COLOR', min=0.0, max=1.0, size=3, default=(0.8, 0.8, 0.8)
+    )
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
