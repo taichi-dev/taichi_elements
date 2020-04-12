@@ -190,7 +190,7 @@ Outputs
 ----------------------------
 
 Inflow
-~~~~~~~
+~~~~~~
 .. tip:: Location: ``Add > Simulation Objects > Inflow``
 
 Description
@@ -214,3 +214,65 @@ Inputs
 Outputs
 """""""
 **Inflow** - this socket is a structure that stores the settings of the inflow object.
+
+
+
+
+
+----------------------------
+
+Simulation
+~~~~~~~~~~
+.. tip:: Location: ``Add > Simulation Objects > Simulation``
+
+Description
+"""""""""""
+This node is a simulation in general. The simulation is launched using the Simulate operator of this node.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Frame Start** - frame on the timeline from which the simulation begins. If you plan to create a particle system from the simulation cache, it is better to set this value to 2, since 0 and 1 frames cannot be displayed correctly (this is a limitation of the blender particle system).
+
+**Frame End** - frame number on the timeline in which the simulation ends.
+
+**FPS** - simulation frame rate.
+
+**Solver** - this socket accepts solver settings as input. At the moment, only MPM Solver can be connected.
+
+**Hubs** - This socket accepts a hub or a list of hubs as an input. The hub node is described below.
+
+Outputs
+"""""""
+**Particles** - this output represents particle simulation data.
+
+
+
+
+
+----------------------------
+
+Hub
+~~~
+.. tip:: Location: ``Add > Simulation Objects > Hub``
+
+Description
+"""""""""""
+This node is the connecting link between emitters and force fields. At the moment, only one force field is supported in the simulation. In the future, the use of different force fields for individual emitters is possible.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Forces** - input for force fields. At the moment, it is possible to connect only one force field. In the future, the capabilities of the simulator and this node will expand, so that it is possible to connect several force fields.
+
+**Emitters** - socket to connect emitter or emitter list. Those emitters that are not connected to any hub object will not participate in the simulation.
+
+Outputs
+"""""""
+**Hub Data** - these are the settings of the hub object.
