@@ -4,7 +4,7 @@ import math
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 5, 10)
+ti.require_version(0, 5, 11)
 
 
 @ti.data_oriented

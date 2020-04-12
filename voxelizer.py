@@ -9,18 +9,19 @@ def cross2d(a, b):
 
 @ti.func
 def inside_ccw(p, a, b, c):
-    eps = 1e-10
-    return cross2d(a - p, b - p) >= -eps and cross2d(
-        b - p, c - p) >= -eps and cross2d(c - p, a - p) >= -eps
+    return cross2d(a - p, b - p) >= 0 and cross2d(
+        b - p, c - p) >= 0 and cross2d(c - p, a - p) >= 0
 
 @ti.data_oriented
 class Voxelizer:
-    def __init__(self, res, dx):
+    def __init__(self, res, dx, precision=ti.f64):
         assert len(res) == 3
         self.res = res
         self.dx = dx
         self.inv_dx = 1 / self.dx
         self.voxels = ti.var(ti.i32, shape=res)
+        assert precision in [ti.f32, ti.f64]
+        self.precision = precision
 
     @ti.func
     def fill(self, p, q, height, inc):
@@ -31,12 +32,19 @@ class Voxelizer:
     def voxelize_triangles(self, num_triangles: ti.i32,
                            triangles: ti.ext_arr()):
         for i in range(num_triangles):
-            a = ti.Vector([triangles[i, 0], triangles[i, 1], triangles[i, 2]])
-            b = ti.Vector([triangles[i, 3], triangles[i, 4], triangles[i, 5]])
-            c = ti.Vector([triangles[i, 6], triangles[i, 7], triangles[i, 8]])
+            jitter_scale = ti.cast(0, self.precision)
+            if ti.static(self.precision is ti.f32):
+                jitter_scale = 1e-4
+            else:
+                jitter_scale = 1e-8
+            # We jitter the vertices to prevent voxel samples from lying precicely at triangle edges
+            jitter = ti.Vector([-0.057616723909439505, -0.25608986292614977, 0.06716309129743714]) * jitter_scale
+            a = ti.Vector([triangles[i, 0], triangles[i, 1], triangles[i, 2]]) + jitter
+            b = ti.Vector([triangles[i, 3], triangles[i, 4], triangles[i, 5]]) + jitter
+            c = ti.Vector([triangles[i, 6], triangles[i, 7], triangles[i, 8]]) + jitter
 
-            bound_min = ti.Vector.zero(ti.f32, 3)
-            bound_max = ti.Vector.zero(ti.f32, 3)
+            bound_min = ti.Vector.zero(self.precision, 3)
+            bound_max = ti.Vector.zero(self.precision, 3)
             for k in ti.static(range(3)):
                 bound_min[k] = min(a[k], b[k], c[k])
                 bound_max[k] = max(a[k], b[k], c[k])
@@ -49,31 +57,40 @@ class Voxelizer:
 
             normal = ti.normalized(ti.cross(b - a, c - a))
             
-            if abs(normal[2]) > 1e-8:
+            if abs(normal[2]) < 1e-10:
+                continue
 
-                a_proj = ti.Vector([a[0], a[1]])
-                b_proj = ti.Vector([b[0], b[1]])
-                c_proj = ti.Vector([c[0], c[1]])
+            a_proj = ti.Vector([a[0], a[1]])
+            b_proj = ti.Vector([b[0], b[1]])
+            c_proj = ti.Vector([c[0], c[1]])
 
-                for p in range(p_min, p_max):
-                    for q in range(q_min, q_max):
-                        pos2d = ti.Vector([p * self.dx, q * self.dx])
-                        if inside_ccw(pos2d, a_proj, b_proj, c_proj) or inside_ccw(pos2d, a_proj, c_proj, b_proj):
-                            base_voxel = ti.Vector([p * self.dx, q * self.dx, 0])
-                            height = int(
-                                -ti.dot(normal, base_voxel - a) /
-                                normal[2] * self.inv_dx)
-                            height = min(height, self.res[1] - 1)
-                            inc = 0
-                            if normal[2] > 0:
-                                inc = 1
-                            else:
-                                inc = -1
-                            self.fill(p, q, height, inc)
+            for p in range(p_min, p_max):
+                for q in range(q_min, q_max):
+                    pos2d = ti.Vector([(p + 0.5) * self.dx, (q + 0.5) * self.dx])
+                    if inside_ccw(pos2d, a_proj, b_proj, c_proj) or inside_ccw(pos2d, a_proj, c_proj, b_proj):
+                        base_voxel = ti.Vector([pos2d[0], pos2d[1], 0])
+                        height = int(
+                            -ti.dot(normal, base_voxel - a) /
+                            normal[2] * self.inv_dx - 0.5)
+                        height = min(height, self.res[1] - 1)
+                        inc = 0
+                        if normal[2] > 0:
+                            inc = 1
+                        else:
+                            inc = -1
+                        self.fill(p, q, height, inc)
+
 
     def voxelize(self, triangles):
         assert isinstance(triangles, np.ndarray)
-        assert triangles.dtype == np.float32
+        triangles = triangles.astype(np.float64)
+        assert triangles.dtype in [np.float32, np.float64]
+        if self.precision is ti.f32:
+            triangles = triangles.astype(np.float32)
+        elif self.precision is ti.f64:
+            triangles = triangles.astype(np.float64)
+        else:
+            assert False
         assert len(triangles.shape) == 2
         assert triangles.shape[1] == 9
 
