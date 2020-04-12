@@ -423,7 +423,7 @@ class ElementsFCurveNode(BaseNode):
     bl_label = 'FCurve'
 
     action_name: bpy.props.StringProperty()
-    fcurve_index: bpy.props.IntProperty(min=0)
+    fcurve_index: bpy.props.IntProperty(min=0, name='FCurve Index')
     category = CATEGORY_SOURCE_DATA_NAME
 
     def init(self, context):
