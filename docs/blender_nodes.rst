@@ -276,3 +276,80 @@ Inputs
 Outputs
 """""""
 **Hub Data** - these are the settings of the hub object.
+
+
+
+
+
+----------------------------
+
+Source Object
+~~~~~~~~~~~~~
+.. tip:: Location: ``Add > Source Data > Source Object``
+
+Description
+"""""""""""
+Allows you to select and use an mesh object from the scene in the simulation.
+
+Parameters
+""""""""""
+**Object** - the name of the object to use.
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**Source Geometry** - geometric data from the mesh of the object.
+
+
+----------------------------
+
+FCurve
+~~~~~~~~~~~~~
+.. tip:: Location: ``Add > Source Data > FCurve``
+
+Description
+"""""""""""
+Animation curve. You can use it to specify animation for the Enable parameter of the Inflow object. To do this, create a Custom Property on any scene object and animate this custom property. Next, you can specify an animation curve using this node.
+
+Parameters
+""""""""""
+**Action** - name action from the blend file.
+
+**FCurve Index** - index of the animation curve. If this index is specified correctly, the name of the animation curve will be displayed below.
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**FCurve Values** - animation curve values.
+
+
+
+
+
+----------------------------
+
+Texture
+~~~~~~~
+.. tip:: Location: ``Add > Source Data > Texture``
+
+Description
+"""""""""""
+Allows you to select a texture from a blend file. At the moment, this node cannot be used anywhere. In the future, it is planned to expand the capabilities of the simulator and it will be possible to use this node.
+
+Parameters
+""""""""""
+**Texture** - the name of the texture to use.
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+**Texture** - an object that represents data and texture parameters.
