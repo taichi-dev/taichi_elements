@@ -23,7 +23,7 @@ The short-term plan is
  ```
   The output looks like `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81`, which means python3 is located at `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81/python/bin/python3.7`
  - Install [pip](https://pip.pypa.io/en/stable/installing/) using that Python executable
- - Install Taichi: `./python3.7m -m pip install --upgrade taichi-nightly` (Note: as of April 4 2020, Taichi version is `v0.5.10`. Please use the latest version.)
+ - Install Taichi: `./python3.7m -m pip install --upgrade taichi-nightly` (Note: as of April 12 2020, Taichi version is `v0.5.11`. Please use the latest version.)
 
 ## Installing taichi_elements (experimental) for Blender
  - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`
