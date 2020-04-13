@@ -4,17 +4,43 @@ Blender nodes for Taichi elements
 .. contents:: Contents
    :depth: 3
 
+
+
+
+
+
 Node System
 -----------
-(TODO)
+To create a taichi-elements simulation, you need to open the Elements window. Next, you need to create a new tree and add the necessary nodes. Addon requires many nodes for simulation. The main node is the Simulation node. This node store the Simulate button. Using this button, you can start the simulation. Examples of node trees can be downloaded from here: https://github.com/taichi-dev/taichi_elements_blender_examples
 
-Node Categories
----------------
-(TODO)
+
+
+
+
 
 Node Sockets
 ------------
-(TODO)
+Taichi Elements has the following sockets:
+
+**Integer** - represents a single integer value. Color - gray.
+
+**Float** - represents a single float value. Color - gray.
+
+**Vector** - represents a single 3d vector value. Color - gray.
+
+**Struct** - structure that stores settings. Color - green.
+
+**Add** - dynamic socket, which is needed to create new inputs. Color - black.
+
+**Folder** - socket stores the path to the folder. Color - orange.
+
+**Color** - stores color values in RGB format. Color - yellow.
+
+
+
+
+
+
 
 Nodes
 -----
