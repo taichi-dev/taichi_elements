@@ -1,6 +1,6 @@
 import taichi as ti
 import numpy as np
-from mpm_solver import MPMSolver
+from engine.mpm_solver import MPMSolver
 
 write_to_disk = False
 
