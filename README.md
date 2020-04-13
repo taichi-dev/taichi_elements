@@ -9,7 +9,7 @@ The short-term plan is
 
 ## How to run (without Blender)
  - Install [Taichi](https://github.com/yuanming-hu/taichi) with pip
- - `python3 demo_2d.py` and you will see
+ - `python3 demo_2d.py` and you will see (all demo files are in the demo folder)
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
  
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
