@@ -353,3 +353,169 @@ Inputs
 Outputs
 """""""
 **Texture** - an object that represents data and texture parameters.
+
+
+
+
+
+----------------------------
+
+Disk Cache
+~~~~~~~~~~
+.. tip:: Location: ``Add > Output > Disk Cache``
+
+Description
+"""""""""""
+This node saves the simulation to disk.
+
+Parameters
+""""""""""
+**Particle System** - import particles from the cache and create a particle system based on them.
+
+**Particle Mesh** - import particles from the cache and create a mesh based on them. The created mesh will only have vertices.
+
+Inputs
+""""""
+**Particles** - this input receives a list of particles from the Simulation node.
+
+**Folder** - path to save and import cache.
+
+Outputs
+"""""""
+`It has no outputs.`
+
+
+
+
+
+----------------------------
+
+Gravity
+~~~~~~~
+.. tip:: Location: ``Add > Force Fields > Gravity``
+
+Description
+"""""""""""
+Gravitational force field.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Speed** - temporarily not working.
+
+**Direction** - direction and force of gravity.
+
+Outputs
+"""""""
+**Gravity Force** - structure that represents gravity settings.
+
+
+
+
+
+----------------------------
+
+Make List
+~~~~~~~~~
+.. tip:: Location: ``Add > Struct > Make List``
+
+Description
+"""""""""""
+Combines several structures (nodes) into one list.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Add Element** - dynamic socket with which you can connect many nodes.
+
+**Element** - list item.
+
+Outputs
+"""""""
+**Elements** - list of input structures.
+
+
+
+
+
+----------------------------
+
+Merge
+~~~~~
+.. tip:: Location: ``Add > Struct > Merge``
+
+Description
+"""""""""""
+Combines lists of structures that are formed using the Make List node.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+**Merge Lists** - dynamic socket with which you can connect many nodes.
+
+**List** - list item.
+
+Outputs
+"""""""
+**Elements** - merged lists items.
+
+
+
+
+
+----------------------------
+
+Frame
+~~~~~
+.. tip:: Location: ``Add > Layout > Frame``
+
+Description
+"""""""""""
+Standard frame blender node.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+`It has no outputs.`
+
+
+
+
+
+----------------------------
+
+Reroute
+~~~~~~~
+.. tip:: Location: ``Add > Layout > Reroute``
+
+Description
+"""""""""""
+Standard reroute blender node.
+
+Parameters
+""""""""""
+`It has no parameters.`
+
+Inputs
+""""""
+`It has no inputs.`
+
+Outputs
+"""""""
+`It has no outputs.`
