@@ -1,9 +1,10 @@
 import taichi as ti
 import numpy as np
 import os
-from mpm_solver import MPMSolver
+import utils
+from engine.mpm_solver import MPMSolver
 
-write_to_disk = True
+write_to_disk = False
 
 if write_to_disk:
     os.makedirs('outputs', exist_ok=True)

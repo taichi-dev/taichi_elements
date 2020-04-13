@@ -93,7 +93,7 @@ class MPMSolver:
             if USE_IN_BLENDER:
                 from .voxelizer import Voxelizer
             else:
-                from voxelizer import Voxelizer
+                from engine.voxelizer import Voxelizer
             self.voxelizer = Voxelizer(self.res, self.dx)
             self.set_gravity((0, -9.8, 0))
             

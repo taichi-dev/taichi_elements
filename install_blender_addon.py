@@ -13,6 +13,9 @@ if addon_path[:-1] == '/':
 assert addon_path.endswith(os.path.join('scripts', 'addons'))
 
 addon_folder = os.path.join(addon_path, 'taichi_elements')
+blender_addon_path = 'blender'
+blender_addon_main_file_name = '__init__.py'
+engine_path = 'engine'
 
 
 def install():
@@ -21,9 +24,11 @@ def install():
         shutil.rmtree(addon_folder)
 
     os.mkdir(addon_folder)
-    for f in os.listdir('.'):
-        if f.endswith('.py'):
-            shutil.copy(f, os.path.join(addon_folder, f))
+    for source_directory in (engine_path, blender_addon_path):
+        for f in os.listdir(source_directory):
+            if f.endswith('.py'):
+                source_file_path = os.path.join(source_directory, f)
+                shutil.copy(source_file_path, os.path.join(addon_folder, f))
     print("Done.")
 
 
