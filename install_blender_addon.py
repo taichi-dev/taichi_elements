@@ -14,6 +14,7 @@ assert addon_path.endswith(os.path.join('scripts', 'addons'))
 
 addon_folder = os.path.join(addon_path, 'taichi_elements')
 blender_addon_path = 'blender'
+blender_addon_main_file_name = '__init__.py'
 engine_path = 'engine'
 
 
@@ -28,6 +29,11 @@ def install():
             if f.endswith('.py'):
                 source_file_path = os.path.join(source_directory, f)
                 shutil.copy(source_file_path, os.path.join(addon_folder, f))
+    # copy main blender addon file
+    shutil.copy(
+        os.path.join(blender_addon_path, blender_addon_main_file_name),
+        os.path.join(addon_folder, blender_addon_main_file_name)
+    )
     print("Done.")
 
 
