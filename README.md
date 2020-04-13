@@ -27,6 +27,6 @@ The short-term plan is
 
 ## Installing taichi_elements (experimental) for Blender
  - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`
- - Execute `python3 install_blender_addo.py` to install the addon
+ - Execute `python3 install_blender_addon.py` to install the addon
    - If you are doing development and wish to **k**eep refreshing the installed addon, add argument `-k`.
  - Restart Blender to reload the addon
