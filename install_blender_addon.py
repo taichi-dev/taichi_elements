@@ -24,16 +24,11 @@ def install():
         shutil.rmtree(addon_folder)
 
     os.mkdir(addon_folder)
-    for source_directory in (blender_addon_path, engine_path):
+    for source_directory in (engine_path, blender_addon_path):
         for f in os.listdir(source_directory):
             if f.endswith('.py'):
                 source_file_path = os.path.join(source_directory, f)
                 shutil.copy(source_file_path, os.path.join(addon_folder, f))
-    # copy main blender addon file
-    shutil.copy(
-        os.path.join(blender_addon_path, blender_addon_main_file_name),
-        os.path.join(addon_folder, blender_addon_main_file_name)
-    )
     print("Done.")
 
 
