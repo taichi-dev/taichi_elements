@@ -13,9 +13,9 @@ if addon_path[:-1] == '/':
 assert addon_path.endswith(os.path.join('scripts', 'addons'))
 
 addon_folder = os.path.join(addon_path, 'taichi_elements')
-blender_addon_path = 'blender'
-blender_addon_main_file_name = '__init__.py'
-engine_path = 'engine'
+taichi_elements_path = os.path.dirname(os.path.abspath(os.curdir))
+blender_addon_path = os.path.join(taichi_elements_path, 'blender')
+engine_path = os.path.join(taichi_elements_path, 'engine')
 
 
 def install():
