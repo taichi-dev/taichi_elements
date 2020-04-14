@@ -8,7 +8,7 @@ The short-term plan is
  - To integrate the simulator into Blender
 
 ## How to run (without Blender)
- - Install [Taichi](https://github.com/yuanming-hu/taichi) with pip
+ - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
  - Go to `demo` folder
  - `python3 demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
@@ -24,7 +24,7 @@ The short-term plan is
  ```
   The output looks like `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81`, which means python3 is located at `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81/python/bin/python3.7`
  - Install [pip](https://pip.pypa.io/en/stable/installing/) using that Python executable
- - Install Taichi: `./python3.7m -m pip install --upgrade taichi-nightly` (Note: as of April 12 2020, Taichi version is `v0.5.11`. Please use the latest version.)
+ - Install Taichi: `./python3.7m -m pip install --upgrade taichi` (Note: as of April 13 2020, Taichi version is `v0.5.12`. Please use the latest version. Also note that the package name is now simply `taichi` instead of `taichi-nightly`.)
 
 ## Installing taichi_elements (experimental) for Blender
  - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`
