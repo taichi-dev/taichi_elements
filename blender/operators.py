@@ -27,8 +27,8 @@ def get_cache_folder(sim_node):
             disk = link.to_node
             folder_raw = disk.inputs['Folder'].get_value()
             folder = bpy.path.abspath(folder_raw)
-            par_sys = disk.create_particles_system
-            par_mesh = disk.create_particles_mesh
+            par_sys = disk.create_psys
+            par_mesh = disk.create_pmesh
             return folder, par_sys, par_mesh
 
 
@@ -59,7 +59,7 @@ def create_emitter(solv, emitter):
     if not src_geom:
         return
 
-    obj_name = src_geom.bpy_object_name
+    obj_name = src_geom.name
     obj = bpy.data.objects.get(obj_name)
 
     if not obj:
@@ -88,7 +88,7 @@ def create_emitter(solv, emitter):
     b_mesh.clear()
     tris = np.array(tris, dtype=np.float32)
     # material type
-    mat = emitter.material.material_type
+    mat = emitter.material.typ
     # taichi material
     ti_mat = mpm_solver.MPMSolver.materials.get(mat, None)
 
@@ -128,17 +128,17 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
             # create emitters
             for emitter in self.emitters:
-                if emitter.emitter_type == 'EMITTER':
+                if emitter.typ == 'EMITTER':
                     if emitter.emit_frame == frame:
                         create_emitter(self.solv, emitter)
-                elif emitter.emitter_type == 'INFLOW':
+                elif emitter.typ == 'INFLOW':
                     enable = emitter.enable_fcurve
-                    action = bpy.data.actions.get(enable.action_name, None)
+                    action = bpy.data.actions.get(enable.act, None)
                     if action is None:
                         create_emitter(self.solv, emitter)
                         continue
-                    if len(action.fcurves) > enable.fcurve_index:
-                        fcurve = action.fcurves[enable.fcurve_index]
+                    if len(action.fcurves) > enable.index:
+                        fcurve = action.fcurves[enable.index]
                         enable_value = bool(int(fcurve.evaluate(frame)))
                         if enable_value:
                             create_emitter(self.solv, emitter)
