@@ -36,6 +36,8 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
             from_socket = self.links[0].from_socket
             if from_socket.node.bl_idname == 'NodeReroute':
                 from_socket = get_socket(from_socket)
+                if from_socket is None:
+                    return self.value
             if from_socket.bl_idname == self.bl_idname:
                 if hasattr(from_socket, 'get_value'):
                     return from_socket.get_value()
