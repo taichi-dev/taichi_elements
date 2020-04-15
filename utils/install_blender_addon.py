@@ -13,9 +13,28 @@ if addon_path[:-1] == '/':
 assert addon_path.endswith(os.path.join('scripts', 'addons'))
 
 addon_folder = os.path.join(addon_path, 'taichi_elements')
+addon_engine_folder = os.path.join(addon_folder, 'engine')
 taichi_elements_path = os.path.dirname(os.path.abspath(os.curdir))
-blender_addon_path = os.path.join(taichi_elements_path, 'blender')
+blend_addon_path = os.path.join(taichi_elements_path, 'blender')
 engine_path = os.path.join(taichi_elements_path, 'engine')
+out_dirs = (addon_folder, addon_engine_folder)
+
+
+def copy_file(src_dir, out_dir, f):
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    source_file_path = os.path.join(src_dir, f)
+    shutil.copy(source_file_path, os.path.join(out_dir, f))
+
+
+def copy_files(src_dir, out_dir):
+    for f in os.listdir(src_dir):
+        if os.path.isdir(os.path.join(src_dir, f)):
+            src_subdir = os.path.join(src_dir, f)
+            out_subdir = os.path.join(out_dir, f)
+            copy_files(src_subdir, out_subdir)
+        elif f.endswith('.py'):
+            copy_file(src_dir, out_dir, f)
 
 
 def install():
@@ -23,12 +42,10 @@ def install():
     if os.path.exists(addon_folder):  # delete the old addon
         shutil.rmtree(addon_folder)
 
-    os.mkdir(addon_folder)
-    for source_directory in (engine_path, blender_addon_path):
-        for f in os.listdir(source_directory):
-            if f.endswith('.py'):
-                source_file_path = os.path.join(source_directory, f)
-                shutil.copy(source_file_path, os.path.join(addon_folder, f))
+    for dir_index, src_dir in enumerate((blend_addon_path, engine_path)):
+        out_dir = out_dirs[dir_index]
+        copy_files(src_dir, out_dir)
+
     print("Done.")
 
 
