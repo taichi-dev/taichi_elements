@@ -26,7 +26,7 @@ class Voxelizer:
 
     @ti.func
     def fill(self, p, q, height, inc):
-        for i in range(height):
+        for i in range(self.padding, height):
             self.voxels[p, q, i] += inc
 
     @ti.kernel
@@ -79,7 +79,7 @@ class Voxelizer:
                         height = int(
                             -ti.dot(normal, base_voxel - a) /
                             normal[2] * self.inv_dx - 0.5)
-                        height = min(height, self.res[1] - 1)
+                        height = min(height, self.res[1] - self.padding)
                         inc = 0
                         if normal[2] > 0:
                             inc = 1
