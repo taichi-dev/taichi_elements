@@ -1,18 +1,6 @@
 import bpy
 import nodeitems_utils
 
-
-# category names
-SOLVERS = 'Solvers'
-SIMULATION_OBJECTS = 'Simulation Objects'
-SOURCE_DATA = 'Source Data'
-INPUTS = 'Inputs'
-FORCE_FIELDS = 'Force Fields'
-STRUCT = 'Struct'
-OUTPUT = 'Output'
-LAYOUT = 'Layout'
-
-
 from . import nodes
 
 

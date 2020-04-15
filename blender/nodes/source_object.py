@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SOURCE_DATA
 
 
 class ElementsSourceObjectNode(base.BaseNode):
@@ -9,7 +8,7 @@ class ElementsSourceObjectNode(base.BaseNode):
     bl_label = 'Source Object'
 
     name: bpy.props.StringProperty()
-    category = SOURCE_DATA
+    category = base.SOURCE_DATA
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Object')

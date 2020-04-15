@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import STRUCT
 
 
 class ElementsMergeNode(base.ElementsDynamicSocketsNode, base.BaseNode):
@@ -10,4 +9,4 @@ class ElementsMergeNode(base.ElementsDynamicSocketsNode, base.BaseNode):
 
     text: bpy.props.StringProperty(default='List')
     text_empty: bpy.props.StringProperty(default='Merge Lists')
-    category = STRUCT
+    category = base.STRUCT

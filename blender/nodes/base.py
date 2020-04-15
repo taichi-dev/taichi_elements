@@ -1,6 +1,17 @@
 import bpy
 
 
+# node category names
+SOLVERS = 'Solvers'
+SIMULATION_OBJECTS = 'Simulation Objects'
+SOURCE_DATA = 'Source Data'
+INPUTS = 'Inputs'
+FORCE_FIELDS = 'Force Fields'
+STRUCT = 'Struct'
+OUTPUT = 'Output'
+LAYOUT = 'Layout'
+
+
 def create_class(node):
     node_class_name = ''.join(
         map(lambda part: part.capitalize(), node.bl_label.split(' ')))

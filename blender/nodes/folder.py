@@ -1,12 +1,11 @@
 from . import base
-from ..categories import INPUTS
 
 
 class ElementsFolderNode(base.BaseNode):
     bl_idname = 'elements_folder_node'
     bl_label = 'Folder'
 
-    category = INPUTS
+    category = base.INPUTS
 
     def init(self, context):
         self.width = 250.0

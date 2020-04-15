@@ -1,5 +1,4 @@
 from . import base
-from ..categories import SOLVERS
 
 
 class ElementsMpmSolverNode(base.BaseNode):
@@ -17,7 +16,7 @@ class ElementsMpmSolverNode(base.BaseNode):
             'elements_float_node',
         ],
     }
-    category = SOLVERS
+    category = base.SOLVERS
 
     def init(self, context):
         self.width = 175.0

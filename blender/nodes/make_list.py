@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import STRUCT
 
 
 class ElementsMakeListNode(base.ElementsDynamicSocketsNode, base.BaseNode):
@@ -10,4 +9,4 @@ class ElementsMakeListNode(base.ElementsDynamicSocketsNode, base.BaseNode):
 
     text: bpy.props.StringProperty(default='Element')
     text_empty: bpy.props.StringProperty(default='Add Element')
-    category = STRUCT
+    category = base.STRUCT

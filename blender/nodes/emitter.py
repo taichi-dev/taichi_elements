@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SIMULATION_OBJECTS
 
 
 class ElementsEmitterNode(base.BaseNode):
@@ -21,7 +20,7 @@ class ElementsEmitterNode(base.BaseNode):
         'Color': ['elements_color_node']
     }
     typ: bpy.props.StringProperty(default='EMITTER')
-    category = SIMULATION_OBJECTS
+    category = base.SIMULATION_OBJECTS
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Emitter')

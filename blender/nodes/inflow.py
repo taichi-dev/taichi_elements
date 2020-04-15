@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SIMULATION_OBJECTS
 
 
 class ElementsInflowNode(base.BaseNode):
@@ -20,7 +19,7 @@ class ElementsInflowNode(base.BaseNode):
     }
     typ: bpy.props.StringProperty(default='INFLOW')
 
-    category = SIMULATION_OBJECTS
+    category = base.SIMULATION_OBJECTS
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Inflow')
@@ -37,4 +36,3 @@ class ElementsInflowNode(base.BaseNode):
 
         color = self.inputs.new('elements_color_socket', 'Color')
         color.text = 'Color'
-        color.value = (0.8, 0.8, 0.8)

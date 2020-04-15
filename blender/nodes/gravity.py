@@ -1,5 +1,4 @@
 from . import base
-from ..categories import FORCE_FIELDS
 
 
 class ElementsGravityNode(base.BaseNode):
@@ -11,7 +10,7 @@ class ElementsGravityNode(base.BaseNode):
         'Direction': [],
     }
 
-    category = FORCE_FIELDS
+    category = base.FORCE_FIELDS
 
     def init(self, context):
         self.width = 175.0

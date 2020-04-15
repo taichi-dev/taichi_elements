@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SOURCE_DATA
 
 
 class ElementsTextureNode(base.BaseNode):
@@ -9,7 +8,7 @@ class ElementsTextureNode(base.BaseNode):
     bl_label = 'Texture'
 
     name: bpy.props.StringProperty()
-    category = SOURCE_DATA
+    category = base.SOURCE_DATA
 
     def init(self, context):
         self.width = 250.0

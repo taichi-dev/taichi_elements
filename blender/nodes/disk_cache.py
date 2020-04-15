@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import OUTPUT
 
 
 class ElementsCacheNode(base.BaseNode):
@@ -19,7 +18,7 @@ class ElementsCacheNode(base.BaseNode):
     create_psys: bpy.props.BoolProperty(default=True, name='Particles System')
     create_pmesh: bpy.props.BoolProperty(default=False, name='Particles Mesh')
 
-    category = OUTPUT
+    category = base.OUTPUT
 
     def init(self, context):
         self.width = 200.0

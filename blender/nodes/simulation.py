@@ -1,5 +1,4 @@
 from . import base
-from ..categories import SIMULATION_OBJECTS
 
 
 class ElementsSimulationNode(base.BaseNode):
@@ -25,7 +24,7 @@ class ElementsSimulationNode(base.BaseNode):
         ]
     }
 
-    category = SIMULATION_OBJECTS
+    category = base.SIMULATION_OBJECTS
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Simulation Data')

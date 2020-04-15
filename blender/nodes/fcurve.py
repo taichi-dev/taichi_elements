@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SOURCE_DATA
 
 
 class ElementsFCurveNode(base.BaseNode):
@@ -12,7 +11,7 @@ class ElementsFCurveNode(base.BaseNode):
     act: bpy.props.StringProperty()
     # fcurve index
     index: bpy.props.IntProperty(min=0, name='FCurve Index')
-    category = SOURCE_DATA
+    category = base.SOURCE_DATA
 
     def init(self, context):
         output_socket = self.outputs.new(

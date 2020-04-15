@@ -1,7 +1,6 @@
 import bpy
 
 from . import base
-from ..categories import SOLVERS
 
 
 class ElementsMaterialNode(base.BaseNode):
@@ -15,7 +14,7 @@ class ElementsMaterialNode(base.BaseNode):
         ('SAND', 'Sand', '')
     ]
     typ: bpy.props.EnumProperty(items=items, default='WATER')
-    category = SOLVERS
+    category = base.SOLVERS
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Material')
