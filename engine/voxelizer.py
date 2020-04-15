@@ -14,7 +14,7 @@ def inside_ccw(p, a, b, c):
 
 @ti.data_oriented
 class Voxelizer:
-    def __init__(self, res, dx, precision=ti.f64):
+    def __init__(self, res, dx, precision=ti.f64, padding=3):
         assert len(res) == 3
         self.res = res
         self.dx = dx
@@ -22,6 +22,7 @@ class Voxelizer:
         self.voxels = ti.var(ti.i32, shape=res)
         assert precision in [ti.f32, ti.f64]
         self.precision = precision
+        self.padding = padding
 
     @ti.func
     def fill(self, p, q, height, inc):
@@ -51,9 +52,15 @@ class Voxelizer:
 
             p_min = int(ti.floor(bound_min[0] * self.inv_dx))
             p_max = int(ti.floor(bound_max[0] * self.inv_dx)) + 1
+            
+            p_min = max(self.padding, p_min)
+            p_max = min(self.res[0] - self.padding, p_max)
 
             q_min = int(ti.floor(bound_min[1] * self.inv_dx))
             q_max = int(ti.floor(bound_max[1] * self.inv_dx)) + 1
+            
+            q_min = max(self.padding, q_min)
+            q_max = min(self.res[1] - self.padding, q_max)
 
             normal = ti.normalized(ti.cross(b - a, c - a))
             
@@ -106,6 +113,9 @@ if __name__ == '__main__':
     #                       0.7]]).astype(np.float32)
     triangles = np.fromfile('triangles.npy', dtype=np.float32)
     triangles = np.reshape(triangles, (len(triangles) // 9, 9)) * 0.306 + 0.501
+    offsets = [0.0, 0.0, 0.0]
+    for i in range(9):
+        triangles[:, i] += offsets[i % 3]
     print(triangles.shape)
     print(triangles.max())
     print(triangles.min())
@@ -113,7 +123,9 @@ if __name__ == '__main__':
     vox.voxelize(triangles)
 
     voxels = vox.voxels.to_numpy().astype(np.float32)
-
+    
+    import os
+    os.makedirs('outputs', exist_ok=True)
     gui = ti.GUI('cross section', (n, n))
     for i in range(n):
         gui.set_image(voxels[:, :, i])
