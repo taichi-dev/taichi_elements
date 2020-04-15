@@ -35,7 +35,7 @@ class MPMSolver:
         'SEPARATE': surface_separate
     }
 
-    def __init__(self, res, size=1, max_num_particles=2**20):
+    def __init__(self, res, size=1, max_num_particles=2**20, padding=3):
         self.dim = len(res)
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
@@ -68,7 +68,7 @@ class MPMSolver:
         # grid node mass
         self.grid_m = ti.var(dt=ti.f32, shape=self.res)
         
-        self.padding = 3
+        self.padding = padding
 
         # Young's modulus and Poisson's ratio
         self.E, self.nu = 1e6 * size, 0.2
@@ -94,7 +94,7 @@ class MPMSolver:
                 from .voxelizer import Voxelizer
             else:
                 from engine.voxelizer import Voxelizer
-            self.voxelizer = Voxelizer(self.res, self.dx)
+            self.voxelizer = Voxelizer(res=self.res, dx=self.dx, padding=self.padding)
             self.set_gravity((0, -9.8, 0))
             
         self.grid_postprocess = []
@@ -214,7 +214,7 @@ class MPMSolver:
             for d in ti.static(range(self.dim)):
                 if I[d] < self.padding and self.grid_v[I][d] < 0:
                     self.grid_v[I][d] = 0  # Boundary conditions
-                if I[d] > self.res[d] - self.padding and self.grid_v[I][d] > 0:
+                if I[d] >= self.res[d] - self.padding and self.grid_v[I][d] > 0:
                     self.grid_v[I][d] = 0
 
 
