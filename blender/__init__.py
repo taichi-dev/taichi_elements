@@ -2,7 +2,7 @@
 bl_info = {
     'name': 'Elements',
     'description': 'High-Performance Multi-Material Continuum Physics Engine',
-    'author': '',    # TODO
+    'author': 'Taichi Elements Developers',
     'version': (0, 0, 0),
     'blender': (2, 82, 0),
     'location': 'Elements Window',
