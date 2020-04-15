@@ -20,6 +20,7 @@ from .mpm_solver import *
 from .simulation import *
 from .source_object import *
 from .texture import *
+from .vector import *
 
 
 node_classes = []

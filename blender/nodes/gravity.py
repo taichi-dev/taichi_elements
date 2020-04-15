@@ -5,10 +5,7 @@ class ElementsGravityNode(base.BaseNode):
     bl_idname = 'elements_gravity_node'
     bl_label = 'Gravity'
 
-    required_nodes = {
-        'Speed': ['elements_float_node', 'elements_integer_node'],
-        'Direction': [],
-    }
+    required_nodes = {'Direction': ['elements_vector_node', ], }
 
     category = base.FORCE_FIELDS
 
@@ -17,10 +14,6 @@ class ElementsGravityNode(base.BaseNode):
 
         out = self.outputs.new('elements_struct_socket', 'Gravity')
         out.text = 'Gravity Force'
-
-        # speed = self.inputs.new('elements_float_socket', 'Speed')
-        # speed.text = 'Speed'
-        # speed.value = 0.0
 
         direction = self.inputs.new('elements_vector_socket', 'Direction')
         direction.text = 'Direction'
