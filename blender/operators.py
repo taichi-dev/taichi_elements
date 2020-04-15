@@ -10,7 +10,7 @@ import bmesh
 # addon modules
 import taichi as ti
 import numpy as np
-from . import mpm_solver
+from .engine import mpm_solver
 
 
 WARN_SIM_NODE = 'The node tree must not contain more than 1 "Simulation" node.'
