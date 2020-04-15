@@ -145,6 +145,7 @@ def create_psys_obj():
     psys_me = bpy.data.meshes.new(PSYS_MESH_NAME)
     # particle system object
     psys_obj = bpy.data.objects.new(PSYS_OBJ_NAME, psys_me)
+    psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
     # create geometry
     bm = bmesh.new()
     bmesh.ops.create_cube(bm)
@@ -157,7 +158,7 @@ def create_psys_obj():
     psys_obj.show_instancer_for_render = False
     psys_obj.show_instancer_for_viewport = False
     # particle system settings
-    psys_stgs = psys_obj.particle_systems[0]
+    psys_stgs = psys_obj.particle_systems[0].settings
     # set particle system settings
     psys_stgs.frame_start = 0
     psys_stgs.frame_end = 0
