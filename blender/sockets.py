@@ -13,6 +13,19 @@ cols = {
 }
 
 
+# get reroute input socket
+def get_socket(socket):
+    node = socket.node
+    for input_socket in node.inputs:
+        for link in input_socket.links:
+            from_node = link.from_node
+            from_socket = link.from_socket
+            if from_node:
+                if from_node.bl_idname == 'NodeReroute':
+                    from_socket = get_socket(from_socket)
+                return from_socket
+
+
 class ElementsBaseSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_base_socket'
 
@@ -21,6 +34,8 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
     def get_value(self):
         if not self.is_output and len(self.links):
             from_socket = self.links[0].from_socket
+            if from_socket.node.bl_idname == 'NodeReroute':
+                from_socket = get_socket(from_socket)
             if from_socket.bl_idname == self.bl_idname:
                 if hasattr(from_socket, 'get_value'):
                     return from_socket.get_value()
@@ -80,8 +95,10 @@ class ElementsStructSocket(ElementsBaseSocket):
     def get_value(self):
         if not self.is_output and len(self.links):
             from_socket = self.links[0].from_socket
+            if from_socket.node.bl_idname == 'NodeReroute':
+                from_socket = get_socket(from_socket)
             if from_socket.bl_idname == self.bl_idname:
-                return self.links[0].from_node.get_class()
+                return from_socket.links[0].from_node.get_class()
             else:
                 return None
         else:

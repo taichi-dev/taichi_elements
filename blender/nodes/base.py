@@ -139,6 +139,22 @@ def find_node_class(node):
     return node.name
 
 
+def get_reroute_input(node):
+    if len(node.inputs):
+        # reroute links
+        re_links = node.inputs[0].links
+        if len(re_links):
+            from_node = re_links[0].from_node
+            node_id = from_node.bl_idname
+            if node_id == 'NodeReroute':
+                from_node = get_reroute_input(from_node)
+            return from_node
+        else:
+            return
+    else:
+        return
+
+
 class BaseNode(bpy.types.Node):
     @classmethod
     def poll(cls, node_tree):
@@ -154,7 +170,18 @@ class BaseNode(bpy.types.Node):
                     if hasattr(self, 'required_nodes'):
                         socket_nodes = self.required_nodes.get(
                             input_socket.name, None)
-                        if not link.from_node.bl_idname in socket_nodes:
+                        # linked node
+                        node = link.from_node
+                        # linked node id name
+                        node_id = node.bl_idname
+                        if node_id == 'NodeReroute':
+                            # reroute from node
+                            re_node = get_reroute_input(node)
+                            if re_node is None:
+                                return
+                            else:
+                                node_id = re_node.bl_idname
+                        if not node_id in socket_nodes:
                             bpy.context.space_data.node_tree.links.remove(link)
 
 
