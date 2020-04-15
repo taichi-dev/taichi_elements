@@ -1,11 +1,15 @@
 import bpy
 
-socket_colors = {
-    'NUMBER': (0.3, 0.3, 0.3, 1.0),
+
+# socket colors
+cols = {
+    'INT': (0.25, 0.25, 0.25, 1.0),
+    'FLOAT': (0.5, 0.5, 0.5, 1.0),
+    'VECTOR': (0.25, 0.25, 0.8, 1.0),
     'STRUCT': (0.0, 1.0, 0.0, 1.0),
     'ADD': (0.0, 0.0, 0.0, 0.25),
     'STRING': (1.0, 0.5, 0.0, 1.0),
-    'COLOR': (1.0, 1.0, 0.0, 1.0)
+    'COLOR': (0.8, 0.8, 0.0, 1.0)
 }
 
 
@@ -45,7 +49,7 @@ class ElementsIntegerSocket(ElementsBaseSocket):
     text: bpy.props.StringProperty(default='Integer')
 
     def draw_color(self, context, node):
-        return socket_colors['NUMBER']
+        return cols['INT']
 
 
 class ElementsFloatSocket(ElementsBaseSocket):
@@ -55,17 +59,17 @@ class ElementsFloatSocket(ElementsBaseSocket):
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
-        return socket_colors['NUMBER']
+        return cols['FLOAT']
 
 
-class Elements3dVectorFloatSocket(ElementsBaseSocket):
-    bl_idname = 'elements_3d_vector_float_socket'
+class ElementsVectorSocket(ElementsBaseSocket):
+    bl_idname = 'elements_vector_socket'
 
     value: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0), size=3)
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
-        return socket_colors['NUMBER']
+        return cols['VECTOR']
 
 
 class ElementsStructSocket(ElementsBaseSocket):
@@ -84,7 +88,7 @@ class ElementsStructSocket(ElementsBaseSocket):
             return None
 
     def draw_color(self, context, node):
-        return socket_colors['STRUCT']
+        return cols['STRUCT']
 
     def draw(self, context, layout, node, text):
         layout.label(text=self.text)
@@ -96,7 +100,7 @@ class ElementsAddSocket(bpy.types.NodeSocket):
     text: bpy.props.StringProperty(default='')
 
     def draw_color(self, context, node):
-        return socket_colors['ADD']
+        return cols['ADD']
 
     def draw(self, context, layout, node, text):
         layout.label(text=self.text)
@@ -111,7 +115,7 @@ class ElementsFolderSocket(ElementsBaseSocket):
     split_factor = 0.3
 
     def draw_color(self, context, node):
-        return socket_colors['STRING']
+        return cols['STRING']
 
 
 class ElementsColorSocket(ElementsBaseSocket):
@@ -123,12 +127,17 @@ class ElementsColorSocket(ElementsBaseSocket):
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
-        return socket_colors['COLOR']
+        return cols['COLOR']
 
 
 socket_classes = [
-    ElementsIntegerSocket, ElementsFloatSocket, Elements3dVectorFloatSocket,
-    ElementsStructSocket, ElementsAddSocket, ElementsFolderSocket, ElementsColorSocket
+    ElementsIntegerSocket,
+    ElementsFloatSocket,
+    ElementsVectorSocket,
+    ElementsColorSocket,
+    ElementsStructSocket,
+    ElementsAddSocket,
+    ElementsFolderSocket
 ]
 
 

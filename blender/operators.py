@@ -1,84 +1,107 @@
+# standart modules
 import threading
 import struct
 import os
 
-import bpy, bmesh
-from . import mpm_solver
+# blender modules
+import bpy
+import bmesh
+
+# addon modules
 import taichi as ti
 import numpy as np
+from . import mpm_solver
 
 
+WARN_SIM_NODE = 'The node tree must not contain more than 1 "Simulation" node.'
 mpm_solver.USE_IN_BLENDER = True
 
 
-def get_cache_folder(simulation_node):
-    particles_socket = simulation_node.outputs['Simulation Data']
-    if particles_socket.is_linked:
-        for link in particles_socket.links:
-            disk_cache_node = link.to_node
-            folder = disk_cache_node.inputs['Folder'].get_value()
-            par_sys = disk_cache_node.create_particles_system
-            par_mesh = disk_cache_node.create_particles_mesh
-            folder = bpy.path.abspath(folder)
+# sim_node - simulation node
+def get_cache_folder(sim_node):
+    # particles socket
+    par_s = sim_node.outputs['Simulation Data']
+    if par_s.is_linked:
+        for link in par_s.links:
+            # disk cache node
+            disk = link.to_node
+            folder_raw = disk.inputs['Folder'].get_value()
+            folder = bpy.path.abspath(folder_raw)
+            par_sys = disk.create_particles_system
+            par_mesh = disk.create_particles_mesh
             return folder, par_sys, par_mesh
 
 
-def get_simulation_nodes(operator, node_tree):
-    simulation_nodes = []
+# get simulation node
+def get_sim_node(operator, node_tree):
+    # simulation nodes
+    sim_nodes = []
+
     for node in node_tree.nodes:
         if node.bl_idname == 'elements_simulation_node':
-            simulation_nodes.append(node)
-    simulation_nodes_count = len(simulation_nodes)
-    if simulation_nodes_count != 1:
-        if simulation_nodes_count > 1:
-            operator.report({
-                'WARNING'
-            }, 'The node tree must not contain more than 1 "Simulation" node.')
+            sim_nodes.append(node)
+
+    # simulation nodes count
+    sim_nodes_cnt = len(sim_nodes)
+
+    if sim_nodes_cnt != 1:
+        if sim_nodes_cnt > 1:
+            operator.report({'WARNING'}, WARN_SIM_NODE)
             return
     else:
-        return simulation_nodes[0]
+        return sim_nodes[0]
 
 
-def create_emitter(sim, emitter):
-    source_geometry = emitter.source_geometry
-    if not source_geometry:
+def create_emitter(solv, emitter):
+    # source geometry
+    src_geom = emitter.source_geometry
+
+    if not src_geom:
         return
-    obj_name = emitter.source_geometry.bpy_object_name
+
+    obj_name = src_geom.bpy_object_name
     obj = bpy.data.objects.get(obj_name)
+
     if not obj:
         return
     if obj.type != 'MESH':
         return
     if not emitter.material:
         return
+
     b_mesh = bmesh.new()
     b_mesh.from_mesh(obj.data)
     bmesh.ops.triangulate(b_mesh, faces=b_mesh.faces)
-    triangles = []
-    for face in b_mesh.faces:
-        triangle = []
-        for vertex in face.verts:
-            v = obj.matrix_world @ vertex.co
-            triangle.extend(v)
-        triangles.append(triangle)
+    # emitter triangles
+    tris = []
 
-    triangles = np.array(triangles, dtype=np.float32)
-    print('Object "{0}": {1} tris'.format(obj.name, len(triangles)))
+    for face in b_mesh.faces:
+         # triangle
+        tri = []
+        # v - bmesh vertex
+        for v in face.verts:
+            # final vertex coordinate
+            v_co = obj.matrix_world @ v.co
+            tri.extend(v_co)
+        tris.append(tri)
 
     b_mesh.clear()
-    material = emitter.material.material_type
-    taichi_material = mpm_solver.MPMSolver.materials.get(material, None)
-    if taichi_material is None:
-        assert False, material
+    tris = np.array(tris, dtype=np.float32)
+    # material type
+    mat = emitter.material.material_type
+    # taichi material
+    ti_mat = mpm_solver.MPMSolver.materials.get(mat, None)
+
+    if ti_mat is None:
+        assert False, mat
+
+    # emitter particles color
     red = int(emitter.color.r * 255) << 16
     green = int(emitter.color.g * 255) << 8
     blue = int(emitter.color.b * 255)
     color = red | green | blue
-    sim.add_mesh(
-        triangles=triangles,
-        material=taichi_material,
-        color=color
-    )
+    # add emitter
+    solv.add_mesh(triangles=tris, material=ti_mat, color=color)
 
 
 class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
@@ -92,7 +115,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = False
         self.event_type = 'DEFAULT'
 
-    def run_simulation(self):
+    def run_sim(self):
         # self.frame_end + 1 - this means include the last frame in the range
         for frame in range(self.frame_start, self.frame_end + 1, 1):
             if self.event_type == 'ESC':
@@ -102,102 +125,109 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 self.cancel(bpy.context)
                 return
             print('Frame: {}'.format(frame))
+
+            # create emitters
             for emitter in self.emitters:
                 if emitter.emitter_type == 'EMITTER':
                     if emitter.emit_frame == frame:
-                        create_emitter(self.sim, emitter)
+                        create_emitter(self.solv, emitter)
                 elif emitter.emitter_type == 'INFLOW':
                     enable = emitter.enable_fcurve
                     action = bpy.data.actions.get(enable.action_name, None)
                     if action is None:
-                        create_emitter(self.sim, emitter)
+                        create_emitter(self.solv, emitter)
                         continue
                     if len(action.fcurves) > enable.fcurve_index:
                         fcurve = action.fcurves[enable.fcurve_index]
                         enable_value = bool(int(fcurve.evaluate(frame)))
                         if enable_value:
-                            create_emitter(self.sim, emitter)
+                            create_emitter(self.solv, emitter)
                     else:
-                        create_emitter(self.sim, emitter)
+                        create_emitter(self.solv, emitter)
+
             # generate simulation state at t = 0
-            particles = self.sim.particle_info()
-            np_x = particles['position']
-            np_v = particles['velocity']
-            np_material = particles['material']
-            np_color = particles['color']
+            # particles
+            pars = self.solv.particle_info()
+            np_x = pars['position']
+            np_v = pars['velocity']
+            np_material = pars['material']
+            np_color = pars['color']
             # and then start time stepping
-            self.sim.step(1 / self.fps)
+            self.solv.step(1 / self.fps)
             print(np_x)
 
             if not os.path.exists(self.cache_folder):
                 os.makedirs(self.cache_folder)
 
-            particles_file_path = os.path.join(
-                self.cache_folder, 'particles_{0:0>6}.bin'.format(frame))
+            # file name
+            fname = 'particles_{0:0>6}.bin'.format(frame)
+            # particle file path
+            pars_fpath = os.path.join(self.cache_folder, fname)
             data = bytearray()
-            particles_count = len(np_x)
-            data.extend(struct.pack('I', particles_count))
-            print(particles_count)
-            for particle_index in range(particles_count):
-                data.extend(struct.pack('3f', *np_x[particle_index]))
-                data.extend(struct.pack('3f', *np_v[particle_index]))
-                data.extend(struct.pack('I', np_color[particle_index]))
+            # particles count
+            pars_cnt = len(np_x)
+            data.extend(struct.pack('I', pars_cnt))
+            print('Particles count:', pars_cnt)
+
+            # par_i - particles index
+            for par_i in range(pars_cnt):
+                data.extend(struct.pack('3f', *np_x[par_i]))
+                data.extend(struct.pack('3f', *np_v[par_i]))
+                data.extend(struct.pack('I', np_color[par_i]))
 
             write_obj = False
+
             if write_obj:
-                with open(particles_file_path + '.obj', 'w') as f:
-                    for i in range(particles_count):
+                with open(pars_fpath + '.obj', 'w') as f:
+                    for i in range(pars_cnt):
                         x = np_x[i]
                         print(f'v {x[0]} {x[1]} {x[2]}', file=f)
 
-            with open(particles_file_path, 'wb') as file:
+            with open(pars_fpath, 'wb') as file:
                 file.write(data)
 
-    def init_simulation(self):
+    def init_sim(self):
         self.is_runnig = True
         self.scene.elements_nodes.clear()
-        simulation_node = get_simulation_nodes(self, self.node_tree)
-        if not simulation_node:
+        # simulation node
+        sim = get_sim_node(self, self.node_tree)
+
+        if not sim:
             return {'FINISHED'}
 
-        simulation_node.get_class()
-        simulation_class = self.scene.elements_nodes[simulation_node.name]
-        self.cache_folder, _, _ = get_cache_folder(simulation_node)
+        sim.get_class()
+        # simulation class
+        cls = self.scene.elements_nodes[sim.name]
+        self.cache_folder, _, _ = get_cache_folder(sim)
 
         if not self.cache_folder:
             self.report({'WARNING'}, 'Cache folder not specified')
             return {'FINISHED'}
 
-        for i, j in self.scene.elements_nodes.items():
-            print(i, j)
-
-        simulation_class = self.scene.elements_nodes[simulation_node.name]
-
-        self.frame_start = simulation_class.frame_start
-        self.frame_end = simulation_class.frame_end
-        self.fps = simulation_class.fps
+        self.frame_start = cls.frame_start
+        self.frame_end = cls.frame_end
+        self.fps = cls.fps
 
         # TODO: list is not implemented
 
-        res = simulation_class.solver.resolution
-        size = simulation_class.solver.size
+        res = cls.solver.resolution
+        size = cls.solver.size
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
-        sim = mpm_solver.MPMSolver((res, res, res), size=size)
+        solv = mpm_solver.MPMSolver((res, res, res), size=size)
 
-        hub = simulation_class.hubs
+        hub = cls.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
         gravity_direction = hub.forces[0].direction
-        print('g =', gravity_direction)
-        sim.set_gravity(tuple(gravity_direction))
+        solv.set_gravity(tuple(gravity_direction))
 
         self.emitters = hub.emitters
         self.size = size
-        self.sim = sim
-        self.run_simulation()
+        self.solv = solv
+        self.run_sim()
 
-    def launch_simulation(self):
-        self.thread = threading.Thread(target=self.init_simulation, args=())
+    def launch_sim(self):
+        self.thread = threading.Thread(target=self.init_sim, args=())
         self.thread.start()
 
     def modal(self, context, event):
@@ -205,7 +235,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.event_type = 'ESC'
 
         if not self.is_runnig:
-            self.launch_simulation()
+            self.launch_sim()
 
         if self.is_finishing:
             self.cancel(context)
@@ -217,8 +247,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.node_tree = context.space_data.node_tree
         self.scene = context.scene
         context.window_manager.modal_handler_add(self)
-        self.timer = context.window_manager.event_timer_add(
-            1.0, window=context.window)
+        win = context.window
+        self.timer = context.window_manager.event_timer_add(1.0, window=win)
         return {'RUNNING_MODAL'}
 
     def cancel(self, context):
@@ -229,7 +259,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = True
 
 
-def draw_render_operator(self, context):
+# render operator draw function
+def rend_op_draw_func(self, context):
     if context.space_data.node_tree:
         if context.space_data.node_tree.bl_idname == 'elements_node_tree':
             self.layout.operator('elements.stable_render_animation')
@@ -241,23 +272,30 @@ class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.space_data.node_tree:
-            return context.space_data.node_tree.bl_idname == 'elements_node_tree'
+        # space data
+        spc_data = context.space_data
+        if spc_data.node_tree:
+            return spc_data.node_tree.bl_idname == 'elements_node_tree'
 
     def execute(self, context):
-        scene = context.scene
-        scene.render.image_settings.file_format = 'PNG'
-        output_folder = scene.render.filepath
-        for frame in range(scene.frame_start, scene.frame_end + 1):
-            file_path = os.path.join(bpy.path.abspath(output_folder), '{0:0>4}.png'.format(frame))
-            if scene.render.use_overwrite or not os.path.exists(file_path): 
-                print('Render Frame:', frame)
-                scene.frame_set(frame)
+        scn = context.scene
+        rend = scn.render
+        rend.image_settings.file_format = 'PNG'
+        # output folder
+        out = rend.filepath
+
+        for frm in range(scn.frame_start, scn.frame_end + 1):
+            file_name = '{0:0>4}.png'.format(frm)
+            file_path = os.path.join(bpy.path.abspath(out), file_name)
+            if rend.use_overwrite or not os.path.exists(file_path): 
+                print('Render Frame:', frm)
+                scn.frame_set(frm)
                 bpy.ops.render.render(animation=False)
                 for image in bpy.data.images:
                     if image.type == 'RENDER_RESULT':
-                        image.save_render(file_path, scene=scene)
+                        image.save_render(file_path, scene=scn)
                         bpy.data.images.remove(image)
+
         return {'FINISHED'}
 
 

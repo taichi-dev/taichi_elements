@@ -516,7 +516,7 @@ class ElementsGravityNode(BaseNode):
         speed_socket.text = 'Speed'
         speed_socket.value = 9.8
 
-        direction_socket = self.inputs.new('elements_3d_vector_float_socket',
+        direction_socket = self.inputs.new('elements_vector_socket',
                                            'Direction')
         direction_socket.text = 'Direction'
         direction_socket.value = (0.0, 0.0, -1.0)

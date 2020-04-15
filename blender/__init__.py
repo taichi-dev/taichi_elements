@@ -1,5 +1,17 @@
 # necessary for Blender to detect this addon
-bl_info = {'name': 'Elements', 'blender': (2, 81, 0), 'category': 'Animation'}
+bl_info = {
+    'name': 'Elements',
+    'description': 'High-Performance Multi-Material Continuum Physics Engine',
+    'author': '',    # TODO
+    'version': (0, 0, 0),
+    'blender': (2, 82, 0),
+    'location': 'Elements Window',
+    'warning': 'Work in progress',
+    'support': 'COMMUNITY',
+    'wiki_url': 'https://taichi-elements.readthedocs.io/en/latest/',
+    'tracker_url': 'https://github.com/taichi-dev/taichi_elements/issues',
+    'category': 'Physics'
+}
 
 use_blender = False
 
@@ -19,6 +31,5 @@ if use_blender:
 
     def unregister():
         addon.unregister()
-
 
 # Otherwise act as a PyPI package
