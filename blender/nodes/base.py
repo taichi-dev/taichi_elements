@@ -110,13 +110,21 @@ def create_class(node):
         else:
             return self.elements.__getitem__(item)
 
+    def node_dir_function(self):
+        # class attributes
+        attrs = []
+        attrs.extend(self.params.keys())
+        attrs.extend(self.inputs.keys())
+        return attrs
+
     node_class = type(
         node_class_name, (), {
             '__init__': node_init_function,
             '__getattribute__': get_attribute_function,
             '__len__': node_len_function,
             '__next__': node_next_function,
-            '__getitem__': node_getitem_function
+            '__getitem__': node_getitem_function,
+            '__dir__': node_dir_function
         })
 
     return node_class()
