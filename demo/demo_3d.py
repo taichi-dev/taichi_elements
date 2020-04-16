@@ -12,9 +12,10 @@ gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
 
 mpm = MPMSolver(res=(64, 64, 64), size=10)
 
-mpm.add_cube(lower_corner=[2, 4, 3],
-             cube_size=[1, 1, 3],
-             material=MPMSolver.material_snow)
+mpm.add_ellipsoid(center=[2, 4, 3],
+                  radius=1,
+                  material=MPMSolver.material_snow,
+                  velocity=[0, -10, 0])
 mpm.add_cube(lower_corner=[2, 6, 3],
              cube_size=[1, 1, 3],
              material=MPMSolver.material_elastic)
