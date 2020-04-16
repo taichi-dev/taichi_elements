@@ -1,5 +1,6 @@
 import taichi as ti
 import numpy as np
+import numbers
 import math
 
 USE_IN_BLENDER = False
@@ -50,6 +51,7 @@ class MPMSolver:
         self.max_num_particles = max_num_particles
         self.gravity = ti.Vector(self.dim, dt=ti.f32, shape=())
         self.source_bound = ti.Vector(self.dim, dt=ti.f32, shape=2)
+        self.source_velocity = ti.Vector(self.dim, dt=ti.f32, shape=())
         # position
         self.x = ti.Vector(self.dim, dt=ti.f32)
         # velocity
@@ -103,7 +105,7 @@ class MPMSolver:
         return ti.ndrange(*((3, ) * self.dim))
 
     def set_gravity(self, g):
-        assert isinstance(g, tuple)
+        assert isinstance(g, (tuple, list))
         assert len(g) == self.dim
         self.gravity[None] = g
         
@@ -282,9 +284,9 @@ class MPMSolver:
             self.g2p(dt)
             
     @ti.func
-    def seed_particle(self, i, x, material, color):
+    def seed_particle(self, i, x, material, color, velocity):
         self.x[i] = x
-        self.v[i] = ti.Vector.zero(ti.f32, self.dim)
+        self.v[i] = velocity
         self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
         self.color[i] = color
         self.material[i] = material
@@ -295,18 +297,27 @@ class MPMSolver:
             self.Jp[i] = 1
 
     @ti.kernel
-    def seed(self, num_original_particles: ti.i32, new_particles: ti.i32,
-             new_material: ti.i32, color: ti.i32):
-        for i in range(num_original_particles,
-                       num_original_particles + new_particles):
+    def seed(self, new_particles: ti.i32, new_material: ti.i32, color: ti.i32):
+        for i in range(self.n_particles[None],
+                       self.n_particles[None] + new_particles):
             self.material[i] = new_material
             x = ti.Vector.zero(ti.f32, self.dim)
             for k in ti.static(range(self.dim)):
                 x[k] = self.source_bound[0][k] + ti.random(
                 ) * self.source_bound[1][k]
-            self.seed_particle(i, x, new_material, color)
+            self.seed_particle(i, x, new_material, color, self.source_velocity[None])
+        
+    def set_source_velocity(self, velocity):
+        if velocity is not None:
+            velocity = list(velocity)
+            assert len(velocity) == self.dim
+            self.source_velocity[None] = velocity
+        else:
+            for i in range(self.dim):
+                self.source_velocity[None][i] = 0
 
-    def add_cube(self, lower_corner, cube_size, material, color=0xFFFFFF, sample_density=None):
+
+    def add_cube(self, lower_corner, cube_size, material, color=0xFFFFFF, sample_density=None, velocity=None):
         if sample_density is None:
             sample_density = 2**self.dim
         vol = 1
@@ -318,10 +329,62 @@ class MPMSolver:
         for i in range(self.dim):
             self.source_bound[0][i] = lower_corner[i]
             self.source_bound[1][i] = cube_size[i]
-
-        self.seed(self.n_particles[None], num_new_particles, material, color)
+            
+        self.set_source_velocity(velocity=velocity)
+            
+        self.seed(num_new_particles, material, color)
         self.n_particles[None] += num_new_particles
+
+
+    @ti.func
+    def random_point_in_unit_sphere(self):
+        ret = ti.Vector.zero(dt=ti.f32, n=self.dim)
+        while True:
+            for i in ti.static(range(self.dim)):
+                ret[i] = ti.random(ti.f32) * 2 - 1
+            if ret.norm_sqr() <= 1:
+                break
+        return ret
         
+
+    @ti.kernel
+    def seed_ellipsoid(self, new_particles: ti.i32, new_material: ti.i32, color: ti.i32):
+        
+        for i in range(self.n_particles[None], self.n_particles[None] + new_particles):
+            self.material[i] = new_material
+            x = self.source_bound[0] + self.random_point_in_unit_sphere() * self.source_bound[1]
+            self.seed_particle(i, x, new_material, color, self.source_velocity[None])
+
+    def add_ellipsoid(self, center, radius, material, color=0xFFFFFF, sample_density=None, velocity=None):
+        if sample_density is None:
+            sample_density = 2**self.dim
+            
+        if isinstance(radius, numbers.Number):
+            radius = [radius, ] * self.dim
+            
+        radius = list(radius)
+        
+        if self.dim == 2:
+            num_particles = math.pi
+        else:
+            num_particles = 4 / 3 * math.pi
+            
+        for i in range(self.dim):
+            num_particles *= radius[i] * self.inv_dx
+            
+        num_particles = int(math.ceil(num_particles * sample_density))
+            
+        self.source_bound[0] = center
+        self.source_bound[1] = radius
+    
+        self.set_source_velocity(velocity=velocity)
+
+        assert self.n_particles[None] + num_particles <= self.max_num_particles
+        
+        self.seed_ellipsoid(num_particles, material, color)
+        self.n_particles[None] += num_particles
+
+
     @ti.kernel
     def seed_from_voxels(self, material: ti.i32, color: ti.i32, sample_density: ti.i32):
         for i, j, k in self.voxelizer.voxels:
@@ -332,14 +395,16 @@ class MPMSolver:
                 for l in range(sample_density):
                     x = ti.Vector([ti.random() + i, ti.random() + j, ti.random() + k]) * self.dx
                     p = ti.atomic_add(self.n_particles[None], 1)
-                    self.seed_particle(p, x, material, color)
+                    self.seed_particle(p, x, material, color, self.source_velocity[None])
                     
         
-    def add_mesh(self, triangles, material, color=0xFFFFFF, sample_density=None):
+    def add_mesh(self, triangles, material, color=0xFFFFFF, sample_density=None, velocity=None):
         assert self.dim == 3
         if sample_density is None:
             sample_density = 2**self.dim
-            
+
+        self.set_source_velocity(velocity=velocity)
+        
         self.voxelizer.voxelize(triangles)
         self.seed_from_voxels(material, color, sample_density)
         
