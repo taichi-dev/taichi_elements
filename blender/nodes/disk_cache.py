@@ -16,7 +16,6 @@ class ElementsCacheNode(base.BaseNode):
         ],
     }
     create_psys: bpy.props.BoolProperty(default=True, name='Particles System')
-    create_pmesh: bpy.props.BoolProperty(default=False, name='Particles Mesh')
 
     category = base.OUTPUT
 
@@ -32,4 +31,3 @@ class ElementsCacheNode(base.BaseNode):
     def draw_buttons(self, context, layout):
         layout.label(text='Create:')
         layout.prop(self, 'create_psys', expand=True)
-        layout.prop(self, 'create_pmesh', expand=True)

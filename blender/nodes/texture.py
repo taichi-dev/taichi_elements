@@ -7,7 +7,7 @@ class ElementsTextureNode(base.BaseNode):
     bl_idname = 'elements_texture_node'
     bl_label = 'Texture'
 
-    name: bpy.props.StringProperty()
+    tex_name: bpy.props.StringProperty()
     category = base.SOURCE_DATA
 
     def init(self, context):
@@ -17,4 +17,4 @@ class ElementsTextureNode(base.BaseNode):
         out.text = 'Texture'
 
     def draw_buttons(self, context, layout):
-        layout.prop_search(self, 'name', bpy.data, 'textures', text='')
+        layout.prop_search(self, 'tex_name', bpy.data, 'textures', text='')

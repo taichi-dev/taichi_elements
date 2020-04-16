@@ -11,10 +11,15 @@ import bmesh
 import taichi as ti
 import numpy as np
 from .engine import mpm_solver
+from . import types
 
 
 WARN_SIM_NODE = 'The node tree must not contain more than 1 "Simulation" node.'
 mpm_solver.USE_IN_BLENDER = True
+IMPORT_NODES = (
+    'elements_particles_mesh_node',
+    'elements_particles_system_node'
+)
 
 
 # sim_node - simulation node
@@ -27,29 +32,28 @@ def get_cache_folder(sim_node):
             disk = link.to_node
             folder_raw = disk.inputs['Folder'].get_value()
             folder = bpy.path.abspath(folder_raw)
-            par_sys = disk.create_psys
-            par_mesh = disk.create_pmesh
-            return folder, par_sys, par_mesh
+            return folder
 
 
-# get simulation node
-def get_sim_node(operator, node_tree):
-    # simulation nodes
-    sim_nodes = []
+# get simulation nodes tree object
+def get_tree_obj(node_tree):
+    # simulation nodes tree object
+    tree = types.Tree()
 
     for node in node_tree.nodes:
         if node.bl_idname == 'elements_simulation_node':
-            sim_nodes.append(node)
+            tree.sim_nds[node.name] = node
+        elif node.bl_idname in IMPORT_NODES:
+            if node.bl_idname == 'elements_particles_system_node':
+                import_type = 'PAR_SYS'
+            elif node.bl_idname == 'elements_particles_mesh_node':
+                import_type = 'PAR_MESH'
+            node.get_class()
+            tree.imp_nds[node.name] = node, import_type
+        elif node.bl_idname == 'elements_cache_node':
+            tree.cache_nds[node.name] = node
 
-    # simulation nodes count
-    sim_nodes_cnt = len(sim_nodes)
-
-    if sim_nodes_cnt != 1:
-        if sim_nodes_cnt > 1:
-            operator.report({'WARNING'}, WARN_SIM_NODE)
-            return
-    else:
-        return sim_nodes[0]
+    return tree
 
 
 def create_emitter(solv, emitter):
@@ -59,7 +63,7 @@ def create_emitter(solv, emitter):
     if not src_geom:
         return
 
-    obj_name = src_geom.name
+    obj_name = src_geom.obj_name
     obj = bpy.data.objects.get(obj_name)
 
     if not obj:
@@ -189,8 +193,16 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     def init_sim(self):
         self.is_runnig = True
         self.scene.elements_nodes.clear()
-        # simulation node
-        sim = get_sim_node(self, self.node_tree)
+        tree = get_tree_obj(self.node_tree)
+        # simulation nodes count
+        sim_nodes_cnt = len(tree.sim_nds)
+    
+        if sim_nodes_cnt != 1:
+            if sim_nodes_cnt > 1:
+                self.report({'WARNING'}, WARN_SIM_NODE)
+                return
+
+        sim = list(tree.sim_nds.values())[0]
 
         if not sim:
             return {'FINISHED'}
@@ -198,7 +210,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         sim.get_class()
         # simulation class
         cls = self.scene.elements_nodes[sim.name]
-        self.cache_folder, _, _ = get_cache_folder(sim)
+        self.cache_folder = get_cache_folder(sim)
 
         if not self.cache_folder:
             self.report({'WARNING'}, 'Cache folder not specified')
@@ -259,16 +271,18 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = True
 
 
-# render operator draw function
-def rend_op_draw_func(self, context):
+# operators draw function
+def op_draw_func(self, context):
     if context.space_data.node_tree:
         if context.space_data.node_tree.bl_idname == 'elements_node_tree':
+            self.layout.operator('elements.simulate_particles')
             self.layout.operator('elements.stable_render_animation')
 
 
 class ELEMENTS_OT_StableRenderAnimation(bpy.types.Operator):
-    bl_idname = "elements.stable_render_animation"
-    bl_label = "Stable Render Animation"
+    bl_idname = 'elements.stable_render_animation'
+    bl_label = 'Render'
+    bl_description = 'Stable Render Animation'
 
     @classmethod
     def poll(cls, context):
