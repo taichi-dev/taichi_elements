@@ -1,0 +1,24 @@
+sudo: false
+
+language: python
+
+python:
+    - "3.7"
+
+matrix:
+  include:
+  - os: linux
+    dist: bionic
+    env:
+    - MATRIX_EVAL="PYTHON=python3.7"
+
+install:
+    - python3 -m pip install taichi
+    - python3 -m pip install coverage
+    - python3 -m pip install requests
+
+script:
+    - python -m coverage run tests/runner.py
+
+after_success:
+    bash <(curl -s https://codecov.io/bash)
