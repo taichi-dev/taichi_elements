@@ -29,7 +29,7 @@ def get_socket(socket):
 class ElementsBaseSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_base_socket'
 
-    split_factor = 0.6
+    split_factor = 0.5
 
     def get_value(self):
         if not self.is_output and len(self.links):
@@ -131,7 +131,7 @@ class ElementsFolderSocket(ElementsBaseSocket):
     value: bpy.props.StringProperty(subtype='DIR_PATH')
     text: bpy.props.StringProperty(default='Folder')
 
-    split_factor = 0.3
+    split_factor = 0.35
 
     def draw_color(self, context, node):
         return cols['STRING']

@@ -10,14 +10,10 @@ import bmesh
 from . import operators
 
 
-# name of particles mesh
-PAR_MESH_NAME = 'elements_particles_mesh'
 # name of particles object
-PAR_OBJ_NAME = 'elements_particles_object'
-# name of particles system mesh
-PSYS_MESH_NAME = 'elements_particle_system_mesh'
+PAR_OBJ_NAME = 'elements_particles'
 # name of particles system object
-PSYS_OBJ_NAME = 'elements_particle_system_object'
+PSYS_OBJ_NAME = 'elements_particle_system'
 
 
 class FakeOperator:
@@ -38,45 +34,27 @@ def get_tree():
                             return space.node_tree
 
 
-# get particles
-def get_pars():
-    # node tree
-    tree = get_tree()
+# read particles
+def read_pars(imp_nd_obj, caches, imps, imp_type):
     # particles positions
     pos = []
     # particles velocities
     vel = []
     # particles colors
     col = []
-    # create particle system
-    sys = False
-    # create particles mesh
-    mesh = False
-
-    if not tree:
-        return pos, vel, col, sys, mesh
-
-    # fake operator
-    op = FakeOperator()
-    # simulation node
-    sim = operators.get_sim_node(op, tree)
-
-    if not sim:
-        return pos, vel, col, sys, mesh
-
-    # cache folder, create particle system, create particles mesh
-    folder, sys, mesh = operators.get_cache_folder(sim)
-
-    if not sys and not mesh:
-        return pos, vel, col, sys, mesh
-
-    if not folder:
-        return pos, vel, col, sys, mesh
-
+    # scene
+    scn = bpy.context.scene
     # particles file name
-    name = 'particles_{0:0>6}.bin'.format(bpy.context.scene.frame_current)
+    name = 'particles_{0:0>6}.bin'.format(scn.frame_current)
+    # cache folder
+    folder = imp_nd_obj.cache_folder
+    imps.append((folder, imp_nd_obj.obj_name, imp_type))
+
+    if caches.get(folder, None):
+        return
+
     # absolute particles file path
-    path = os.path.join(folder, name)
+    path = bpy.path.abspath(os.path.join(folder, name))
 
     if os.path.exists(path):
 
@@ -106,18 +84,45 @@ def get_pars():
             offs += 4
             col.append(p_col)
 
-    return pos, vel, col, sys, mesh
+    caches[folder] = (pos, vel, col)
+
+
+# get particles
+def get_pars():
+    # cache folders data
+    caches = {}
+    # importers
+    imps = []
+
+    # node tree
+    tree = get_tree()
+
+    if not tree:
+        return caches
+
+    # simulation nodes tree object
+    tree = operators.get_tree_obj(tree)
+    # scene
+    scn = bpy.context.scene
+
+    # imp_nd - import node
+    for imp_nd, (_, imp_type) in tree.imp_nds.items():
+        # import node object
+        imp_nd_obj = scn.elements_nodes[imp_nd]
+        read_pars(imp_nd_obj, caches, imps, imp_type)
+
+    return caches, imps
 
 
 # update particles mesh
 # Function params:
 # obj - particles object, pos - particles positions
-def update_pmesh(obj, pos):
+def update_pmesh(obj, pos, mesh_name):
     # old particles mesh
     me_old = obj.data
     me_old.name = 'temp'
     # new particles mesh
-    me_new = bpy.data.meshes.new(PAR_MESH_NAME)
+    me_new = bpy.data.meshes.new(mesh_name)
     verts = []
 
     # i - particle index
@@ -130,27 +135,19 @@ def update_pmesh(obj, pos):
 
 
 # create particles object
-def create_pobj():
+def create_pobj(mesh_name):
+    if not mesh_name:
+        mesh_name = PAR_OBJ_NAME
     # particles mesh
-    par_me = bpy.data.meshes.new(PAR_MESH_NAME)
+    par_me = bpy.data.meshes.new(mesh_name)
     # particles object
-    par_obj = bpy.data.objects.new(PAR_OBJ_NAME, par_me)
+    par_obj = bpy.data.objects.new(mesh_name, par_me)
     bpy.context.scene.collection.objects.link(par_obj)
     return par_obj
 
 
-# create particle system object
-def create_psys_obj():
-    # particle system mesh
-    psys_me = bpy.data.meshes.new(PSYS_MESH_NAME)
-    # particle system object
-    psys_obj = bpy.data.objects.new(PSYS_OBJ_NAME, psys_me)
-    psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
-    # create geometry
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm)
-    bm.to_mesh(psys_me)
-    bpy.context.scene.collection.objects.link(psys_obj)
+# set particles system settings
+def set_psys_settings(psys_obj):
     # set obj settings
     psys_obj.hide_viewport = False
     psys_obj.hide_render = False
@@ -168,6 +165,21 @@ def create_psys_obj():
     psys_stgs.color_maximum = 10.0
     psys_stgs.display_color = 'VELOCITY'
     psys_stgs.display_method = 'DOT'
+
+
+# create particle system object
+def create_psys_obj(obj_name):
+    # particle system mesh
+    psys_me = bpy.data.meshes.new(obj_name)
+    # particle system object
+    psys_obj = bpy.data.objects.new(PSYS_OBJ_NAME, psys_me)
+    psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+    # create geometry
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm)
+    bm.to_mesh(psys_me)
+    bpy.context.scene.collection.objects.link(psys_obj)
+    set_psys_settings(psys_obj)
     return psys_obj
 
 
@@ -178,6 +190,9 @@ def create_psys_obj():
 # p_vel - particles velocities
 # p_col - particles colors
 def upd_psys_obj(psys_obj, p_pos, p_vel, p_col):
+    if not len(psys_obj.particle_systems):
+        psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+        set_psys_settings(psys_obj)
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
     psys_stgs.count = len(p_pos) // 3
@@ -207,28 +222,32 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_col):
 # import simulation data
 @bpy.app.handlers.persistent
 def imp_sim_data(scene):
-    # p_pos - particles positions
-    # p_vel - particles velocities
-    # p_col - particles colors
-    # use_psys - create particle system
-    # use_pmesh - create particles mesh
-    p_pos, p_vel, p_col, use_psys, use_pmesh = get_pars()
+    scene.elements_nodes.clear()
+    # caches data, importers
+    caches, imps = get_pars()
 
-    # create particles mesh
-    if use_pmesh:
-        # particles object
-        p_obj = bpy.data.objects.get(PAR_OBJ_NAME, None)
-        if not p_obj:
-            p_obj = create_pobj()
-        update_pmesh(p_obj, p_pos)
-
-    # create particles system
-    if use_psys:
-        # particle system object
-        psys_obj = bpy.data.objects.get(PSYS_OBJ_NAME, None)
-        if not psys_obj:
-            psys_obj = create_psys_obj()
-        upd_psys_obj(psys_obj, p_pos, p_vel, p_col)
+    for folder, obj_name, imp_type in imps:
+        if imp_type == 'PAR_MESH':
+            if not obj_name:
+                obj_name = PAR_OBJ_NAME
+            # particles object
+            p_obj = bpy.data.objects.get(obj_name, None)
+            if not p_obj:
+                p_obj = create_pobj(obj_name)
+            # particles positions
+            p_pos = caches[folder][0]
+            update_pmesh(p_obj, p_pos, obj_name)
+        elif imp_type == 'PAR_SYS':
+            if not obj_name:
+                obj_name = PSYS_OBJ_NAME
+            # particle system object
+            psys_obj = bpy.data.objects.get(obj_name, None)
+            if not psys_obj:
+                psys_obj = create_psys_obj(obj_name)
+            p_pos = caches[folder][0]
+            p_vel = caches[folder][1]
+            p_col = caches[folder][2]
+            upd_psys_obj(psys_obj, p_pos, p_vel, p_col)
 
 
 def register():

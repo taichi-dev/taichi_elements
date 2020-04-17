@@ -47,6 +47,3 @@ class ElementsSimulationNode(base.BaseNode):
 
         hubs = self.inputs.new('elements_struct_socket', 'Hubs')
         hubs.text = 'Hubs'
-
-    def draw_buttons(self, context, layout):
-        layout.operator('elements.simulate_particles')
