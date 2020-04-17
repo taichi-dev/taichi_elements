@@ -56,7 +56,7 @@ def get_tree_obj(node_tree):
     return tree
 
 
-def create_emitter(solv, emitter):
+def create_emitter(solv, emitter, vel):
     # source geometry
     src_geom = emitter.source_geometry
 
@@ -105,7 +105,7 @@ def create_emitter(solv, emitter):
     blue = int(emitter.color.b * 255)
     color = red | green | blue
     # add emitter
-    solv.add_mesh(triangles=tris, material=ti_mat, color=color)
+    solv.add_mesh(triangles=tris, material=ti_mat, color=color, velocity=vel)
 
 
 class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
@@ -132,22 +132,21 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
             # create emitters
             for emitter in self.emitters:
+                vel = emitter.velocity
                 if emitter.typ == 'EMITTER':
                     if emitter.emit_frame == frame:
-                        create_emitter(self.solv, emitter)
+                        create_emitter(self.solv, emitter, vel)
                 elif emitter.typ == 'INFLOW':
-                    enable = emitter.enable_fcurve
-                    action = bpy.data.actions.get(enable.act, None)
-                    if action is None:
-                        create_emitter(self.solv, emitter)
-                        continue
-                    if len(action.fcurves) > enable.index:
-                        fcurve = action.fcurves[enable.index]
-                        enable_value = bool(int(fcurve.evaluate(frame)))
-                        if enable_value:
-                            create_emitter(self.solv, emitter)
+                    if type(emitter.enable) == float:
+                        enable = emitter.enable
                     else:
-                        create_emitter(self.solv, emitter)
+                        if len(emitter.enable) == 1:
+                            index = 0
+                        else:
+                            index = frame
+                        enable = bool(int(round(emitter.enable[index], 0)))
+                    if enable:
+                        create_emitter(self.solv, emitter, vel)
 
             # generate simulation state at t = 0
             # particles
@@ -191,6 +190,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 file.write(data)
 
     def init_sim(self):
+        # simulation nodes
+        sim = []
+        for node in self.node_tree.nodes:
+            if node.bl_idname == 'elements_simulation_node':
+                sim.append(node)
+
+        if len(sim) != 1:
+            self.report({'WARNING'}, WARN_SIM_NODE)
+        else:
+            inputs = sim[0].inputs
+            self.scene.elements_frame_start = inputs['Frame Start'].value
+            self.scene.elements_frame_end = inputs['Frame End'].value
+
         self.is_runnig = True
         self.scene.elements_nodes.clear()
         tree = get_tree_obj(self.node_tree)

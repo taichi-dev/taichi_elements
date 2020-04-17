@@ -11,6 +11,8 @@ from .float_value import *
 from .folder import *
 from .particles_mesh import *
 from .particles_system import *
+from .combine_vector import *
+from .float_math import *
 from .gravity import *
 from .hub import *
 from .inflow import *

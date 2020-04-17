@@ -13,9 +13,7 @@ class ElementsInflowNode(base.BaseNode):
         ],
         'Material': [
             'elements_material_node',
-        ],
-        'Enable FCurve': ['elements_fcurve_node', ],
-        'Color': ['elements_color_node']
+        ]
     }
     typ: bpy.props.StringProperty(default='INFLOW')
 
@@ -25,8 +23,8 @@ class ElementsInflowNode(base.BaseNode):
         out = self.outputs.new('elements_struct_socket', 'Inflow')
         out.text = 'Inflow'
 
-        enable = self.inputs.new('elements_struct_socket', 'Enable FCurve')
-        enable.text = 'Enable FCurve'
+        enable = self.inputs.new('elements_float_socket', 'Enable')
+        enable.text = 'Enable'
 
         src_geom = self.inputs.new('elements_struct_socket', 'Source Geometry')
         src_geom.text = 'Source Geometry'
@@ -36,3 +34,6 @@ class ElementsInflowNode(base.BaseNode):
 
         color = self.inputs.new('elements_color_socket', 'Color')
         color.text = 'Color'
+
+        vel = self.inputs.new('elements_vector_socket', 'Velocity')
+        vel.text = 'Velocity'

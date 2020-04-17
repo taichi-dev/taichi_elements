@@ -9,12 +9,6 @@ class ElementsMpmSolverNode(base.BaseNode):
         'Domain Object': [
             'elements_source_object_node',
         ],
-        'Resolution': [
-            'elements_integer_node',
-        ],
-        'Size': [
-            'elements_float_node',
-        ],
     }
     category = base.SOLVERS
 
