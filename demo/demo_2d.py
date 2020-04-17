@@ -1,5 +1,6 @@
 import taichi as ti
 import numpy as np
+import utils
 import math
 from engine.mpm_solver import MPMSolver
 
