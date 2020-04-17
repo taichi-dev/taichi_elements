@@ -10,30 +10,40 @@ class ElementsNodeCategory(nodeitems_utils.NodeCategory):
         return context.space_data.tree_type == 'elements_node_tree'
 
 
-# node categories data
-data = {}
+# get categories data
+def get_categs_data():
+    # node categories data
+    data = {}
 
-for node in nodes.node_classes:
-    if not data.get(node.category, None):
-        data[node.category] = []
-    data[node.category].append(node.bl_idname)
+    for node in nodes.node_classes:
+        if not data.get(node.category, None):
+            data[node.category] = []
+        data[node.category].append(node.bl_idname)
 
-# key - category name, values - node identifier
-data['Layout'] = ['NodeFrame', 'NodeReroute']
-# node categories
-categories = []
+    # key - category name, values - node identifier
+    data['Layout'] = ['NodeFrame', 'NodeReroute']
+    return data
 
-for name, ids in data.items():
-    # category items
-    items = []
-    for node_id in ids:
-        items.append(nodeitems_utils.NodeItem(node_id))
-    category_id = name.lower().replace(' ', '_')
-    category = ElementsNodeCategory(category_id, name, items=items)
-    categories.append(category)
+
+def get_categories():
+    data = get_categs_data()
+    # node categories
+    categories = []
+
+    for name, ids in data.items():
+        # category items
+        items = []
+        for node_id in ids:
+            items.append(nodeitems_utils.NodeItem(node_id))
+        category_id = name.lower().replace(' ', '_')
+        category = ElementsNodeCategory(category_id, name, items=items)
+        categories.append(category)
+
+    return categories
 
 
 def register():
+    categories = get_categories()
     nodeitems_utils.register_node_categories('elements_node_tree', categories)
 
 

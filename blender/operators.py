@@ -167,6 +167,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             # particle file path
             pars_fpath = os.path.join(self.cache_folder, fname)
             data = bytearray()
+            # particles format version
+            data.extend(struct.pack('I', 0))
             # particles count
             pars_cnt = len(np_x)
             data.extend(struct.pack('I', pars_cnt))
@@ -178,6 +180,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 data.extend(struct.pack('3f', *np_v[par_i]))
                 data.extend(struct.pack('I', np_color[par_i]))
 
+            with open(pars_fpath, 'wb') as file:
+                file.write(data)
+
             write_obj = False
 
             if write_obj:
@@ -185,9 +190,6 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                     for i in range(pars_cnt):
                         x = np_x[i]
                         print(f'v {x[0]} {x[1]} {x[2]}', file=f)
-
-            with open(pars_fpath, 'wb') as file:
-                file.write(data)
 
     def init_sim(self):
         # simulation nodes

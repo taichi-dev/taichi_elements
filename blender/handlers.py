@@ -14,6 +14,10 @@ from . import operators
 PAR_OBJ_NAME = 'elements_particles'
 # name of particles system object
 PSYS_OBJ_NAME = 'elements_particle_system'
+# particles format version 0
+PARS_FMT_VER_0 = 0
+# particles format support versions
+PARS_FMT_SUPP = (PARS_FMT_VER_0, )
 
 
 class FakeOperator:
@@ -22,32 +26,68 @@ class FakeOperator:
 
 
 # get elements node tree
-def get_tree():
-    windows = bpy.context.window_manager.windows
-    for window in windows:
-        screen = window.screen
-        for area in screen.areas:
-            for space in area.spaces:
-                if space.type == 'NODE_EDITOR':
-                    if space.node_tree:
-                        if space.node_tree.bl_idname == 'elements_node_tree':
-                            return space.node_tree
+def get_trees():
+    trees = []
+    for node_group in bpy.data.node_groups:
+        if node_group.bl_idname == 'elements_node_tree':
+            trees.append(node_group)
+    return trees
 
 
-# read particles
-def read_pars(imp_nd_obj, caches, imps, imp_type):
+def read_pars_v0(data, caches, offs, folder):
     # particles positions
     pos = []
     # particles velocities
     vel = []
     # particles colors
     col = []
+    # particles count
+    count = struct.unpack('I', data[offs : offs + 4])[0]
+    offs += 4
+
+    for index in range(count):
+        # particle position
+        p_pos = struct.unpack('3f', data[offs : offs + 12])
+        offs += 12
+        pos.extend(p_pos)
+
+        # particle velocity
+        p_vel = struct.unpack('3f', data[offs : offs + 12])
+        offs += 12
+        vel.extend(p_vel)
+
+        # particle color
+        p_col = struct.unpack('I', data[offs : offs + 4])[0]
+        offs += 4
+        col.append(p_col)
+
+    caches[folder] = (pos, vel, col)
+
+
+# read particles
+def read_pars(data, caches, folder):
+    # read offset in file
+    offs = 0
+    # particles format version
+    ver = struct.unpack('I', data[offs : offs + 4])[0]
+    offs += 4
+
+    if not ver in PARS_FMT_SUPP:
+        msg = 'Unsupported particles format version: {0}'.format(ver)
+        raise BaseException(msg)
+
+    if ver == PARS_FMT_VER_0:
+        read_pars_v0(data, caches, offs, folder)
+
+
+# get particles
+def get_pars(imp_nd_obj, caches, imps, imp_type):
     # scene
     scn = bpy.context.scene
     # particles file name
     name = 'particles_{0:0>6}.bin'.format(scn.frame_current)
     # cache folder
-    folder = imp_nd_obj.cache_folder
+    folder = bpy.path.abspath(imp_nd_obj.cache_folder)
     imps.append((folder, imp_nd_obj.obj_name, imp_type))
 
     if caches.get(folder, None):
@@ -61,55 +101,36 @@ def read_pars(imp_nd_obj, caches, imps, imp_type):
         with open(path, 'rb') as file:
             # particles file data
             data = file.read()
+            read_pars(data, caches, folder)
 
-        # read offset in file
-        offs = 0
-        # particles count
-        count = struct.unpack('I', data[offs : offs + 4])[0]
-        offs += 4
-
-        for index in range(count):
-            # particle position
-            p_pos = struct.unpack('3f', data[offs : offs + 12])
-            offs += 12
-            pos.extend(p_pos)
-
-            # particle velocity
-            p_vel = struct.unpack('3f', data[offs : offs + 12])
-            offs += 12
-            vel.extend(p_vel)
-
-            # particle color
-            p_col = struct.unpack('I', data[offs : offs + 4])[0]
-            offs += 4
-            col.append(p_col)
-
-    caches[folder] = (pos, vel, col)
+    else:
+        caches[folder] = ((), (), ())
 
 
-# get particles
-def get_pars():
+# get caches
+def get_caches():
     # cache folders data
     caches = {}
     # importers
     imps = []
 
     # node tree
-    tree = get_tree()
+    trees = get_trees()
 
-    if not tree:
+    if not trees:
         return caches, imps
 
-    # simulation nodes tree object
-    tree = operators.get_tree_obj(tree)
-    # scene
-    scn = bpy.context.scene
+    for tree in trees:
+        # simulation nodes tree object
+        tree_obj = operators.get_tree_obj(tree)
+        # scene
+        scn = bpy.context.scene
 
-    # imp_nd - import node
-    for imp_nd, (_, imp_type) in tree.imp_nds.items():
-        # import node object
-        imp_nd_obj = scn.elements_nodes[imp_nd]
-        read_pars(imp_nd_obj, caches, imps, imp_type)
+        # imp_nd - import node
+        for imp_nd, (_, imp_type) in tree_obj.imp_nds.items():
+            # import node object
+            imp_nd_obj = scn.elements_nodes[imp_nd]
+            get_pars(imp_nd_obj, caches, imps, imp_type)
 
     return caches, imps
 
@@ -224,7 +245,7 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_col):
 def imp_sim_data(scene):
     scene.elements_nodes.clear()
     # caches data, importers
-    caches, imps = get_pars()
+    caches, imps = get_caches()
 
     for folder, obj_name, imp_type in imps:
         if imp_type == 'PAR_MESH':
