@@ -119,6 +119,57 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.is_finishing = False
         self.event_type = 'DEFAULT'
 
+    def create_emitters(self, frame):
+        for emitter in self.emitters:
+            vel = emitter.velocity
+            if emitter.typ == 'EMITTER':
+                if emitter.emit_frame == frame:
+                    create_emitter(self.solv, emitter, vel)
+            elif emitter.typ == 'INFLOW':
+                if type(emitter.enable) == float:
+                    enable = emitter.enable
+                else:
+                    if len(emitter.enable) == 1:
+                        index = 0
+                    else:
+                        index = frame
+                    enable = bool(int(round(emitter.enable[index], 0)))
+                if enable:
+                    create_emitter(self.solv, emitter, vel)
+
+    def save_particles(self, frame, np_x, np_v, np_color):
+        if not os.path.exists(self.cache_folder):
+            os.makedirs(self.cache_folder)
+
+        # file name
+        fname = 'particles_{0:0>6}.bin'.format(frame)
+        # particle file path
+        pars_fpath = os.path.join(self.cache_folder, fname)
+        data = bytearray()
+        # particles format version
+        data.extend(struct.pack('I', 0))
+        # particles count
+        pars_cnt = len(np_x)
+        data.extend(struct.pack('I', pars_cnt))
+        print('Particles count:', pars_cnt)
+
+        # par_i - particles index
+        for par_i in range(pars_cnt):
+            data.extend(struct.pack('3f', *np_x[par_i]))
+            data.extend(struct.pack('3f', *np_v[par_i]))
+            data.extend(struct.pack('I', np_color[par_i]))
+
+        with open(pars_fpath, 'wb') as file:
+            file.write(data)
+
+        write_obj = False
+
+        if write_obj:
+            with open(pars_fpath + '.obj', 'w') as f:
+                for i in range(pars_cnt):
+                    x = np_x[i]
+                    print(f'v {x[0]} {x[1]} {x[2]}', file=f)
+
     def run_sim(self):
         # self.frame_end + 1 - this means include the last frame in the range
         for frame in range(self.frame_start, self.frame_end + 1, 1):
@@ -130,23 +181,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 return
             print('Frame: {}'.format(frame))
 
-            # create emitters
-            for emitter in self.emitters:
-                vel = emitter.velocity
-                if emitter.typ == 'EMITTER':
-                    if emitter.emit_frame == frame:
-                        create_emitter(self.solv, emitter, vel)
-                elif emitter.typ == 'INFLOW':
-                    if type(emitter.enable) == float:
-                        enable = emitter.enable
-                    else:
-                        if len(emitter.enable) == 1:
-                            index = 0
-                        else:
-                            index = frame
-                        enable = bool(int(round(emitter.enable[index], 0)))
-                    if enable:
-                        create_emitter(self.solv, emitter, vel)
+            self.create_emitters(frame)
 
             # generate simulation state at t = 0
             # particles
@@ -159,37 +194,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.solv.step(1 / self.fps)
             print(np_x)
 
-            if not os.path.exists(self.cache_folder):
-                os.makedirs(self.cache_folder)
-
-            # file name
-            fname = 'particles_{0:0>6}.bin'.format(frame)
-            # particle file path
-            pars_fpath = os.path.join(self.cache_folder, fname)
-            data = bytearray()
-            # particles format version
-            data.extend(struct.pack('I', 0))
-            # particles count
-            pars_cnt = len(np_x)
-            data.extend(struct.pack('I', pars_cnt))
-            print('Particles count:', pars_cnt)
-
-            # par_i - particles index
-            for par_i in range(pars_cnt):
-                data.extend(struct.pack('3f', *np_x[par_i]))
-                data.extend(struct.pack('3f', *np_v[par_i]))
-                data.extend(struct.pack('I', np_color[par_i]))
-
-            with open(pars_fpath, 'wb') as file:
-                file.write(data)
-
-            write_obj = False
-
-            if write_obj:
-                with open(pars_fpath + '.obj', 'w') as f:
-                    for i in range(pars_cnt):
-                        x = np_x[i]
-                        print(f'v {x[0]} {x[1]} {x[2]}', file=f)
+            self.save_particles(frame, np_x, np_v, np_color)
 
     def init_sim(self):
         # simulation nodes
