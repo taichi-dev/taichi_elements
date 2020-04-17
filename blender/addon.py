@@ -20,3 +20,5 @@ def unregister():
     for addon_module in reversed(addon_modules):
         addon_module.unregister()
     del bpy.types.Scene.elements_nodes
+    del bpy.types.Scene.elements_frame_end
+    del bpy.types.Scene.elements_frame_start
