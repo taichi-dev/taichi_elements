@@ -17,11 +17,6 @@ class ElementsCombineVectorNode(base.BaseNode):
     bl_idname = 'elements_combine_vector_node'
     bl_label = 'Combine Vector'
 
-    required_nodes = {
-        'X': ['elements_float_node', 'elements_fcurve_node'],
-        'Y': ['elements_float_node', 'elements_fcurve_node'],
-        'Z': ['elements_float_node', 'elements_fcurve_node']
-    }
     category = base.CONVERTER
     get_value = {'Vector': get_out_value, }
 

@@ -7,14 +7,7 @@ class ElementsCacheNode(base.BaseNode):
     bl_idname = 'elements_cache_node'
     bl_label = 'Disk Cache'
 
-    required_nodes = {
-        'Particles': [
-            'elements_simulation_node',
-        ],
-        'Folder': [
-            'elements_folder_node',
-        ],
-    }
+    required_nodes = {'Particles': ['elements_simulation_node', ], }
 
     category = base.OUTPUT
 

@@ -8,17 +8,12 @@ class ElementsEmitterNode(base.BaseNode):
     bl_label = 'Emitter'
 
     required_nodes = {
-        'Emit Frame': [
-            'elements_integer_node',
-        ],
         'Source Geometry': [
             'elements_source_object_node',
         ],
         'Material': [
             'elements_material_node',
-        ],
-        'Color': ['elements_color_node'],
-        'Velocity': ['elements_vector_node', 'elements_combine_vector_node']
+        ]
     }
     typ: bpy.props.StringProperty(default='EMITTER')
     category = base.SIMULATION_OBJECTS

@@ -5,8 +5,6 @@ class ElementsGravityNode(base.BaseNode):
     bl_idname = 'elements_gravity_node'
     bl_label = 'Gravity'
 
-    required_nodes = {'Direction': ['elements_vector_node', ], }
-
     category = base.FORCE_FIELDS
 
     def init(self, context):

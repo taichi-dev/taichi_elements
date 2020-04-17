@@ -13,9 +13,7 @@ class ElementsInflowNode(base.BaseNode):
         ],
         'Material': [
             'elements_material_node',
-        ],
-        'Enable FCurve': ['elements_fcurve_node', ],
-        'Color': ['elements_color_node']
+        ]
     }
     typ: bpy.props.StringProperty(default='INFLOW')
 

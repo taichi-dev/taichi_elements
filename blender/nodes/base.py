@@ -169,21 +169,27 @@ class BaseNode(bpy.types.Node):
         for input_socket in self.inputs:
             if len(input_socket.links):
                 for link in input_socket.links:
-                    if hasattr(self, 'required_nodes'):
-                        socket_nodes = self.required_nodes.get(
-                            input_socket.name, None)
-                        # linked node
-                        node = link.from_node
-                        # linked node id name
-                        node_id = node.bl_idname
-                        if node_id == 'NodeReroute':
-                            # reroute from node
-                            re_node = get_reroute_input(node)
-                            if re_node is None:
-                                return
-                            else:
-                                node_id = re_node.bl_idname
-                        if not node_id in socket_nodes:
+                    if input_socket.bl_idname == 'elements_struct_socket':
+                        if hasattr(self, 'required_nodes'):
+                            socket_nodes = self.required_nodes.get(
+                                input_socket.name, None
+                            )
+                            # linked node
+                            node = link.from_node
+                            # linked node id name
+                            node_id = node.bl_idname
+                            if node_id == 'NodeReroute':
+                                # reroute from node
+                                re_node = get_reroute_input(node)
+                                if re_node is None:
+                                    return
+                                else:
+                                    node_id = re_node.bl_idname
+                            if not node_id in socket_nodes:
+                                bpy.context.space_data.node_tree.links.remove(link)
+                    else:
+                        from_socket = link.from_socket
+                        if from_socket.bl_idname != input_socket.bl_idname:
                             bpy.context.space_data.node_tree.links.remove(link)
 
 
