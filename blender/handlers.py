@@ -98,7 +98,7 @@ def get_pars():
     tree = get_tree()
 
     if not tree:
-        return caches
+        return caches, imps
 
     # simulation nodes tree object
     tree = operators.get_tree_obj(tree)

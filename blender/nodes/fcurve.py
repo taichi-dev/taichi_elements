@@ -1,6 +1,24 @@
 import bpy
 
 from . import base
+from .. import utils
+
+
+def get_out_value(socket):
+    frm_strt, frm_end = utils.get_frame_info()
+    node = socket.node
+    action = bpy.data.actions.get(node.act, None)
+    if action is None:
+        return [1.0, ]
+    if len(action.fcurves) > node.index:
+        values = []
+        for frame in range(frm_strt, frm_end + 1):
+            fcurve = action.fcurves[node.index]
+            value = fcurve.evaluate(frame)
+            values.append(value)
+        return values
+    else:
+        return [1.0, ]
 
 
 class ElementsFCurveNode(base.BaseNode):
@@ -12,12 +30,14 @@ class ElementsFCurveNode(base.BaseNode):
     # fcurve index
     index: bpy.props.IntProperty(min=0, name='FCurve Index')
     category = base.SOURCE_DATA
+    get_value = {'FCurve Values': get_out_value, }
 
     def init(self, context):
         output_socket = self.outputs.new(
-            'elements_struct_socket',
+            'elements_float_socket',
             'FCurve Values'
         )
+        output_socket.hide_value = True
         output_socket.text = 'FCurve Values'
 
     def draw_buttons(self, context, layout):
