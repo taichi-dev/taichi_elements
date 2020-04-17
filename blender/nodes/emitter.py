@@ -17,7 +17,8 @@ class ElementsEmitterNode(base.BaseNode):
         'Material': [
             'elements_material_node',
         ],
-        'Color': ['elements_color_node']
+        'Color': ['elements_color_node'],
+        'Velocity': ['elements_vector_node', 'elements_combine_vector_node']
     }
     typ: bpy.props.StringProperty(default='EMITTER')
     category = base.SIMULATION_OBJECTS
@@ -37,3 +38,6 @@ class ElementsEmitterNode(base.BaseNode):
 
         color = self.inputs.new('elements_color_socket', 'Color')
         color.text = 'Color'
+
+        vel = self.inputs.new('elements_vector_socket', 'Velocity')
+        vel.text = 'Velocity'

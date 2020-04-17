@@ -26,6 +26,19 @@ def get_socket(socket):
                 return from_socket
 
 
+def get_socket_value(socket):
+    node = socket.node
+    if hasattr(node, 'get_value'):
+        get_value_func = node.get_value.get(socket.name, None)
+        if not get_value_func:
+            return socket.value
+        else:
+            value = get_value_func(socket)
+            return value
+    else:
+        return socket.value
+
+
 class ElementsBaseSocket(bpy.types.NodeSocket):
     bl_idname = 'elements_base_socket'
 
@@ -40,14 +53,14 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
                     return self.value
             if from_socket.bl_idname == self.bl_idname:
                 if hasattr(from_socket, 'get_value'):
-                    return from_socket.get_value()
+                    return get_socket_value(from_socket)
             else:
                 return self.value
         else:
             return self.value
 
     def draw(self, context, layout, node, text):
-        if not len(self.links) or self.is_output:
+        if (not len(self.links) or self.is_output) and not self.hide_value:
             if self.text:
                 row = layout.split(factor=self.split_factor)
                 row.label(text=self.text)
