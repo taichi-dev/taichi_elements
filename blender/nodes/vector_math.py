@@ -22,7 +22,6 @@ def get_res_value(socket):
         out.value[0] = val_1[0] / val_2[0]
         out.value[1] = val_1[1] / val_2[1]
         out.value[2] = val_1[2] / val_2[2]
-    print(out.value[0], out.value[1], out.value[2])
     return out.value
 
 

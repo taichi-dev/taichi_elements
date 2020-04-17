@@ -13,6 +13,6 @@ class ElementsGravityNode(base.BaseNode):
         out = self.outputs.new('elements_struct_socket', 'Gravity')
         out.text = 'Gravity Force'
 
-        direction = self.inputs.new('elements_vector_socket', 'Direction')
-        direction.text = 'Direction'
+        direction = self.inputs.new('elements_vector_socket', 'Strength')
+        direction.text = 'Strength'
         direction.value = (0.0, 0.0, -9.81)

@@ -57,13 +57,13 @@ def get_tree_obj(node_tree):
 
 
 def create_emitter(solv, emitter, vel):
-    # source geometry
-    src_geom = emitter.source_geometry
+    # source object
+    src_obj = emitter.source_object
 
-    if not src_geom:
+    if not src_obj:
         return
 
-    obj_name = src_geom.obj_name
+    obj_name = src_obj.obj_name
     obj = bpy.data.objects.get(obj_name)
 
     if not obj:
@@ -249,7 +249,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         hub = cls.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
-        gravity_direction = hub.forces[0].direction
+        gravity_direction = hub.forces[0].strength
         solv.set_gravity(tuple(gravity_direction))
 
         self.emitters = hub.emitters

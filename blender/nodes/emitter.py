@@ -8,7 +8,7 @@ class ElementsEmitterNode(base.BaseNode):
     bl_label = 'Emitter'
 
     required_nodes = {
-        'Source Geometry': [
+        'Source Object': [
             'elements_source_object_node',
         ],
         'Material': [
@@ -25,8 +25,8 @@ class ElementsEmitterNode(base.BaseNode):
         emit_frame = self.inputs.new('elements_integer_socket', 'Emit Frame')
         emit_frame.text = 'Emit Frame'
 
-        src_geom = self.inputs.new('elements_struct_socket', 'Source Geometry')
-        src_geom.text = 'Source Geometry'
+        src_geom = self.inputs.new('elements_struct_socket', 'Source Object')
+        src_geom.text = 'Source Object'
 
         mat = self.inputs.new('elements_struct_socket', 'Material')
         mat.text = 'Material'

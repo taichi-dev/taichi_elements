@@ -12,7 +12,7 @@ class ElementsSourceObjectNode(base.BaseNode):
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Object')
-        out.text = 'Source Geometry'
+        out.text = 'Source Object'
 
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'obj_name', bpy.data, 'objects', text='')
