@@ -8,7 +8,7 @@ class ElementsInflowNode(base.BaseNode):
     bl_label = 'Inflow'
 
     required_nodes = {
-        'Source Geometry': [
+        'Source Object': [
             'elements_source_object_node',
         ],
         'Material': [
@@ -26,8 +26,8 @@ class ElementsInflowNode(base.BaseNode):
         enable = self.inputs.new('elements_float_socket', 'Enable')
         enable.text = 'Enable'
 
-        src_geom = self.inputs.new('elements_struct_socket', 'Source Geometry')
-        src_geom.text = 'Source Geometry'
+        src_geom = self.inputs.new('elements_struct_socket', 'Source Object')
+        src_geom.text = 'Source Object'
 
         mat = self.inputs.new('elements_struct_socket', 'Material')
         mat.text = 'Material'
