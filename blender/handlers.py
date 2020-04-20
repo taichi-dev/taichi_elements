@@ -1,23 +1,18 @@
 # standart modules
 import os
-import struct
 
 # blender modules
 import bpy
 import bmesh
 
 # addon modules
-from . import operators
+from . import operators, particles_io
 
 
 # name of particles object
 PAR_OBJ_NAME = 'elements_particles'
 # name of particles system object
 PSYS_OBJ_NAME = 'elements_particle_system'
-# particles format version 0
-PARS_FMT_VER_0 = 0
-# particles format support versions
-PARS_FMT_SUPP = (PARS_FMT_VER_0, )
 
 
 class FakeOperator:
@@ -32,52 +27,6 @@ def get_trees():
         if node_group.bl_idname == 'elements_node_tree':
             trees.append(node_group)
     return trees
-
-
-def read_pars_v0(data, caches, offs, folder):
-    # particles positions
-    pos = []
-    # particles velocities
-    vel = []
-    # particles colors
-    col = []
-    # particles count
-    count = struct.unpack('I', data[offs : offs + 4])[0]
-    offs += 4
-
-    for index in range(count):
-        # particle position
-        p_pos = struct.unpack('3f', data[offs : offs + 12])
-        offs += 12
-        pos.extend(p_pos)
-
-        # particle velocity
-        p_vel = struct.unpack('3f', data[offs : offs + 12])
-        offs += 12
-        vel.extend(p_vel)
-
-        # particle color
-        p_col = struct.unpack('I', data[offs : offs + 4])[0]
-        offs += 4
-        col.append(p_col)
-
-    caches[folder] = (pos, vel, col)
-
-
-# read particles
-def read_pars(data, caches, folder):
-    # read offset in file
-    offs = 0
-    # particles format version
-    ver = struct.unpack('I', data[offs : offs + 4])[0]
-    offs += 4
-
-    if not ver in PARS_FMT_SUPP:
-        msg = 'Unsupported particles format version: {0}'.format(ver)
-        raise BaseException(msg)
-
-    if ver == PARS_FMT_VER_0:
-        read_pars_v0(data, caches, offs, folder)
 
 
 # get particles
@@ -101,10 +50,10 @@ def get_pars(imp_nd_obj, caches, imps, imp_type):
         with open(path, 'rb') as file:
             # particles file data
             data = file.read()
-            read_pars(data, caches, folder)
+            particles_io.read_pars(data, caches, folder)
 
     else:
-        caches[folder] = ((), (), ())
+        caches[folder] = {}
 
 
 # get caches
@@ -177,9 +126,11 @@ def set_psys_settings(psys_obj):
     psys_obj.show_instancer_for_viewport = False
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
+    # scene current frame
+    cur_frm = bpy.context.scene.frame_current
     # set particle system settings
-    psys_stgs.frame_start = 0
-    psys_stgs.frame_end = 0
+    psys_stgs.frame_start = cur_frm
+    psys_stgs.frame_end = cur_frm
     psys_stgs.lifetime = 1000
     psys_stgs.particle_size = 0.005
     psys_stgs.display_size = 0.005
@@ -210,7 +161,8 @@ def create_psys_obj(obj_name):
 # p_pos - particles positions
 # p_vel - particles velocities
 # p_col - particles colors
-def upd_psys_obj(psys_obj, p_pos, p_vel, p_col):
+# p_mat - particles materials ids
+def upd_psys_obj(psys_obj, p_pos, p_vel, p_col, p_mat):
     if not len(psys_obj.particle_systems):
         psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
         set_psys_settings(psys_obj)
@@ -237,7 +189,15 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_col):
         p_col_flt.extend((red, green, blue))
 
     psys.particles.foreach_set('angular_velocity', p_col_flt)
-    psys_stgs.frame_end = 0
+    # scene current frame
+    cur_frm = bpy.context.scene.frame_current
+    psys_stgs.frame_end = cur_frm
+    psys_stgs.frame_start = cur_frm
+    # used when navigating a timeline in the opposite direction
+    psys_stgs.frame_end = cur_frm
+    degp.update()
+    # set material id attribute
+    psys.particles.foreach_set('lifetime', p_mat)
 
 
 # import simulation data
@@ -256,7 +216,7 @@ def imp_sim_data(scene):
             if not p_obj:
                 p_obj = create_pobj(obj_name)
             # particles positions
-            p_pos = caches[folder][0]
+            p_pos = caches[folder].get(particles_io.POS, ())
             update_pmesh(p_obj, p_pos, obj_name)
         elif imp_type == 'PAR_SYS':
             if not obj_name:
@@ -265,10 +225,11 @@ def imp_sim_data(scene):
             psys_obj = bpy.data.objects.get(obj_name, None)
             if not psys_obj:
                 psys_obj = create_psys_obj(obj_name)
-            p_pos = caches[folder][0]
-            p_vel = caches[folder][1]
-            p_col = caches[folder][2]
-            upd_psys_obj(psys_obj, p_pos, p_vel, p_col)
+            p_pos = caches[folder].get(particles_io.POS, ())
+            p_vel = caches[folder].get(particles_io.VEL, ())
+            p_col = caches[folder].get(particles_io.COL, ())
+            p_mat = caches[folder].get(particles_io.MAT, ())
+            upd_psys_obj(psys_obj, p_pos, p_vel, p_col, p_mat)
 
 
 def register():

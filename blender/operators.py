@@ -11,7 +11,7 @@ import bmesh
 import taichi as ti
 import numpy as np
 from .engine import mpm_solver
-from . import types
+from . import types, particles_io
 
 
 WARN_SIM_NODE = 'The node tree must not contain more than 1 "Simulation" node.'
@@ -137,7 +137,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 if enable:
                     create_emitter(self.solv, emitter, vel)
 
-    def save_particles(self, frame, np_x, np_v, np_color):
+    def save_particles(self, frame, np_x, np_v, np_color, np_material):
         if not os.path.exists(self.cache_folder):
             os.makedirs(self.cache_folder)
 
@@ -145,19 +145,14 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         fname = 'particles_{0:0>6}.bin'.format(frame)
         # particle file path
         pars_fpath = os.path.join(self.cache_folder, fname)
-        data = bytearray()
-        # particles format version
-        data.extend(struct.pack('I', 0))
-        # particles count
-        pars_cnt = len(np_x)
-        data.extend(struct.pack('I', pars_cnt))
-        print('Particles count:', pars_cnt)
-
-        # par_i - particles index
-        for par_i in range(pars_cnt):
-            data.extend(struct.pack('3f', *np_x[par_i]))
-            data.extend(struct.pack('3f', *np_v[par_i]))
-            data.extend(struct.pack('I', np_color[par_i]))
+        # particles data
+        par_data = {
+            particles_io.POS: np_x,
+            particles_io.VEL: np_v,
+            particles_io.COL: np_color,
+            particles_io.MAT: np_material
+        }
+        data = particles_io.write_pars_v0(par_data)
 
         with open(pars_fpath, 'wb') as file:
             file.write(data)
@@ -194,7 +189,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.solv.step(1 / self.fps)
             print(np_x)
 
-            self.save_particles(frame, np_x, np_v, np_color)
+            self.save_particles(frame, np_x, np_v, np_color, np_material)
 
     def init_sim(self):
         # simulation nodes
