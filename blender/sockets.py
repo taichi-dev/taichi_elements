@@ -31,12 +31,17 @@ def get_socket_value(socket):
     if hasattr(node, 'get_value'):
         get_value_func = node.get_value.get(socket.name, None)
         if not get_value_func:
-            return socket.value
+            return [socket.default, ]
         else:
-            value = get_value_func(socket)
+            get_value_func(socket)
+            key = '{0}.{1}'.format(node.name, socket.name)
+            scn = bpy.context.scene
+            value = scn.elements_sockets.get(key, None)
+            if key is None:
+                raise BaseException('Cannot find socket value: {}'.format(key))
             return value
     else:
-        return socket.value
+        return [socket.default, ]
 
 
 class ElementsBaseSocket(bpy.types.NodeSocket):
@@ -50,24 +55,24 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
             if from_socket.node.bl_idname == 'NodeReroute':
                 from_socket = get_socket(from_socket)
                 if from_socket is None:
-                    return self.value
+                    return [self.default, ]
             if from_socket.bl_idname == self.bl_idname:
                 if hasattr(from_socket, 'get_value'):
                     return get_socket_value(from_socket)
             else:
-                return self.value
+                return [self.default, ]
         else:
-            return self.value
+            return [self.default, ]
 
     def draw(self, context, layout, node, text):
         if (not len(self.links) or self.is_output) and not self.hide_value:
             if self.text:
                 row = layout.split(factor=self.split_factor)
                 row.label(text=self.text)
-                row.prop(self, 'value', text='')
+                row.prop(self, 'default', text='')
             else:
                 row = layout.split(factor=1.0)
-                row.prop(self, 'value', text='')
+                row.prop(self, 'default', text='')
         else:
             layout.label(text=self.text)
 
@@ -75,7 +80,7 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
 class ElementsIntegerSocket(ElementsBaseSocket):
     bl_idname = 'elements_integer_socket'
 
-    value: bpy.props.IntProperty(default=0)
+    default: bpy.props.IntProperty(default=0)
     text: bpy.props.StringProperty(default='Integer')
 
     def draw_color(self, context, node):
@@ -85,7 +90,7 @@ class ElementsIntegerSocket(ElementsBaseSocket):
 class ElementsFloatSocket(ElementsBaseSocket):
     bl_idname = 'elements_float_socket'
 
-    value: bpy.props.FloatProperty(default=0.0)
+    default: bpy.props.FloatProperty(default=0.0)
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
@@ -95,7 +100,7 @@ class ElementsFloatSocket(ElementsBaseSocket):
 class ElementsVectorSocket(ElementsBaseSocket):
     bl_idname = 'elements_vector_socket'
 
-    value: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0), size=3)
+    default: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0), size=3)
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
@@ -141,7 +146,7 @@ class ElementsAddSocket(bpy.types.NodeSocket):
 class ElementsFolderSocket(ElementsBaseSocket):
     bl_idname = 'elements_folder_socket'
 
-    value: bpy.props.StringProperty(subtype='DIR_PATH')
+    default: bpy.props.StringProperty(subtype='DIR_PATH')
     text: bpy.props.StringProperty(default='Folder')
 
     split_factor = 0.35
@@ -153,7 +158,7 @@ class ElementsFolderSocket(ElementsBaseSocket):
 class ElementsColorSocket(ElementsBaseSocket):
     bl_idname = 'elements_color_socket'
 
-    value: bpy.props.FloatVectorProperty(
+    default: bpy.props.FloatVectorProperty(
         subtype='COLOR', min=0.0, max=1.0, size=3, default=(0.8, 0.8, 0.8)
     )
     text: bpy.props.StringProperty(default='Float')

@@ -3,26 +3,41 @@ from . import base
 
 def get_out_value_x(socket):
     node = socket.node
-    vector = node.inputs['Vector'].get_value()
+    vectors = node.inputs['Vector'].get_value()
     x = node.outputs['X']
-    x.value = vector[0]
-    return x.value
+    # scene
+    scn = bpy.context.scene
+    key = '{0}.{1}'.format(node.name, x.name)
+    res = []
+    for vector in vectors:
+        res.append(vector[0])
+    scn.elements_sockets[key] = res
 
 
 def get_out_value_y(socket):
     node = socket.node
-    vector = node.inputs['Vector'].get_value()
+    vectors = node.inputs['Vector'].get_value()
     y = node.outputs['Y']
-    y.value = vector[1]
-    return y.value
+    # scene
+    scn = bpy.context.scene
+    key = '{0}.{1}'.format(node.name, y.name)
+    res = []
+    for vector in vectors:
+        res.append(vector[1])
+    scn.elements_sockets[key] = res
 
 
 def get_out_value_z(socket):
     node = socket.node
-    vector = node.inputs['Vector'].get_value()
+    vectors = node.inputs['Vector'].get_value()
     z = node.outputs['Z']
-    z.value = vector[1]
-    return z.value
+    # scene
+    scn = bpy.context.scene
+    key = '{0}.{1}'.format(node.name, z.name)
+    res = []
+    for vector in vectors:
+        res.append(vector[2])
+    scn.elements_sockets[key] = res
 
 
 class ElementsSeparateVectorNode(base.BaseNode):

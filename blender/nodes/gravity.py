@@ -15,4 +15,4 @@ class ElementsGravityNode(base.BaseNode):
 
         direction = self.inputs.new('elements_vector_socket', 'Strength')
         direction.text = 'Strength'
-        direction.value = (0.0, 0.0, -9.81)
+        direction.default = (0.0, 0.0, -9.81)
