@@ -1,16 +1,23 @@
+import bpy
+
 from . import base
 
 
 def get_out_value(socket):
     node = socket.node
     out = node.outputs['Vector']
+    node = socket.node
+    out = node.outputs['Float']
     x = node.inputs['X'].get_value()
     y = node.inputs['Y'].get_value()
     z = node.inputs['Z'].get_value()
-    out.value[0] = x
-    out.value[1] = y
-    out.value[2] = z
-    return out.value
+    # scene
+    scn = bpy.context.scene
+    key = '{0}.{1}'.format(node.name, out.name)
+    res = []
+    for x_val, y_val, z_val in zip(x, y, z):
+        res.append((x_val, y_val, z_val))
+    scn.elements_sockets[key] = res
 
 
 class ElementsCombineVectorNode(base.BaseNode):

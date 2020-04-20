@@ -10,10 +10,10 @@ def get_cache(socket):
     node = socket.node
     pos = node.outputs['Position']
     vel = node.outputs['Velocity']
-    col = node.outputs['Color']
+    col = node.outputs['Hex Color']
     mat = node.outputs['Material']
     size = node.outputs['Size']
-    folder = node.inputs['Folder'].get_value()
+    folder = node.inputs['Folder'].get_value()[0]
     pos_key = '{0}.{1}'.format(node.name, pos.name)
     vel_key = '{0}.{1}'.format(node.name, vel.name)
     col_key = '{0}.{1}'.format(node.name, col.name)
@@ -65,7 +65,7 @@ class ElementsCacheNode(base.BaseNode):
     get_value = {
         'Position': get_cache,
         'Velocity': get_cache,
-        'Color': get_cache,
+        'Hex Color': get_cache,
         'Material': get_cache,
         'Size': get_cache
     }
@@ -92,8 +92,8 @@ class ElementsCacheNode(base.BaseNode):
         vel.hide_value = True
 
         # particle color
-        col = self.outputs.new('elements_color_socket', 'Color')
-        col.text = 'Color'
+        col = self.outputs.new('elements_integer_socket', 'Hex Color')
+        col.text = 'Hex Color'
         col.hide_value = True
 
         # particle material id

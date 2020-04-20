@@ -54,12 +54,12 @@ def read_pars_v0(data, caches, offs, folder):
         # particle position
         p_pos = struct.unpack('3f', data[offs : offs + 12])
         offs += 12
-        pos.extend(p_pos)
+        pos.append(p_pos)
 
         # particle velocity
         p_vel = struct.unpack('3f', data[offs : offs + 12])
         offs += 12
-        vel.extend(p_vel)
+        vel.append(p_vel)
 
         # particle color
         p_col = struct.unpack('I', data[offs : offs + 4])[0]

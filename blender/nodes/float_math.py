@@ -6,18 +6,59 @@ from . import base
 def get_res_value(socket):
     node = socket.node
     out = node.outputs['Result']
-    val_1 = node.inputs['Float 1'].get_value()
-    val_2 = node.inputs['Float 2'].get_value()
+    vals_1 = node.inputs['Float 1'].get_value()
+    vals_2 = node.inputs['Float 2'].get_value()
     mode = node.mode
-    if mode == 'ADD':
-        out.value = val_1 + val_2
-    elif mode == 'SUBTRACT':
-        out.value = val_1 - val_2
-    elif mode == 'MULTIPLY':
-        out.value = val_1 * val_2
-    elif mode == 'DIVIDE':
-        out.value = val_1 / val_2
-    return out.value
+    res = []
+    if type(vals_1) == list and type(vals_2) == float:
+        val_2 = vals_2
+        for val_1 in vals_1:
+            if mode == 'ADD':
+                res_val = val_1 + val_2
+            elif mode == 'SUBTRACT':
+                res_val = val_1 - val_2
+            elif mode == 'MULTIPLY':
+                res_val = val_1 * val_2
+            elif mode == 'DIVIDE':
+                res_val = val_1 / val_2
+            res.append(res_val)
+    elif type(vals_1) == float and type(vals_2) == list:
+        val_1 = vals_1
+        for val_2 in vals_2:
+            if mode == 'ADD':
+                res_val = val_1 + val_2
+            elif mode == 'SUBTRACT':
+                res_val = val_1 - val_2
+            elif mode == 'MULTIPLY':
+                res_val = val_1 * val_2
+            elif mode == 'DIVIDE':
+                res_val = val_1 / val_2
+            res.append(res_val)
+    elif type(vals_1) == list and type(vals_2) == list:
+        for val_1, val_2 in zip(vals_1, vals_2):
+            if mode == 'ADD':
+                res_val = val_1 + val_2
+            elif mode == 'SUBTRACT':
+                res_val = val_1 - val_2
+            elif mode == 'MULTIPLY':
+                res_val = val_1 * val_2
+            elif mode == 'DIVIDE':
+                res_val = val_1 / val_2
+            res.append(res_val)
+    elif type(vals_1) == float and type(vals_2) == float:
+        if mode == 'ADD':
+            res_val = val_1 + val_2
+        elif mode == 'SUBTRACT':
+            res_val = val_1 - val_2
+        elif mode == 'MULTIPLY':
+            res_val = val_1 * val_2
+        elif mode == 'DIVIDE':
+            res_val = val_1 / val_2
+        res.append(res_val)
+    # scene
+    scn = bpy.context.scene
+    key = '{0}.{1}'.format(node.name, out.name)
+    scn.elements_sockets[key] = res
 
 
 class ElementsFloatMathNode(base.BaseNode):

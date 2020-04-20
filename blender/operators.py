@@ -30,7 +30,7 @@ def get_cache_folder(sim_node):
         for link in par_s.links:
             # disk cache node
             disk = link.to_node
-            folder_raw = disk.inputs['Folder'].get_value()
+            folder_raw = disk.inputs['Folder'].get_value()[0]
             folder = bpy.path.abspath(folder_raw)
             return folder
 
@@ -100,9 +100,9 @@ def create_emitter(solv, emitter, vel):
         assert False, mat
 
     # emitter particles color
-    red = int(emitter.color.r * 255) << 16
-    green = int(emitter.color.g * 255) << 8
-    blue = int(emitter.color.b * 255)
+    red = int(emitter.color[0].r * 255) << 16
+    green = int(emitter.color[0].g * 255) << 8
+    blue = int(emitter.color[0].b * 255)
     color = red | green | blue
     # add emitter
     solv.add_mesh(triangles=tris, material=ti_mat, color=color, velocity=vel)
@@ -121,9 +121,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
     def create_emitters(self, frame):
         for emitter in self.emitters:
-            vel = emitter.velocity
+            vel = emitter.velocity[0]
             if emitter.typ == 'EMITTER':
-                if emitter.emit_frame == frame:
+                if emitter.emit_frame[0] == frame:
                     create_emitter(self.solv, emitter, vel)
             elif emitter.typ == 'INFLOW':
                 if type(emitter.enable) == float:
@@ -202,8 +202,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.report({'WARNING'}, WARN_SIM_NODE)
         else:
             inputs = sim[0].inputs
-            self.scene.elements_frame_start = inputs['Frame Start'].get_value()
-            self.scene.elements_frame_end = inputs['Frame End'].get_value()
+            self.scene.elements_frame_start = inputs['Frame Start'].get_value()[0]
+            self.scene.elements_frame_end = inputs['Frame End'].get_value()[0]
 
         self.is_runnig = True
         self.scene.elements_nodes.clear()
@@ -230,21 +230,21 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.report({'WARNING'}, 'Cache folder not specified')
             return {'FINISHED'}
 
-        self.frame_start = cls.frame_start
-        self.frame_end = cls.frame_end
-        self.fps = cls.fps
+        self.frame_start = cls.frame_start[0]
+        self.frame_end = cls.frame_end[0]
+        self.fps = cls.fps[0]
 
         # TODO: list is not implemented
 
-        res = cls.solver.resolution
-        size = cls.solver.size
+        res = cls.solver.resolution[0]
+        size = cls.solver.size[0]
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
         solv = mpm_solver.MPMSolver((res, res, res), size=size)
 
         hub = cls.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
-        gravity_direction = hub.forces[0].strength
+        gravity_direction = hub.forces[0].strength[0]
         solv.set_gravity(tuple(gravity_direction))
 
         self.emitters = hub.emitters

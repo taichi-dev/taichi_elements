@@ -108,7 +108,7 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
         set_psys_settings(psys_obj)
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
-    psys_stgs.count = len(p_pos) // 3
+    psys_stgs.count = len(p_pos)
     psys_stgs.use_rotations = True
     psys_stgs.rotation_mode = 'NONE'
     psys_stgs.angular_velocity_mode = 'NONE'
@@ -116,11 +116,20 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
     degp = bpy.context.evaluated_depsgraph_get()
     # particle system
     psys = psys_obj.evaluated_get(degp).particle_systems[0]
-    psys.particles.foreach_set('location', p_pos)
-    if len(p_vel) != 3:
-        psys.particles.foreach_set('velocity', p_vel)
-    if len(p_ang) != 3:
-        psys.particles.foreach_set('angular_velocity', p_ang)
+    pos = []
+    for p in p_pos:
+        pos.extend((p[0], p[1], p[2]))
+    psys.particles.foreach_set('location', pos)
+    if len(p_vel) != 1:
+        vel = []
+        for v in p_vel:
+            vel.extend((v[0], v[1], v[2]))
+        psys.particles.foreach_set('velocity', vel)
+    if len(p_ang) != 1:
+        ang = []
+        for a in p_ang:
+            ang.extend((a[0], a[1], a[2]))
+        psys.particles.foreach_set('angular_velocity', ang)
     # scene current frame
     cur_frm = bpy.context.scene.frame_current
     psys_stgs.frame_end = cur_frm
@@ -128,7 +137,7 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
     # used when navigating a timeline in the opposite direction
     psys_stgs.frame_end = cur_frm
     degp.update()
-    if type(p_life) != float:
+    if len(p_life) != 1:
         psys.particles.foreach_set('lifetime', p_life)
 
 

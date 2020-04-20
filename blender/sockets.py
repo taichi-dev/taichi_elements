@@ -31,7 +31,7 @@ def get_socket_value(socket):
     if hasattr(node, 'get_value'):
         get_value_func = node.get_value.get(socket.name, None)
         if not get_value_func:
-            return socket.default
+            return [socket.default, ]
         else:
             get_value_func(socket)
             key = '{0}.{1}'.format(node.name, socket.name)
@@ -41,7 +41,7 @@ def get_socket_value(socket):
                 raise BaseException('Cannot find socket value: {}'.format(key))
             return value
     else:
-        return socket.default
+        return [socket.default, ]
 
 
 class ElementsBaseSocket(bpy.types.NodeSocket):
@@ -55,14 +55,14 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
             if from_socket.node.bl_idname == 'NodeReroute':
                 from_socket = get_socket(from_socket)
                 if from_socket is None:
-                    return self.default
+                    return [self.default, ]
             if from_socket.bl_idname == self.bl_idname:
                 if hasattr(from_socket, 'get_value'):
                     return get_socket_value(from_socket)
             else:
-                return self.default
+                return [self.default, ]
         else:
-            return self.default
+            return [self.default, ]
 
     def draw(self, context, layout, node, text):
         if (not len(self.links) or self.is_output) and not self.hide_value:
