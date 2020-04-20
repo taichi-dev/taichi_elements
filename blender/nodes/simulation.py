@@ -24,7 +24,7 @@ class ElementsSimulationNode(base.BaseNode):
         ]
     }
 
-    category = base.SIMULATION_OBJECTS
+    category = base.ELEMENT
 
     def init(self, context):
         self.width = 200.0

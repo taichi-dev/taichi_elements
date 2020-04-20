@@ -10,7 +10,7 @@ class ElementsMpmSolverNode(base.BaseNode):
             'elements_source_object_node',
         ],
     }
-    category = base.SOLVERS
+    category = base.ELEMENT
 
     def init(self, context):
         self.width = 180.0

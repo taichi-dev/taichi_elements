@@ -16,7 +16,7 @@ class ElementsEmitterNode(base.BaseNode):
         ]
     }
     typ: bpy.props.StringProperty(default='EMITTER')
-    category = base.SIMULATION_OBJECTS
+    category = base.ELEMENT
 
     def init(self, context):
         self.width = 200.0

@@ -14,7 +14,7 @@ class ElementsMaterialNode(base.BaseNode):
         ('SAND', 'Sand', '')
     ]
     typ: bpy.props.EnumProperty(items=items, default='WATER')
-    category = base.SOLVERS
+    category = base.ELEMENT
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Material')

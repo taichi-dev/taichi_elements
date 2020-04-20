@@ -8,7 +8,7 @@ class ElementsTextureNode(base.BaseNode):
     bl_label = 'Texture'
 
     tex_name: bpy.props.StringProperty()
-    category = base.SOURCE_DATA
+    category = base.INPUT
 
     def init(self, context):
         self.width = 220.0

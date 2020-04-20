@@ -35,7 +35,7 @@ class ElementsParticlesSystemNode(base.BaseNode):
     bl_idname = 'elements_particles_system_node'
     bl_label = 'Particles System'
 
-    category = base.CREATE
+    category = base.OUTPUT
     # particle system object name
     obj_name: bpy.props.StringProperty()
 

@@ -3,37 +3,48 @@ import inspect
 import bpy
 
 from .base import *
-from .color import *
-from .cache import *
-from .emitter import *
-from .fcurve import *
+# input
+from .integer import *
 from .float_value import *
+from .vector import *
+from .color import *
 from .folder import *
+from .obj import *
+from .texture import *
+from .fcurve import *
+from .time_info import *
+
+# element
+from .simulation import *
+from .mpm_solver import *
+from .material import *
+from .emitter import *
+from .inflow import *
+from .gravity import *
+from .hub import *
+from .cache import *
+
+# output
 from .particles_system import *
-from .combine_vector import *
+
+# converter
+from .int_to_float import *
 from .color_to_vector import *
 from .hex_color_to_rgb import *
+from .float_math import *
+from .vector_math import *
+from .combine_vector import *
+from .seratate_vector import *
+
+# color
 from .bright_contrast import *
 from .gamma import *
 from .invert import *
 from .mix_rgb import *
-from .int_to_float import *
-from .seratate_vector import *
-from .float_math import *
-from .vector_math import *
-from .gravity import *
-from .hub import *
-from .inflow import *
-from .integer import *
-from .time_info import *
+
+# struct
 from .make_list import *
-from .material import *
 from .merge import *
-from .mpm_solver import *
-from .simulation import *
-from .source_object import *
-from .texture import *
-from .vector import *
 
 
 node_classes = []

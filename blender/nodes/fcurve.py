@@ -29,7 +29,7 @@ class ElementsFCurveNode(base.BaseNode):
     act: bpy.props.StringProperty()
     # fcurve index
     index: bpy.props.IntProperty(min=0, name='FCurve Index')
-    category = base.SOURCE_DATA
+    category = base.INPUT
     get_value = {'FCurve Values': get_out_value, }
 
     def init(self, context):

@@ -70,7 +70,7 @@ class ElementsCacheNode(base.BaseNode):
         'Size': get_cache
     }
 
-    category = base.OUTPUT
+    category = base.ELEMENT
 
     def init(self, context):
         self.width = 200.0

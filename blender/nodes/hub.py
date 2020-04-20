@@ -16,7 +16,7 @@ class ElementsHubNode(base.BaseNode):
         ],
     }
 
-    category = base.SIMULATION_OBJECTS
+    category = base.ELEMENT
 
     def init(self, context):
         hub = self.outputs.new('elements_struct_socket', 'Hub Data')

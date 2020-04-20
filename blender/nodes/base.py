@@ -2,17 +2,12 @@ import bpy
 
 
 # node category names
-SOLVERS = 'Solvers'
-SIMULATION_OBJECTS = 'Simulation Objects'
-SOURCE_DATA = 'Source Data'
-INPUTS = 'Inputs'
-IMPORT = 'Import'
-COLOR = 'Color'
-CREATE = 'Create'
-CONVERTER = 'Converter'
-FORCE_FIELDS = 'Force Fields'
-STRUCT = 'Struct'
+INPUT = 'Input'
 OUTPUT = 'Output'
+ELEMENT = 'Element'
+CONVERTER = 'Converter'
+COLOR = 'Color'
+STRUCT = 'Struct'
 LAYOUT = 'Layout'
 
 

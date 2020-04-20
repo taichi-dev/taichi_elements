@@ -39,7 +39,7 @@ class ElementsTimeInfoNode(base.BaseNode):
     bl_idname = 'elements_time_info_node'
     bl_label = 'Time Info'
 
-    category = base.INPUTS
+    category = base.INPUT
     get_value = {
         'Frame Start': get_f_st_value,
         'Frame End': get_f_en_value,

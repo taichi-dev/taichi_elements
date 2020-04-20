@@ -17,7 +17,7 @@ class ElementsInflowNode(base.BaseNode):
     }
     typ: bpy.props.StringProperty(default='INFLOW')
 
-    category = base.SIMULATION_OBJECTS
+    category = base.ELEMENT
 
     def init(self, context):
         self.width = 200.0
@@ -27,6 +27,7 @@ class ElementsInflowNode(base.BaseNode):
 
         enable = self.inputs.new('elements_float_socket', 'Enable')
         enable.text = 'Enable'
+        enable.default = 1.0
 
         src_geom = self.inputs.new('elements_struct_socket', 'Source Object')
         src_geom.text = 'Source Object'

@@ -7,7 +7,7 @@ class ElementsColorNode(base.BaseNode):
     bl_idname = 'elements_color_node'
     bl_label = 'Color'
 
-    category = base.INPUTS
+    category = base.INPUT
 
     def init(self, context):
         out = self.outputs.new('elements_color_socket', 'Color')
