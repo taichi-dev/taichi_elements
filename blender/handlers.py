@@ -203,7 +203,6 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_col, p_mat):
 # import simulation data
 @bpy.app.handlers.persistent
 def imp_sim_data(scene):
-    scene.elements_nodes.clear()
     # caches data, importers
     caches, imps = get_caches()
 
