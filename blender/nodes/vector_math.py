@@ -80,4 +80,4 @@ class ElementsVectorMathNode(base.BaseNode):
         val_2.text = 'Vector 2'
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, 'mode')
+        layout.prop(self, 'mode', text='')

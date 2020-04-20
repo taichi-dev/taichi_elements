@@ -27,6 +27,8 @@ class ElementsCombineVectorNode(base.BaseNode):
     get_value = {'Vector': get_out_value, }
 
     def init(self, context):
+        self.width = 170.0
+
         out = self.outputs.new('elements_vector_socket', 'Vector')
         out.text = 'Vector'
         out.hide_value = True

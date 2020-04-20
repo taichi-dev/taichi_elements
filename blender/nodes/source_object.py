@@ -11,6 +11,8 @@ class ElementsSourceObjectNode(base.BaseNode):
     category = base.SOURCE_DATA
 
     def init(self, context):
+        self.width = 180.0
+
         out = self.outputs.new('elements_struct_socket', 'Object')
         out.text = 'Source Object'
 

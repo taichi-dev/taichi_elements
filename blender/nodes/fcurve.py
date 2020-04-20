@@ -33,6 +33,8 @@ class ElementsFCurveNode(base.BaseNode):
     get_value = {'FCurve Values': get_out_value, }
 
     def init(self, context):
+        self.width = 220.0
+
         output_socket = self.outputs.new(
             'elements_float_socket',
             'FCurve Values'

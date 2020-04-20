@@ -48,7 +48,7 @@ class ElementsParticlesSystemNode(base.BaseNode):
     }
 
     def init(self, context):
-        self.width = 250.0
+        self.width = 180.0
 
         # particle position
         pos = self.inputs.new('elements_vector_socket', 'Position')

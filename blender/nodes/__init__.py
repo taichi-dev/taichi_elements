@@ -9,7 +9,6 @@ from .emitter import *
 from .fcurve import *
 from .float_value import *
 from .folder import *
-from .particles_mesh import *
 from .particles_system import *
 from .combine_vector import *
 from .color_to_vector import *

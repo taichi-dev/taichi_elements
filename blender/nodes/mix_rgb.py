@@ -70,6 +70,8 @@ class ElementsMixRGBNode(base.BaseNode):
     mode: bpy.props.EnumProperty(name='Mode', items=items)
 
     def init(self, context):
+        self.width = 160.0
+
         out = self.outputs.new('elements_color_socket', 'Color')
         out.text = 'Color'
         out.hide_value = True

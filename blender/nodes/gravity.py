@@ -8,7 +8,7 @@ class ElementsGravityNode(base.BaseNode):
     category = base.FORCE_FIELDS
 
     def init(self, context):
-        self.width = 175.0
+        self.width = 190.0
 
         out = self.outputs.new('elements_struct_socket', 'Gravity')
         out.text = 'Gravity Force'

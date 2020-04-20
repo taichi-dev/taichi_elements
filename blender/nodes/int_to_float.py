@@ -24,6 +24,8 @@ class ElementsIntToFloatNode(base.BaseNode):
     get_value = {'Float': get_out_value, }
 
     def init(self, context):
+        self.width = 180.0
+
         out = self.outputs.new('elements_float_socket', 'Float')
         out.text = 'Float'
         out.hide_value = True

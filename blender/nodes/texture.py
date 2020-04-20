@@ -11,10 +11,11 @@ class ElementsTextureNode(base.BaseNode):
     category = base.SOURCE_DATA
 
     def init(self, context):
-        self.width = 250.0
+        self.width = 220.0
 
-        out = self.outputs.new('elements_struct_socket', 'Texture')
+        out = self.outputs.new('elements_color_socket', 'Texture')
         out.text = 'Texture'
+        out.hide_value = True
 
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'tex_name', bpy.data, 'textures', text='')

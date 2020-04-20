@@ -27,7 +27,7 @@ class ElementsSimulationNode(base.BaseNode):
     category = base.SIMULATION_OBJECTS
 
     def init(self, context):
-        self.width = 180.0
+        self.width = 200.0
 
         out = self.outputs.new('elements_struct_socket', 'Simulation Data')
         out.text = 'Particles'

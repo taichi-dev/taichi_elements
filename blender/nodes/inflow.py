@@ -20,6 +20,8 @@ class ElementsInflowNode(base.BaseNode):
     category = base.SIMULATION_OBJECTS
 
     def init(self, context):
+        self.width = 200.0
+
         out = self.outputs.new('elements_struct_socket', 'Inflow')
         out.text = 'Inflow'
 

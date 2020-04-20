@@ -90,7 +90,7 @@ class ElementsIntegerSocket(ElementsBaseSocket):
 class ElementsFloatSocket(ElementsBaseSocket):
     bl_idname = 'elements_float_socket'
 
-    default: bpy.props.FloatProperty(default=0.0)
+    default: bpy.props.FloatProperty(default=0.0, precision=4)
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):
