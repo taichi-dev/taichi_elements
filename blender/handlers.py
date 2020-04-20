@@ -108,7 +108,9 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
         set_psys_settings(psys_obj)
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
-    psys_stgs.count = len(p_pos)
+    # particles count
+    p_cnt = len(p_pos)
+    psys_stgs.count = p_cnt
     psys_stgs.use_rotations = True
     psys_stgs.rotation_mode = 'NONE'
     psys_stgs.angular_velocity_mode = 'NONE'
@@ -125,11 +127,15 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
         for v in p_vel:
             vel.extend((v[0], v[1], v[2]))
         psys.particles.foreach_set('velocity', vel)
+    # angular velocity
+    ang = []
     if len(p_ang) != 1:
-        ang = []
         for a in p_ang:
             ang.extend((a[0], a[1], a[2]))
-        psys.particles.foreach_set('angular_velocity', ang)
+    else:
+        for i in range(p_cnt):
+            ang.extend(p_ang[0])
+    psys.particles.foreach_set('angular_velocity', ang)
     # scene current frame
     cur_frm = bpy.context.scene.frame_current
     psys_stgs.frame_end = cur_frm
@@ -137,8 +143,13 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life):
     # used when navigating a timeline in the opposite direction
     psys_stgs.frame_end = cur_frm
     degp.update()
-    if len(p_life) != 1:
-        psys.particles.foreach_set('lifetime', p_life)
+    # life time
+    if len(p_life) == 1:
+        life = []
+        for i in range(p_cnt):
+            life.append(p_life[0])
+        p_life = life
+    psys.particles.foreach_set('lifetime', p_life)
 
 
 # get outputs nodes

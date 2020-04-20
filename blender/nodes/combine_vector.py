@@ -7,7 +7,6 @@ def get_out_value(socket):
     node = socket.node
     out = node.outputs['Vector']
     node = socket.node
-    out = node.outputs['Float']
     x = node.inputs['X'].get_value()
     y = node.inputs['Y'].get_value()
     z = node.inputs['Z'].get_value()
