@@ -202,8 +202,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.report({'WARNING'}, WARN_SIM_NODE)
         else:
             inputs = sim[0].inputs
-            self.scene.elements_frame_start = inputs['Frame Start'].value
-            self.scene.elements_frame_end = inputs['Frame End'].value
+            self.scene.elements_frame_start = inputs['Frame Start'].get_value()
+            self.scene.elements_frame_end = inputs['Frame End'].get_value()
 
         self.is_runnig = True
         self.scene.elements_nodes.clear()
@@ -223,7 +223,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         sim.get_class()
         # simulation class
-        cls = self.scene.elements_nodes[sim.name]
+        cls, _ = self.scene.elements_nodes[sim.name]
         self.cache_folder = get_cache_folder(sim)
 
         if not self.cache_folder:

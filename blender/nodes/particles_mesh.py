@@ -7,7 +7,7 @@ class ElementsParticlesMeshNode(base.BaseNode):
     bl_idname = 'elements_particles_mesh_node'
     bl_label = 'Particles Mesh'
 
-    category = base.IMPORT
+    category = base.CREATE
     # mesh object name
     obj_name: bpy.props.StringProperty()
 

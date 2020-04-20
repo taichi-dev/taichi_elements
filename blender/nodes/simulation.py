@@ -27,20 +27,22 @@ class ElementsSimulationNode(base.BaseNode):
     category = base.SIMULATION_OBJECTS
 
     def init(self, context):
+        self.width = 180.0
+
         out = self.outputs.new('elements_struct_socket', 'Simulation Data')
         out.text = 'Particles'
 
         frame_start = self.inputs.new('elements_integer_socket', 'Frame Start')
         frame_start.text = 'Frame Start'
-        frame_start.value = 0
+        frame_start.default = 0
 
         frame_end = self.inputs.new('elements_integer_socket', 'Frame End')
         frame_end.text = 'Frame End'
-        frame_end.value = 50
+        frame_end.default = 50
 
         fps = self.inputs.new('elements_integer_socket', 'FPS')
         fps.text = 'FPS'
-        fps.value = 30
+        fps.default = 30
 
         solver = self.inputs.new('elements_struct_socket', 'Solver')
         solver.text = 'Solver'

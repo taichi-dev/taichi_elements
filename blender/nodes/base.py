@@ -7,6 +7,7 @@ SIMULATION_OBJECTS = 'Simulation Objects'
 SOURCE_DATA = 'Source Data'
 INPUTS = 'Inputs'
 IMPORT = 'Import'
+CREATE = 'Create'
 CONVERTER = 'Converter'
 FORCE_FIELDS = 'Force Fields'
 STRUCT = 'Struct'
@@ -31,7 +32,7 @@ def create_class(node):
                     node_elements.append(input_socket.get_value())
                 elif node.bl_idname == 'elements_merge_node':
                     node_name = input_socket.get_value()
-                    node_class = scene.elements_nodes.get(node_name, None)
+                    node_class, frm = scene.elements_nodes.get(node_name, None)
                     if node_class:
                         node_elements.extend(node_class.elements)
                 else:
@@ -81,7 +82,7 @@ def create_class(node):
             return is_list
         else:
             if self.is_list:
-                attribute = bpy.context.scene.elements_nodes.get(name, None)
+                attribute, frm = bpy.context.scene.elements_nodes.get(name, None)
                 return attribute
             else:
                 attribute = params.get(name, None)
@@ -89,8 +90,8 @@ def create_class(node):
                     attribute_name = inputs.get(name, None)
                     if attribute_name is None:
                         raise BaseException(
-                            'Cannot find attibute: {}'.format(name))
-                    attribute = bpy.context.scene.elements_nodes.get(
+                            'Cannot find attribute: {}'.format(name))
+                    attribute, frm = bpy.context.scene.elements_nodes.get(
                         attribute_name, None)
                 return attribute
 
@@ -134,10 +135,11 @@ def create_class(node):
 
 def find_node_class(node):
     scene = bpy.context.scene
-    node_class = scene.elements_nodes.get(node.name, None)
-    if not node_class:
+    node_class, frame = scene.elements_nodes.get(node.name, (None, None))
+    frm_cur = scene.frame_current
+    if not node_class or frm_cur != frame:
         node_class = create_class(node)
-        scene.elements_nodes[node.name] = node_class
+        scene.elements_nodes[node.name] = node_class, frm_cur
     return node.name
 
 
