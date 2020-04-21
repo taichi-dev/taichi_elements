@@ -1,22 +1,22 @@
 import taichi as ti
 import numpy as np
 import utils
-from engine.mpm_solver import MPMSolver
+from engine import mpm_solver
 
 
 # Try to run on GPU
 ti.init(arch=ti.cuda)
 
 
-mpm = MPMSolver(res=(24, 24, 24), size=10)
+mpm = mpm_solver.MPMSolver(res=(24, 24, 24), size=10)
 
 mpm.add_ellipsoid(center=[2, 4, 3],
                   radius=1,
-                  material=MPMSolver.material_snow,
+                  material=mpm_solver.MPMSolver.material_snow,
                   velocity=[0, -10, 0])
 mpm.add_cube(lower_corner=[2, 6, 3],
              cube_size=[1, 1, 3],
-             material=MPMSolver.material_elastic)
+             material=mpm_solver.MPMSolver.material_elastic)
 
 mpm.set_gravity((0, -50, 0))
 

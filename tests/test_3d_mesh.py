@@ -4,7 +4,7 @@ import utils
 import requests
 import zipfile
 import os
-from engine.mpm_solver import MPMSolver
+from engine import mpm_solver
 
 
 folder = 'tests'
@@ -21,7 +21,7 @@ z.close()
 # Try to run on GPU
 ti.init(arch=ti.cuda)
 
-mpm = MPMSolver(res=(24, 24, 24), size=1)
+mpm = mpm_solver.MPMSolver(res=(24, 24, 24), size=1)
 
 triangles = np.fromfile(os.path.join(folder, 'suzanne.npy'), dtype=np.float32)
 triangles = np.reshape(triangles, (len(triangles) // 9, 9)) * 0.306 + 0.501
@@ -29,7 +29,11 @@ triangles = np.reshape(triangles, (len(triangles) // 9, 9)) * 0.306 + 0.501
 os.remove(zip_file_path)
 os.remove(os.path.join(folder, 'suzanne.npy'))
 
-mpm.add_mesh(triangles=triangles, material=MPMSolver.material_elastic, color=0xFFFF00)
+mpm.add_mesh(
+    triangles=triangles,
+    material=mpm_solver.MPMSolver.material_elastic,
+    color=0xFFFF00
+)
 
 mpm.set_gravity((0, -20, 0))
 
