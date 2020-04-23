@@ -1,5 +1,5 @@
 from .simulation import *
-from .mpm_solver import *
+from .mpm import *
 from .material import *
 from .emitter import *
 from .inflow import *

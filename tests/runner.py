@@ -3,10 +3,10 @@ import coverage
 cov = coverage.Coverage()
 cov.start()
 
-from tests import test_2d
-from tests import test_3d
-from tests import test_3d_collider
-from tests import test_3d_mesh
+import test_2d
+import test_3d
+import test_3d_collider
+import test_3d_mesh
 
 cov.stop()
 cov.xml_report()
