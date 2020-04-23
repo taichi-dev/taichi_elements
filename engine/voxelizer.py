@@ -78,7 +78,7 @@ class Voxelizer:
                         base_voxel = ti.Vector([pos2d[0], pos2d[1], 0])
                         height = int(
                             -ti.dot(normal, base_voxel - a) /
-                            normal[2] * self.inv_dx - 0.5)
+                            normal[2] * self.inv_dx + 0.5)
                         height = min(height, self.res[1] - self.padding)
                         inc = 0
                         if normal[2] > 0:
