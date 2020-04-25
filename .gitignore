@@ -6,3 +6,4 @@ outputs
 htmlcov
 .coverage
 *.xml
+*.zip
