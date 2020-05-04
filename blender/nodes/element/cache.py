@@ -26,7 +26,7 @@ def get_cache(socket):
         scn.elements_sockets[vel_key] = ()
         scn.elements_sockets[col_key] = ()
         scn.elements_sockets[mat_key] = ()
-        scn.elements_sockets[size_key] = 1.0    # TODO
+        scn.elements_sockets[size_key] = (1.0, )    # TODO
         return
     caches = {}
     # particles file name
@@ -46,14 +46,14 @@ def get_cache(socket):
         scn.elements_sockets[vel_key] = ()
         scn.elements_sockets[col_key] = ()
         scn.elements_sockets[mat_key] = ()
-        scn.elements_sockets[size_key] = 1.0    # TODO
+        scn.elements_sockets[size_key] = (1.0, )    # TODO
         return
 
     scn.elements_sockets[pos_key] = caches[folder][particles_io.POS]
     scn.elements_sockets[vel_key] = caches[folder][particles_io.VEL]
     scn.elements_sockets[col_key] = caches[folder][particles_io.COL]
     scn.elements_sockets[mat_key] = caches[folder][particles_io.MAT]
-    scn.elements_sockets[size_key] = 1.0    # TODO
+    scn.elements_sockets[size_key] = (1.0, )    # TODO
 
 
 class ElementsCacheNode(base.BaseNode):

@@ -12,10 +12,15 @@ def get_out_value(socket):
         return [1.0, ]
     if len(action.fcurves) > node.index:
         values = []
+        scn = bpy.context.scene
         for frame in range(frm_strt, frm_end + 1):
             fcurve = action.fcurves[node.index]
             value = fcurve.evaluate(frame)
             values.append(value)
+        val = fcurve.evaluate(scn.frame_current)
+        out = node.outputs['FCurve Values']
+        key = '{0}.{1}'.format(node.name, out.name)
+        scn.elements_sockets[key] = [val, ]
         return values
     else:
         return [1.0, ]
