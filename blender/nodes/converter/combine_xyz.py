@@ -19,9 +19,9 @@ def get_out_value(socket):
     scn.elements_sockets[key] = res
 
 
-class ElementsCombineVectorNode(base.BaseNode):
-    bl_idname = 'elements_combine_vector_node'
-    bl_label = 'Combine Vector'
+class ElementsCombineXYZNode(base.BaseNode):
+    bl_idname = 'elements_combine_xyz_node'
+    bl_label = 'Combine XYZ'
 
     category = base.CONVERTER
     get_value = {'Vector': get_out_value, }

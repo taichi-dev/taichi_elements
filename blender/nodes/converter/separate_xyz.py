@@ -40,9 +40,9 @@ def get_out_value_z(socket):
     scn.elements_sockets[key] = res
 
 
-class ElementsSeparateVectorNode(base.BaseNode):
-    bl_idname = 'elements_separate_vector_node'
-    bl_label = 'Separate Vector'
+class ElementsSeparateXYZNode(base.BaseNode):
+    bl_idname = 'elements_separate_xyz_node'
+    bl_label = 'Separate XYZ'
 
     category = base.CONVERTER
     get_value = {
