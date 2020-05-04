@@ -100,7 +100,9 @@ class ElementsFloatSocket(ElementsBaseSocket):
 class ElementsVectorSocket(ElementsBaseSocket):
     bl_idname = 'elements_vector_socket'
 
-    default: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0), size=3)
+    default: bpy.props.FloatVectorProperty(
+        default=(0.0, 0.0, 0.0), size=3, precision=4
+    )
     text: bpy.props.StringProperty(default='Float')
 
     def draw_color(self, context, node):

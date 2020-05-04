@@ -4,4 +4,5 @@ from .hex_color_to_rgb import *
 from .float_math import *
 from .vector_math import *
 from .combine_vector import *
-from .seratate_vector import *
+from .separate_vector import *
+from .separate_rgb import *
