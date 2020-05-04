@@ -73,7 +73,7 @@ class ElementsParticlesSystemNode(base.BaseNode):
         # particle size
         size = self.inputs.new('elements_float_socket', 'Size')
         size.text = 'Size'
-        size.hide_value = True
+        size.default = 0.01
 
     def draw_buttons(self, context, layout):
         layout.prop_search(self, 'obj_name', bpy.data, 'objects', text='')
