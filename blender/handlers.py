@@ -13,6 +13,8 @@ from . import operators, particles_io
 PAR_OBJ_NAME = 'elements_particles'
 # name of particles system object
 PSYS_OBJ_NAME = 'elements_particle_system'
+# name of mesh object
+MESH_OBJ_NAME = 'elements_particles_mesh'
 
 
 # get elements node tree
@@ -33,13 +35,8 @@ def update_pmesh(obj, pos, mesh_name):
     me_old.name = 'temp'
     # new particles mesh
     me_new = bpy.data.meshes.new(mesh_name)
-    verts = []
 
-    # i - particle index
-    for i in range(0, len(pos), 3):
-        verts.append((pos[i], pos[i + 1], pos[i + 2]))
-
-    me_new.from_pydata(verts, (), ())
+    me_new.from_pydata(pos, (), ())
     obj.data = me_new
     bpy.data.meshes.remove(me_old)
 
@@ -158,7 +155,8 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
 
 # get outputs nodes
 def get_outs_nds():
-    outs_nds = []
+    psys_nds = []
+    mesh_nds = []
     # node tree
     trees = get_trees()
 
@@ -168,9 +166,11 @@ def get_outs_nds():
     for tree in trees:
         for node in tree.nodes:
             if node.bl_idname == 'elements_particles_system_node':
-                outs_nds.append(node)
+                psys_nds.append(node)
+            elif node.bl_idname == 'elements_mesh_node':
+                mesh_nds.append(node)
 
-    return outs_nds
+    return psys_nds, mesh_nds
 
 
 def create_psys(node):
@@ -195,13 +195,34 @@ def create_psys(node):
     upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size)
 
 
+def create_mesh(node):
+    node.get_class()
+    scn = bpy.context.scene
+    # node object
+    nd_obj, _ = scn.elements_nodes[node.name]
+    obj_struct = nd_obj.mesh_object
+    if not obj_struct:
+        obj_name = MESH_OBJ_NAME
+    else:
+        obj_name = obj_struct.obj_name
+    # particle system object
+    me_obj = bpy.data.objects.get(obj_name, None)
+    if not me_obj:
+        me_obj = create_pobj(obj_name)
+    verts = nd_obj.vertices
+    if verts:
+        update_pmesh(me_obj, verts, obj_name)
+
+
 # import simulation data
 @bpy.app.handlers.persistent
 def imp_sim_data(scene):
     # outputs nodes
-    outs = get_outs_nds()
-    for node in outs:
+    psys, meshes = get_outs_nds()
+    for node in psys:
         create_psys(node)
+    for node in meshes:
+        create_mesh(node)
 
 
 def register():
