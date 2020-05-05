@@ -36,8 +36,6 @@ class ElementsParticlesSystemNode(base.BaseNode):
     bl_label = 'Particles System'
 
     category = base.OUTPUT
-    # particle system object name
-    obj_name: bpy.props.StringProperty()
 
     get_value = {
         'Position': get_pos_value,
@@ -47,8 +45,17 @@ class ElementsParticlesSystemNode(base.BaseNode):
         'Size': get_pos_value
     }
 
+    required_nodes = {
+        'Particles Object': [
+            'elements_source_object_node',
+        ],
+    }
+
     def init(self, context):
         self.width = 180.0
+
+        obj = self.inputs.new('elements_struct_socket', 'Particles Object')
+        obj.text = 'Particles Object'
 
         # particle position
         pos = self.inputs.new('elements_vector_socket', 'Position')
@@ -74,6 +81,3 @@ class ElementsParticlesSystemNode(base.BaseNode):
         size = self.inputs.new('elements_float_socket', 'Size')
         size.text = 'Size'
         size.default = 0.01
-
-    def draw_buttons(self, context, layout):
-        layout.prop_search(self, 'obj_name', bpy.data, 'objects', text='')

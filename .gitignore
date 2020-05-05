@@ -7,3 +7,4 @@ htmlcov
 .coverage
 *.xml
 *.zip
+blender/engine

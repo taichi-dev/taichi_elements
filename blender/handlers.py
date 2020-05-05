@@ -178,9 +178,11 @@ def create_psys(node):
     scn = bpy.context.scene
     # node object
     nd_obj, frm = scn.elements_nodes[node.name]
-    obj_name = nd_obj.obj_name
-    if not obj_name:
+    obj_struct = nd_obj.particles_object
+    if not obj_struct:
         obj_name = PSYS_OBJ_NAME
+    else:
+        obj_name = obj_struct.obj_name
     # particle system object
     psys_obj = bpy.data.objects.get(obj_name, None)
     if not psys_obj:

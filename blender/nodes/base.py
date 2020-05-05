@@ -10,6 +10,8 @@ COLOR = 'Color'
 STRUCT = 'Struct'
 LAYOUT = 'Layout'
 
+HAS_NO_ATTRIBUTE = 'Has no attribute'
+
 
 def create_class(node):
     node_class_name = ''.join(
@@ -81,12 +83,14 @@ def create_class(node):
                 attribute, frm = bpy.context.scene.elements_nodes.get(name, None)
                 return attribute
             else:
-                attribute = params.get(name, None)
-                if attribute is None:
-                    attribute_name = inputs.get(name, None)
-                    if attribute_name is None:
+                attribute = params.get(name, HAS_NO_ATTRIBUTE)
+                if attribute == HAS_NO_ATTRIBUTE:
+                    attribute_name = inputs.get(name, HAS_NO_ATTRIBUTE)
+                    if attribute_name == HAS_NO_ATTRIBUTE:
                         raise BaseException(
                             'Cannot find attribute: {}'.format(name))
+                    if attribute_name is None:
+                        return attribute_name
                     attribute, frm = bpy.context.scene.elements_nodes.get(
                         attribute_name, None)
                 return attribute
