@@ -161,7 +161,7 @@ def get_outs_nds():
     trees = get_trees()
 
     if not trees:
-        return
+        return psys_nds, mesh_nds
 
     for tree in trees:
         for node in tree.nodes:
