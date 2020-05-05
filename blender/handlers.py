@@ -212,6 +212,8 @@ def create_mesh(node):
     verts = nd_obj.vertices
     if verts:
         update_pmesh(me_obj, verts, obj_name)
+    else:
+        update_pmesh(me_obj, (), obj_name)
 
 
 # import simulation data
