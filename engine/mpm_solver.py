@@ -5,7 +5,7 @@ import math
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 5, 11)
+ti.require_version(0, 6, 4)
 
 
 @ti.data_oriented
@@ -36,7 +36,7 @@ class MPMSolver:
         'SEPARATE': surface_separate
     }
 
-    def __init__(self, res, size=1, max_num_particles=2**20, padding=3):
+    def __init__(self, res, size=1, max_num_particles=2**20, padding=3, unbounded=False):
         self.dim = len(res)
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
@@ -65,10 +65,17 @@ class MPMSolver:
         self.color = ti.var(dt=ti.i32)
         # plastic deformation
         self.Jp = ti.var(dt=ti.f32)
-        # grid node momemtum/velocity
-        self.grid_v = ti.Vector(self.dim, dt=ti.f32, shape=self.res)
+        # grid node momentum/velocity
+        self.grid_v = ti.Vector(self.dim, dt=ti.f32)
         # grid node mass
-        self.grid_m = ti.var(dt=ti.f32, shape=self.res)
+        self.grid_m = ti.var(dt=ti.f32)
+        
+        if self.dim == 2:
+            self.grid = ti.root.pointer(ti.ij, 128)
+            self.grid.pointer(ti.ij, 8).dense(ti.ij, 8).place(self.grid_m, self.grid_v, offset=(-4096, -4096))
+        else:
+            self.grid = ti.root.pointer(ti.ijk, 128)
+            self.grid.pointer(ti.ijk, 16).dense(ti.ijk, 4).place(self.grid_m, self.grid_v, offset=(-4096, -4096, -4096))
         
         self.padding = padding
 
@@ -87,6 +94,8 @@ class MPMSolver:
         ti.root.dynamic(ti.i, max_num_particles,
                         8192).place(self.x, self.v, self.C, self.F,
                                     self.material, self.color, self.Jp)
+        
+        self.unbounded = unbounded
         
         if self.dim == 2:
             self.voxelizer = None
@@ -133,7 +142,7 @@ class MPMSolver:
     @ti.kernel
     def p2g(self, dt: ti.f32):
         for p in self.x:
-            base = (self.x[p] * self.inv_dx - 0.5).cast(int)
+            base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w = [
@@ -246,11 +255,41 @@ class MPMSolver:
             
         self.grid_postprocess.append(collide)
         
+        
+    def add_surface_collider(self, point, normal, surface=surface_sticky):
+        point = list(point)
+        # normalize normal
+        normal_scale = 1.0 / math.sqrt(sum(x ** 2 for x in normal))
+        normal = list(normal_scale * x for x in normal)
+    
+        @ti.kernel
+        def collide(dt: ti.f32):
+            for I in ti.grouped(self.grid_m):
+                offset = I * self.dx - ti.Vector(point)
+                n = ti.Vector(normal)
+                if ti.dot(offset, n) < 0:
+                    if ti.static(surface == self.surface_sticky):
+                        self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
+                    else:
+                        v = self.grid_v[I]
+                        normal_component = ti.dot(n, v)
+                    
+                        if ti.static(surface == self.surface_slip):
+                            # Project out all normal component
+                            v = v - n * normal_component
+                        else:
+                            # Project out only inward normal component
+                            v = v - n * min(normal_component, 0)
+                    
+                        self.grid_v[I] = v
+    
+        self.grid_postprocess.append(collide)
+        
 
     @ti.kernel
     def g2p(self, dt: ti.f32):
         for p in self.x:
-            base = (self.x[p] * self.inv_dx - 0.5).cast(int)
+            base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
             fx = self.x[p] * self.inv_dx - base.cast(float)
             w = [
                 0.5 * ti.sqr(1.5 - fx), 0.75 - ti.sqr(fx - 1.0),
@@ -274,13 +313,13 @@ class MPMSolver:
         substeps = int(frame_dt / self.default_dt) + 1
         for i in range(substeps):
             dt = frame_dt / substeps
-            self.grid_v.fill(0)
-            self.grid_m.fill(0)
+            self.grid.deactivate_all()
             self.p2g(dt)
             self.grid_normalization_and_gravity(dt)
             for p in self.grid_postprocess:
                 p(dt)
-            self.grid_bounding_box()
+            if not self.unbounded:
+                self.grid_bounding_box()
             self.g2p(dt)
             
     @ti.func
