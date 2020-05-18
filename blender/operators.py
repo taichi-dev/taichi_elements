@@ -242,12 +242,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         print(f"Creating simulation of res {res}, size {size}")
         solv = mpm_solver.MPMSolver((res, res, res), size=size)
 
-        hub = cls.hubs
-        assert len(hub.forces) == 1, "Only one gravity supported"
-        gravity_direction = hub.forces[0].strength[0]
-        solv.set_gravity(tuple(gravity_direction))
+        solv.set_gravity(tuple(cls.gravity[0]))
 
-        self.emitters = hub.emitters
+        self.emitters = cls.emitters
         self.size = size
         self.solv = solv
         self.run_sim()

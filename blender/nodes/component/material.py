@@ -14,11 +14,11 @@ class ElementsMaterialNode(base.BaseNode):
         ('SAND', 'Sand', '')
     ]
     typ: bpy.props.EnumProperty(items=items, default='WATER')
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         out = self.outputs.new('elements_struct_socket', 'Material')
-        out.text = 'Material Settings'
+        out.text = 'Material'
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'typ', text='')

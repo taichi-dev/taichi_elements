@@ -4,6 +4,7 @@ from .vector import *
 from .color import *
 from .folder import *
 from .obj import *
-from .texture import *
+# temporarily disabled
+# from .texture import *
 from .fcurve import *
 from .time_info import *

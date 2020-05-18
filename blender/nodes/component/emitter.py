@@ -16,7 +16,7 @@ class ElementsEmitterNode(base.BaseNode):
         ]
     }
     typ: bpy.props.StringProperty(default='EMITTER')
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         self.width = 200.0

@@ -9,9 +9,9 @@ class ElementsSimulationNode(base.BaseNode):
         'Solver': [
             'elements_mpm_solver_node',
         ],
-        'Hubs': [
-            'elements_hub_node', 'elements_make_list_node',
-            'elements_merge_node'
+        'Emitters': [
+            'elements_emitter_node', 'elements_make_list_node',
+            'elements_merge_node', 'elements_inflow_node'
         ],
         'Frame Start': [
             'elements_integer_node'
@@ -24,7 +24,7 @@ class ElementsSimulationNode(base.BaseNode):
         ]
     }
 
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         self.width = 200.0
@@ -44,8 +44,12 @@ class ElementsSimulationNode(base.BaseNode):
         fps.text = 'FPS'
         fps.default = 30
 
+        gravity = self.inputs.new('elements_vector_socket', 'Gravity')
+        gravity.text = 'Gravity'
+        gravity.default = (0.0, 0.0, -9.81)
+
         solver = self.inputs.new('elements_struct_socket', 'Solver')
         solver.text = 'Solver'
 
-        hubs = self.inputs.new('elements_struct_socket', 'Hubs')
-        hubs.text = 'Hubs'
+        emitters = self.inputs.new('elements_struct_socket', 'Emitters')
+        emitters.text = 'Emitters'

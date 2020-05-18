@@ -5,26 +5,18 @@ class ElementsMpmSolverNode(base.BaseNode):
     bl_idname = 'elements_mpm_solver_node'
     bl_label = 'MPM Solver'
 
-    required_nodes = {
-        'Domain Object': [
-            'elements_source_object_node',
-        ],
-    }
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         self.width = 180.0
 
         out = self.outputs.new('elements_struct_socket', 'MPM Solver')
-        out.text = 'Solver Settings'
-
-        domain_obj = self.inputs.new('elements_struct_socket', 'Domain Object')
-        domain_obj.text = 'Domain Object'
+        out.text = 'Solver'
 
         res = self.inputs.new('elements_integer_socket', 'Resolution')
         res.text = 'Resolution'
-        res.default = 64
+        res.default = 32
 
         size = self.inputs.new('elements_float_socket', 'Size')
         size.text = 'Size'
-        size.default = 10.0
+        size.default = 1.0

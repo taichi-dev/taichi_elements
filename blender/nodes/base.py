@@ -4,7 +4,7 @@ import bpy
 # node category names
 INPUT = 'Input'
 OUTPUT = 'Output'
-ELEMENT = 'Element'
+COMPONENT = 'Component'
 CONVERTER = 'Converter'
 COLOR = 'Color'
 STRUCT = 'Struct'
