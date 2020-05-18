@@ -121,7 +121,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
     def create_emitters(self, frame):
         for emitter in self.emitters:
-            vel = emitter.velocity[0]
+            if len(emitter.velocity) == 1:
+                vel = emitter.velocity[0]
+            else:
+                vel = emitter.velocity[frame]
             if emitter.typ == 'EMITTER':
                 if emitter.emit_frame[0] == frame:
                     create_emitter(self.solv, emitter, vel)
