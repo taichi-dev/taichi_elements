@@ -30,7 +30,9 @@ def create_class(node):
                     node_elements.append(input_socket.get_value())
                 elif node.bl_idname == 'elements_merge_node':
                     node_name = input_socket.get_value()
-                    node_class, frm = scene.elements_nodes.get(node_name, None)
+                    node_class, frm = scene.elements_nodes.get(
+                        node_name, (None, None)
+                    )
                     if node_class:
                         node_elements.extend(node_class.elements)
                 else:
@@ -80,7 +82,9 @@ def create_class(node):
             return is_list
         else:
             if self.is_list:
-                attribute, frm = bpy.context.scene.elements_nodes.get(name, None)
+                attribute, frm = bpy.context.scene.elements_nodes.get(
+                    name, (None, None)
+                )
                 return attribute
             else:
                 attribute = params.get(name, HAS_NO_ATTRIBUTE)
@@ -92,7 +96,8 @@ def create_class(node):
                     if attribute_name is None:
                         return attribute_name
                     attribute, frm = bpy.context.scene.elements_nodes.get(
-                        attribute_name, None)
+                        attribute_name, (None, None)
+                    )
                 return attribute
 
     def node_len_function(self):
