@@ -251,7 +251,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         for collider in hub.colliders:
             solv.add_surface_collider(
                 (*collider.position),
-                (*collider.direction)
+                (*collider.direction),
+                surface=int(collider.surface)
             )
         self.size = size
         self.solv = solv
