@@ -17,10 +17,9 @@ def get_out_value(socket):
             fcurve = action.fcurves[node.index]
             value = fcurve.evaluate(frame)
             values.append(value)
-        val = fcurve.evaluate(scn.frame_current)
         out = node.outputs['FCurve Values']
         key = '{0}.{1}'.format(node.name, out.name)
-        scn.elements_sockets[key] = [val, ]
+        scn.elements_sockets[key] = values
         return values
     else:
         return [1.0, ]

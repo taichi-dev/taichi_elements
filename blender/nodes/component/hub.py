@@ -20,7 +20,7 @@ class ElementsHubNode(base.BaseNode):
         ],
     }
 
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         hub = self.outputs.new('elements_struct_socket', 'Hub Data')

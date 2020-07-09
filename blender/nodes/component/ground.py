@@ -7,7 +7,7 @@ class ElementsGroundNode(base.BaseNode):
     bl_idname = 'elements_ground_node'
     bl_label = 'Ground'
 
-    category = base.ELEMENT
+    category = base.COMPONENT
     items = [
         ('0', 'Sticky', ''),
         ('1', 'Slip', ''),
