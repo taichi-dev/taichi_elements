@@ -7,3 +7,4 @@ from .obj import *
 from .texture import *
 from .fcurve import *
 from .time_info import *
+from .object_transforms import *

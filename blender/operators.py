@@ -240,7 +240,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         size = cls.solver.size[0]
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
-        solv = mpm_solver.MPMSolver((res, res, res), size=size)
+        solv = mpm_solver.MPMSolver((res, res, res), size=size, unbounded=True)
 
         hub = cls.hubs
         assert len(hub.forces) == 1, "Only one gravity supported"
@@ -248,6 +248,12 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         solv.set_gravity(tuple(gravity_direction))
 
         self.emitters = hub.emitters
+        for collider in hub.colliders:
+            solv.add_surface_collider(
+                (*collider.position),
+                (*collider.direction),
+                surface=int(collider.surface)
+            )
         self.size = size
         self.solv = solv
         self.run_sim()

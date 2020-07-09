@@ -14,6 +14,10 @@ class ElementsHubNode(base.BaseNode):
             'elements_emitter_node', 'elements_make_list_node',
             'elements_merge_node', 'elements_inflow_node'
         ],
+        'Colliders': [
+            'elements_ground_node', 'elements_make_list_node',
+            'elements_merge_node'
+        ],
     }
 
     category = base.ELEMENT
@@ -27,3 +31,6 @@ class ElementsHubNode(base.BaseNode):
 
         emitters = self.inputs.new('elements_struct_socket', 'Emitters')
         emitters.text = 'Emitters'
+
+        colliders = self.inputs.new('elements_struct_socket', 'Colliders')
+        colliders.text = 'Colliders'
