@@ -49,7 +49,7 @@ class MPMSolver:
         if self.dim == 2:
             max_num_particles = 2**20
         else:
-            max_num_particles = 2**22
+            max_num_particles = 2**27
 
         self.res = res
         self.n_particles = ti.var(ti.i32, shape=())
