@@ -269,7 +269,7 @@ class MPMSolver:
                         self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
                     else:
                         v = self.grid_v[I]
-                        normal = ti.Vector.normalized(offset, eps=1e-5)
+                        normal = ti.Vector.normalized(offset, 1e-5)
                         normal_component = normal.dot(v)
 
                         if ti.static(surface == self.surface_slip):
