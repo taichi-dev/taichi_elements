@@ -12,6 +12,7 @@ def inside_ccw(p, a, b, c):
     return cross2d(a - p, b - p) >= 0 and cross2d(
         b - p, c - p) >= 0 and cross2d(c - p, a - p) >= 0
 
+
 @ti.data_oriented
 class Voxelizer:
     def __init__(self, res, dx, precision=ti.f64, padding=3):
@@ -39,10 +40,16 @@ class Voxelizer:
             else:
                 jitter_scale = 1e-8
             # We jitter the vertices to prevent voxel samples from lying precicely at triangle edges
-            jitter = ti.Vector([-0.057616723909439505, -0.25608986292614977, 0.06716309129743714]) * jitter_scale
-            a = ti.Vector([triangles[i, 0], triangles[i, 1], triangles[i, 2]]) + jitter
-            b = ti.Vector([triangles[i, 3], triangles[i, 4], triangles[i, 5]]) + jitter
-            c = ti.Vector([triangles[i, 6], triangles[i, 7], triangles[i, 8]]) + jitter
+            jitter = ti.Vector([
+                -0.057616723909439505, -0.25608986292614977,
+                0.06716309129743714
+            ]) * jitter_scale
+            a = ti.Vector([triangles[i, 0], triangles[i, 1], triangles[i, 2]
+                           ]) + jitter
+            b = ti.Vector([triangles[i, 3], triangles[i, 4], triangles[i, 5]
+                           ]) + jitter
+            c = ti.Vector([triangles[i, 6], triangles[i, 7], triangles[i, 8]
+                           ]) + jitter
 
             bound_min = ti.Vector.zero(self.precision, 3)
             bound_max = ti.Vector.zero(self.precision, 3)
@@ -52,18 +59,18 @@ class Voxelizer:
 
             p_min = int(ti.floor(bound_min[0] * self.inv_dx))
             p_max = int(ti.floor(bound_max[0] * self.inv_dx)) + 1
-            
+
             p_min = max(self.padding, p_min)
             p_max = min(self.res[0] - self.padding, p_max)
 
             q_min = int(ti.floor(bound_min[1] * self.inv_dx))
             q_max = int(ti.floor(bound_max[1] * self.inv_dx)) + 1
-            
+
             q_min = max(self.padding, q_min)
             q_max = min(self.res[1] - self.padding, q_max)
 
-            normal = ti.normalized(ti.cross(b - a, c - a))
-            
+            normal = ((b - a).cross(c - a)).normalized()
+
             if abs(normal[2]) < 1e-10:
                 continue
 
@@ -73,12 +80,13 @@ class Voxelizer:
 
             for p in range(p_min, p_max):
                 for q in range(q_min, q_max):
-                    pos2d = ti.Vector([(p + 0.5) * self.dx, (q + 0.5) * self.dx])
-                    if inside_ccw(pos2d, a_proj, b_proj, c_proj) or inside_ccw(pos2d, a_proj, c_proj, b_proj):
+                    pos2d = ti.Vector([(p + 0.5) * self.dx,
+                                       (q + 0.5) * self.dx])
+                    if inside_ccw(pos2d, a_proj, b_proj, c_proj) or inside_ccw(
+                            pos2d, a_proj, c_proj, b_proj):
                         base_voxel = ti.Vector([pos2d[0], pos2d[1], 0])
-                        height = int(
-                            -ti.dot(normal, base_voxel - a) /
-                            normal[2] * self.inv_dx + 0.5)
+                        height = int(-normal.dot(base_voxel - a) / normal[2] *
+                                     self.inv_dx + 0.5)
                         height = min(height, self.res[1] - self.padding)
                         inc = 0
                         if normal[2] > 0:
@@ -86,7 +94,6 @@ class Voxelizer:
                         else:
                             inc = -1
                         self.fill(p, q, height, inc)
-
 
     def voxelize(self, triangles):
         assert isinstance(triangles, np.ndarray)
@@ -123,7 +130,7 @@ if __name__ == '__main__':
     vox.voxelize(triangles)
 
     voxels = vox.voxels.to_numpy().astype(np.float32)
-    
+
     import os
     os.makedirs('outputs', exist_ok=True)
     gui = ti.GUI('cross section', (n, n))

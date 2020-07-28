@@ -7,13 +7,23 @@ The short-term plan is
  - To build a reusable multimaterial (water/elastic/snow/sand/mud) simulator
  - To integrate the simulator into Blender
 
-## How to run (without Blender)
+## Run (without Blender)
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
  - Go to `demo` folder
  - `python3 demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
  
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
+
+## Simulate and render an example 3D scene (without blender)
+ - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
+ - `python3 demo_3d_letters.py` (wait for at least 10 frames)
+   - A binary particle folder with a timestamp in its time (e.g., `particles_2020-07-27_20-55-48`) will be created under the current folder.
+ - `python3 ../renderer/particle_renderer [output_folder] [begin] [end] [step]`
+   - E.g., `../renderer/particle_renderer.py particles_2020-07-27_20-55-48/ 0 100 1`
+ - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
+
+<img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="360px">
 
 ## Installing Taichi for Blender
 (Not sure if it is the standard approach, but it works for now.)

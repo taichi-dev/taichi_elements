@@ -13,7 +13,7 @@ We introduce the Python API through a basic 2D demo.
 
     ti.init(arch=ti.cuda)  # Try to run on GPU
 
-    gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
+    gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
 
     mpm = MPMSolver(res=(128, 128))
 
