@@ -17,18 +17,17 @@ classifiers = [
 
 packages = setuptools.find_packages()
 
-setuptools.setup(
-    name=project_name,
-    packages=packages,
-    version=version,
-    description='Taichi Elements',
-    author='Taichi Elements Developers',
-    author_email='yuanmhu@gmail.com',
-    url='https://github.com/taichi-dev/taichi_elements',
-    install_requires=[
-        'taichi>=0.5.15',
-    ],
-    keywords=['graphics', 'simulation'],
-    license='MIT',
-    include_package_data=True,
-    classifiers=classifiers)
+setuptools.setup(name=project_name,
+                 packages=packages,
+                 version=version,
+                 description='Taichi Elements',
+                 author='Taichi Elements Developers',
+                 author_email='yuanmhu@gmail.com',
+                 url='https://github.com/taichi-dev/taichi_elements',
+                 install_requires=[
+                     'taichi>=0.6.27',
+                 ],
+                 keywords=['graphics', 'simulation'],
+                 license='MIT',
+                 include_package_data=True,
+                 classifiers=classifiers)

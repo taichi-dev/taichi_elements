@@ -18,9 +18,9 @@ The plan is
 ## To simulate and render an example 3D scene with Python
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
  - Download [`taichi.ply`](https://github.com/taichi-dev/taichi_elements_blender_examples/releases/download/ply/taichi.ply) and run `python3 demo_3d_letters.py` (wait for at least 10 frames)
-   - A binary particle folder with a timestamp in its time (e.g., `particles_2020-07-27_20-55-48`) will be created under the current folder.
- - `python3 ../renderer/particle_renderer [output_folder] [begin] [end] [step]`
-   - E.g., `../renderer/particle_renderer.py particles_2020-07-27_20-55-48/ 0 100 1`
+   - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
+ - `python3 ../renderer/render_particles [particle_input_folder] [begin] [end] [step] [render_output_folder]`
+   - E.g., `../renderer/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
