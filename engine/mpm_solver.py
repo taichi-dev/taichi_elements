@@ -48,7 +48,9 @@ class MPMSolver:
             # Max 128 MB particles
             padding=3,
             unbounded=False,
-            dt_scale=1):
+            dt_scale=1,
+            E_scale=1,
+            voxelizer_super_sample=2):
         self.dim = len(res)
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
@@ -119,7 +121,7 @@ class MPMSolver:
         self.padding = padding
 
         # Young's modulus and Poisson's ratio
-        self.E, self.nu = 1e6 * size, 0.2
+        self.E, self.nu = 1e6 * size * E_scale, 0.2
         # Lame parameters
         self.mu_0, self.lambda_0 = self.E / (
             2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) *
@@ -147,8 +149,11 @@ class MPMSolver:
                 from engine.voxelizer import Voxelizer
             self.voxelizer = Voxelizer(res=self.res,
                                        dx=self.dx,
-                                       padding=self.padding)
+                                       padding=self.padding,
+                                       super_sample=voxelizer_super_sample)
             self.set_gravity((0, -9.8, 0))
+
+        self.voxelizer_super_sample = voxelizer_super_sample
 
         self.grid_postprocess = []
 
@@ -399,7 +404,7 @@ class MPMSolver:
                 new_C += 4 * self.inv_dx * weight * g_v.outer_product(dpos)
             self.v[p], self.C[p] = new_v, new_C
             self.x[p] += dt * self.v[p]  # advection
-            
+
     def step(self, frame_dt, print_stat=False):
         begin_t = time.time()
         begin_substep = self.total_substeps
@@ -553,17 +558,20 @@ class MPMSolver:
         for i, j, k in self.voxelizer.voxels:
             inside = 1
             for d in ti.static(range(3)):
-                inside = inside and self.padding <= i and i < self.res[
-                    d] - self.padding
+                inside = inside and -self.grid_size // 2 + self.padding <= i and i < self.grid_size // 2 - self.padding
             if inside and self.voxelizer.voxels[i, j, k] > 0:
-                for l in range(sample_density):
-                    x = ti.Vector(
-                        [ti.random() + i,
-                         ti.random() + j,
-                         ti.random() + k]) * self.dx + self.source_bound[0]
-                    p = ti.atomic_add(self.n_particles[None], 1)
-                    self.seed_particle(p, x, material, color,
-                                       self.source_velocity[None])
+                s = sample_density / self.voxelizer_super_sample**self.dim
+                for l in range(sample_density + 1):
+                    if ti.random() + l < s:
+                        x = ti.Vector([
+                            ti.random() + i,
+                            ti.random() + j,
+                            ti.random() + k
+                        ]) * (self.dx / self.voxelizer_super_sample
+                              ) + self.source_bound[0]
+                        p = ti.atomic_add(self.n_particles[None], 1)
+                        self.seed_particle(p, x, material, color,
+                                           self.source_velocity[None])
 
     def add_mesh(self,
                  triangles,
@@ -577,7 +585,7 @@ class MPMSolver:
             sample_density = 2**self.dim
 
         self.set_source_velocity(velocity=velocity)
-        
+
         for i in range(self.dim):
             if translation:
                 self.source_bound[0][i] = translation[i]

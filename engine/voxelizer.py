@@ -15,12 +15,18 @@ def inside_ccw(p, a, b, c):
 
 @ti.data_oriented
 class Voxelizer:
-    def __init__(self, res, dx, precision=ti.f64, padding=3):
+    def __init__(self, res, dx, super_sample=2, precision=ti.f64, padding=3):
         assert len(res) == 3
-        self.res = res
-        self.dx = dx
+        # Super sample by 2x
+        self.res = (res[0] * super_sample, res[1] * super_sample,
+                    res[2] * super_sample)
+        self.dx = dx / super_sample
         self.inv_dx = 1 / self.dx
-        self.voxels = ti.var(ti.i32, shape=res)
+        self.voxels = ti.field(ti.i32)
+        self.block = ti.root.pointer(
+            ti.ijk, (self.res[0] // 8, self.res[1] // 8, self.res[2] // 8))
+        self.block.dense(ti.ijk, 8).place(self.voxels)
+
         assert precision in [ti.f32, ti.f64]
         self.precision = precision
         self.padding = padding
@@ -108,7 +114,7 @@ class Voxelizer:
         assert len(triangles.shape) == 2
         assert triangles.shape[1] == 9
 
-        self.voxels.fill(0)
+        self.block.deactivate_all()
         num_triangles = len(triangles)
         self.voxelize_triangles(num_triangles, triangles)
 
