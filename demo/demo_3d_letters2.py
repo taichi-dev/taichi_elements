@@ -17,7 +17,7 @@ ti.init(arch=ti.cuda,
         use_unified_memory=False,
         device_memory_fraction=0.7)
 
-max_num_particles = 10000000
+max_num_particles = 4000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM", res=512, background_color=0x112F41)
@@ -48,16 +48,19 @@ def load_mesh(fn, scale, offset):
     return triangles
 
 
-R = 128
+R = 256
 
-mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=1)
+mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=0.5, E_scale=8)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
                          surface=mpm.surface_slip,
                          friction=0.5)
 
-triangles = load_mesh('taichi.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
+triangles = load_mesh('taichi.ply', scale=0.04, offset=(0.5, 0.5, 0.5))
+triangles_small = load_mesh('taichi.ply',
+                                    scale=0.0133,
+                                    offset=(0.5, 0.5, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
@@ -66,8 +69,8 @@ def visualize(particles):
     np_x = particles['position'] / 1.0
 
     # simple camera transform
-    screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2**0.5) - 0.2
-    screen_y = (np_x[:, 1])
+    screen_x = np_x[:, 0]
+    screen_y = np_x[:, 1]
 
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 
@@ -82,21 +85,33 @@ start_t = time.time()
 for frame in range(15000):
     print(f'frame {frame}')
     t = time.time()
-    if mpm.n_particles[None] < max_num_particles:
-        i = frame % 4 - 2
-        j = frame / 4 % 4 - 1
 
-        r = 255 if frame % 3 == 0 else 128
-        g = 255 if frame % 3 == 1 else 128
-        b = 255 if frame % 3 == 2 else 128
-        color = r * 65536 + g * 256 + b
+    if frame % 50 == 0 and mpm.n_particles[None] < max_num_particles:
+        F = frame // 50
+        r = 255 if F % 3 == 0 else 128
+        g = 255 if F % 3 == 1 else 128
+        b = 255 if F % 3 == 2 else 128
         mpm.add_mesh(triangles=triangles,
                      material=MPMSolver.material_elastic,
-                     color=color,
-                     velocity=(0, -2, 0),
-                     translation=((i + 0.5) * 0.25, 0, (2 - j) * 0.1))
+                     color=r * 65536 + g * 256 + b,
+                     velocity=(0, -6, 0),
+                     translation=(0.0, 0.16, (F % 2) * 0.4))
 
-    mpm.step(2e-3, print_stat=True)
+    if frame > 60 and mpm.n_particles[None] < max_num_particles:
+        i = frame % 3 - 1.5
+        j = 0  # frame / 4 % 4 - 1
+        colors = [0xFF8888, 0xEEEEFF, 0xFFFF55]
+        materials = [
+            MPMSolver.material_elastic, MPMSolver.material_elastic,
+            MPMSolver.material_elastic
+        ]
+        mpm.add_mesh(triangles=triangles_small,
+                     material=materials[frame % 3],
+                     color=colors[frame % 3],
+                     velocity=(0, -6, 0),
+                     translation=((i + 0.5) * 0.33, 0.13, 0.2))
+
+    mpm.step(4e-3, print_stat=True)
     if with_gui and frame % 3 == 0:
         particles = mpm.particle_info()
         visualize(particles)
