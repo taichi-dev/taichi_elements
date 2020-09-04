@@ -8,3 +8,4 @@ htmlcov
 *.xml
 *.zip
 blender/engine
+build/
