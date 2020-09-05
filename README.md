@@ -3,17 +3,29 @@ High-Performance Multi-Material Continuum Physics Engine (work in progress).
 
 The solver is being developed using Taichi, therefore it is cross-platform and supports multithreaded CPUs and massively parallel GPUs. 
 
-The short-term plan is
- - To build a reusable multimaterial (water/elastic/snow/sand/mud) simulator
+The plan is
+ - To build a reusable MLS-MPM multimaterial (water/elastic/snow/sand/mud) simulator
  - To integrate the simulator into Blender
 
-## How to run (without Blender)
+# Using `taichi_elements` in Python
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
  - Go to `demo` folder
  - `python3 demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
  
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
+
+## To simulate and render an example 3D scene with Python
+ - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
+ - Download [`taichi.ply`](https://github.com/taichi-dev/taichi_elements_blender_examples/releases/download/ply/taichi.ply) and run `python3 demo_3d_letters.py` (wait for at least 10 frames)
+   - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
+ - `python3 ../renderer/render_particles [particle_input_folder] [begin] [end] [step] [render_output_folder]`
+   - E.g., `../renderer/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
+ - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
+
+<img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
+
+# Using `taichi_elements` in Blender
 
 ## Installing Taichi for Blender
 (Not sure if it is the standard approach, but it works for now.)
@@ -24,7 +36,7 @@ The short-term plan is
  ```
   The output looks like `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81`, which means python3 is located at `/XXX/blender-2.81a-linux-glibc217-x86_64/2.81/python/bin/python3.7`
  - Install [pip](https://pip.pypa.io/en/stable/installing/) using that Python executable
- - Install Taichi: `./python3.7m -m pip install --upgrade taichi` (Note: as of April 13 2020, Taichi version is `v0.5.12`. Please use the latest version. Also note that the package name is now simply `taichi` instead of `taichi-nightly`.)
+ - Install Taichi: `./python3.7m -m pip install --upgrade taichi` (Note: as of July 28 2020, Taichi version is `v0.6.22`. Please use the latest version.)
 
 ## Installing taichi_elements (experimental) for Blender
  - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`

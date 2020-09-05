@@ -8,4 +8,12 @@ htmlcov
 *.xml
 *.zip
 blender/engine
+*.blend*
+*.ply
+*.gif
+*.mp4
+rendered
+particles_*
+sim_*
+*.bin
 /build

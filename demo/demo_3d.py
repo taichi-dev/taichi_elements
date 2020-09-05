@@ -8,7 +8,7 @@ write_to_disk = False
 # Try to run on GPU
 ti.init(arch=ti.cuda)
 
-gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
+gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
 
 mpm = MPMSolver(res=(64, 64, 64), size=10)
 
@@ -27,7 +27,8 @@ mpm.set_gravity((0, -50, 0))
 
 for frame in range(1500):
     mpm.step(4e-3)
-    colors = np.array([0x068587, 0xED553B, 0xEEEEF0, 0xFFFF00], dtype=np.uint32)
+    colors = np.array([0x068587, 0xED553B, 0xEEEEF0, 0xFFFF00],
+                      dtype=np.uint32)
     particles = mpm.particle_info()
     np_x = particles['position'] / 10.0
 

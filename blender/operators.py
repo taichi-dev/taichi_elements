@@ -121,7 +121,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
     def create_emitters(self, frame):
         for emitter in self.emitters:
-            vel = emitter.velocity[0]
+            if len(emitter.velocity) == 1:
+                vel = emitter.velocity[0]
+            else:
+                vel = emitter.velocity[frame]
             if emitter.typ == 'EMITTER':
                 if emitter.emit_frame[0] == frame:
                     create_emitter(self.solv, emitter, vel)
@@ -240,14 +243,17 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         size = cls.solver.size[0]
         ti.reset()
         print(f"Creating simulation of res {res}, size {size}")
-        solv = mpm_solver.MPMSolver((res, res, res), size=size)
+        solv = mpm_solver.MPMSolver((res, res, res), size=size, unbounded=True)
 
-        hub = cls.hubs
-        assert len(hub.forces) == 1, "Only one gravity supported"
-        gravity_direction = hub.forces[0].strength[0]
-        solv.set_gravity(tuple(gravity_direction))
+        solv.set_gravity(tuple(cls.gravity[0]))
 
-        self.emitters = hub.emitters
+        self.emitters = cls.emitters
+        for collider in cls.colliders:
+            solv.add_surface_collider(
+                (*collider.position),
+                (*collider.direction),
+                surface=int(collider.surface)
+            )
         self.size = size
         self.solv = solv
         self.run_sim()

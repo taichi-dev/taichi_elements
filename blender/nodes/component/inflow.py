@@ -17,7 +17,7 @@ class ElementsInflowNode(base.BaseNode):
     }
     typ: bpy.props.StringProperty(default='INFLOW')
 
-    category = base.ELEMENT
+    category = base.COMPONENT
 
     def init(self, context):
         self.width = 200.0
