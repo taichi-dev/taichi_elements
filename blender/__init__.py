@@ -27,19 +27,14 @@ if use_blender:
     import sys
     import os
 
-    use_bundle = False
+    bundle_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'bundle')
 
-    for p in sys.path:
-        bundle_path = os.path.join(p, 'Taichi-Elements', 'bundle')
-        if os.path.exists(bundle_path):
-            use_bundle = True
-            break
-
-    if use_bundle:
+    if os.path.exists(bundle_path):
         def register():
             print('Found Taichi-Elements/bundle at', bundle_path)
             if bundle_path not in sys.path:
                 sys.path.insert(0, bundle_path)
+            # import addon after path is inserted, so that `import taichi` works
             from . import addon
             addon.register()
 
