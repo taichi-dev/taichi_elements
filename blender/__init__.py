@@ -45,7 +45,7 @@ if use_blender:
                 sys.path.remove(bundle_path)
 
     else:
-        print('Cannot find Taichi-Elements/bundle, assuming PyPI install.')
+        print('Cannot find Taichi-Elements/bundle, assuming PyPI installation.')
 
         from . import addon
 
