@@ -496,7 +496,7 @@ class MPMSolver:
 
     @ti.func
     def random_point_in_unit_sphere(self):
-        ret = ti.Vector.zero(dtype=ti.f32, n=self.dim)
+        ret = ti.Vector.zero(ti.f32, n=self.dim)
         while True:
             for i in ti.static(range(self.dim)):
                 ret[i] = ti.random(ti.f32) * 2 - 1
@@ -604,7 +604,7 @@ class MPMSolver:
                                  color: ti.i32):
 
         for i in range(num_particles):
-            x = ti.Vector.zero(dtype=ti.f32, n=self.dim)
+            x = ti.Vector.zero(ti.f32, n=self.dim)
             if ti.static(self.dim == 3):
                 x = ti.Vector([pos[i, 0], pos[i, 1], pos[i, 2]])
             else:
