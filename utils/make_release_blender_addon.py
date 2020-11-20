@@ -2,7 +2,6 @@ import os
 import sys
 import zipfile
 
-
 # taichi elements repository path
 repo_path = os.path.dirname(os.path.abspath(os.curdir))
 os.chdir(repo_path)
@@ -18,9 +17,7 @@ blend_path = os.path.join(repo_path, BLEND_FOLDER)
 engine_path = os.path.join(repo_path, ENGINE_FOLDER)
 sys.path.append(repo_path)
 
-
 from blender import bl_info
-
 
 addon_ver = bl_info['version']
 # release zip file name
@@ -39,7 +36,7 @@ def write_files(zip_file, out_folder):
             if not file.endswith('.py'):
                 continue
             # input file path
-            in_path = os.path.join(root, file)[2 : ]
+            in_path = os.path.join(root, file)[2:]
             # output file path
             out_path = os.path.join(out_folder, in_path)
             zip_file.write(in_path, out_path, compress_type=cmprss)

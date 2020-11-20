@@ -6,7 +6,6 @@ import zipfile
 import os
 from engine import mpm_solver
 
-
 folder = 'tests'
 zip_file_path = os.path.join(folder, 'suzanne_npy.zip')
 f = open(zip_file_path, 'wb')
@@ -29,11 +28,9 @@ triangles = np.reshape(triangles, (len(triangles) // 9, 9)) * 0.306 + 0.501
 os.remove(zip_file_path)
 os.remove(os.path.join(folder, 'suzanne.npy'))
 
-mpm.add_mesh(
-    triangles=triangles,
-    material=mpm_solver.MPMSolver.material_elastic,
-    color=0xFFFF00
-)
+mpm.add_mesh(triangles=triangles,
+             material=mpm_solver.MPMSolver.material_elastic,
+             color=0xFFFF00)
 
 mpm.set_gravity((0, -20, 0))
 

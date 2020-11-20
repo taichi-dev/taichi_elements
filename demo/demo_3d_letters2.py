@@ -59,9 +59,7 @@ mpm.add_surface_collider(point=(0, 0, 0),
                          friction=0.5)
 
 triangles = load_mesh('taichi.ply', scale=0.04, offset=(0.5, 0.5, 0.5))
-triangles_small = load_mesh('taichi.ply',
-                                    scale=0.0133,
-                                    offset=(0.5, 0.5, 0.5))
+triangles_small = load_mesh('taichi.ply', scale=0.0133, offset=(0.5, 0.5, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 

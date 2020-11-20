@@ -9,6 +9,7 @@ version = '0.0.1'
 
 env_pypi_pwd = os.environ.get('PYPI_PWD', '')
 
+
 def get_os_name():
     name = platform.platform()
     # in python 3.8, platform.platform() uses mac_ver() on macOS
@@ -21,12 +22,14 @@ def get_os_name():
         return 'linux'
     assert False, "Unknown platform name %s" % name
 
+
 if env_pypi_pwd == '':
     assert False, "Missing environment variable PYPI_PWD"
 
 
 def get_python_executable():
     return '"' + sys.executable.replace('\\', '/') + '"'
+
 
 with open('../setup.py') as fin:
     with open('setup.py', 'w') as fout:
@@ -58,4 +61,5 @@ shutil.rmtree('./taichi_elements', ignore_errors=True)
 shutil.rmtree('./build', ignore_errors=True)
 
 os.system('{} -m twine upload dist/* --verbose -u yuanming-hu -p {}'.format(
-    get_python_executable(), '%PYPI_PWD%' if get_os_name() == 'win' else '$PYPI_PWD'))
+    get_python_executable(),
+    '%PYPI_PWD%' if get_os_name() == 'win' else '$PYPI_PWD'))
