@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 6, 22)
+ti.require_version(0, 7, 8)
 
 
 @ti.data_oriented
