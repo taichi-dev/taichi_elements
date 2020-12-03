@@ -691,7 +691,7 @@ class MPMSolver:
         series_prefix_2 = fn + "/snow.ply"
         series_prefix_3 = fn + "/sand.ply"
 
-        print("粒子总数：{0}，弹性体：{1}，水：{2}，雪：{3}，沙：{4}，实际渲染数：{5}".format(self.n_particles,len(arr_elast[0]) ,len(arr_water[0]) ,len(arr_snow[0]) ,len(arr_sand[0]) ,len(arr_water[0]) + len(arr_elast[0]) + len(arr_snow[0]) + len(arr_sand[0])),end='\n')
+        print("num_particles：{0}，elast：{1}，water：{2}，snow：{3}，sand：{4}，out_particles：{5}".format(self.n_particles,len(arr_elast[0]) ,len(arr_water[0]) ,len(arr_snow[0]) ,len(arr_sand[0]) ,len(arr_water[0]) + len(arr_elast[0]) + len(arr_snow[0]) + len(arr_sand[0])),end='\n')
 
         if len(arr_water[0]) > 0:
             min_water = np.min(arr_water)
