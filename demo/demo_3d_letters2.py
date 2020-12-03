@@ -11,6 +11,8 @@ from engine.mpm_solver import MPMSolver
 with_gui = True
 write_to_disk = True
 
+w2ply = True
+
 # Try to run on GPU
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
@@ -22,7 +24,7 @@ max_num_particles = 4000000
 if with_gui:
     gui = ti.GUI("MLS-MPM", res=512, background_color=0x112F41)
 
-if write_to_disk:
+if write_to_disk or w2ply:
     output_dir = create_output_folder('./sim')
 
 
@@ -117,5 +119,9 @@ for frame in range(15000):
 
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/{frame:05d}.npz')
+
+    if w2ply:
+        mpm.write_ply(output_dir,frame + 1)
+
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')

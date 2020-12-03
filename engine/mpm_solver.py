@@ -673,6 +673,70 @@ class MPMSolver:
         p.start()
 
         self.writers.append(p)
+    
+    def write_ply(self,fn,frame):
+        p_info = self.particle_info()
+
+        p_pos = p_info['position']
+        p_mat = p_info['material']
+        p_null = np.array([[np.nan]])
+
+        arr_water = np.where(p_mat == 0)
+        arr_elast = np.where(p_mat == 1)        
+        arr_snow = np.where(p_mat == 2)
+        arr_sand = np.where(p_mat == 3)
+        
+        series_prefix_0 = fn + "/water.ply"
+        series_prefix_1 = fn + "/elast.ply"
+        series_prefix_2 = fn + "/snow.ply"
+        series_prefix_3 = fn + "/sand.ply"
+
+        print("粒子总数：{0}，弹性体：{1}，水：{2}，雪：{3}，沙：{4}，实际渲染数：{5}".format(self.n_particles,len(arr_elast[0]) ,len(arr_water[0]) ,len(arr_snow[0]) ,len(arr_sand[0]) ,len(arr_water[0]) + len(arr_elast[0]) + len(arr_snow[0]) + len(arr_sand[0])),end='\n')
+
+        if len(arr_water[0]) > 0:
+            min_water = np.min(arr_water)
+            max_water = np.max(arr_water)
+            writer_0 = ti.PLYWriter(num_vertices=max_water - min_water + 1)
+            writer_0.add_vertex_pos(p_pos[min_water: max_water + 1, 0],p_pos[min_water: max_water + 1, 1],p_pos[min_water: max_water + 1, 2])
+            writer_0.export_frame_ascii(frame,series_prefix_0)
+        else:
+            writer_0 = ti.PLYWriter(num_vertices=1)
+            writer_0.add_vertex_pos(p_null[ : , 0],p_null[ : , 0],p_null[ : , 0])
+            writer_0.export_frame_ascii(frame,series_prefix_0)
+
+        if len(arr_elast[0]) > 0:
+            min_elast = np.min(arr_elast)
+            max_elast = np.max(arr_elast)
+            writer_1 = ti.PLYWriter(num_vertices=max_elast - min_elast + 1)
+            writer_1.add_vertex_pos(p_pos[min_elast: max_elast + 1, 0],p_pos[min_elast: max_elast + 1, 1],p_pos[min_elast: max_elast + 1, 2])
+            writer_1.export_frame_ascii(frame,series_prefix_1)
+        else:
+            writer_1 = ti.PLYWriter(num_vertices=1)
+            writer_1.add_vertex_pos(p_null[ : , 0],p_null[ : , 0],p_null[ : , 0])
+            writer_1.export_frame_ascii(frame,series_prefix_1)
+
+        if len(arr_snow[0]) > 0:
+            min_snow = np.min(arr_snow)
+            max_snow = np.max(arr_snow)
+            writer_2 = ti.PLYWriter(num_vertices=max_snow - min_snow + 1)
+            writer_2.add_vertex_pos(p_pos[min_snow: max_snow + 1, 0],p_pos[min_snow: max_snow + 1, 1],p_pos[min_snow: max_snow + 1, 2])
+            writer_2.export_frame_ascii(frame,series_prefix_2)
+        else:
+            writer_2 = ti.PLYWriter(num_vertices=1)
+            writer_2.add_vertex_pos(p_null[ : , 0],p_null[ : , 0],p_null[ : , 0])
+            writer_2.export_frame_ascii(frame,series_prefix_2)
+
+        if len(arr_sand[0]) > 0:
+            min_sand = np.min(arr_sand)
+            max_sand = np.max(arr_sand)
+            writer_3 = ti.PLYWriter(num_vertices=max_sand - min_sand + 1)
+            writer_3.add_vertex_pos(p_pos[min_sand: max_sand + 1, 0],p_pos[min_sand: max_sand + 1, 1],p_pos[min_sand: max_sand + 1, 2])
+            writer_3.export_frame_ascii(frame,series_prefix_3)
+        else:
+            writer_3 = ti.PLYWriter(num_vertices=1)
+            writer_3.add_vertex_pos(p_null[ : , 0],p_null[ : , 0],p_null[ : , 0])
+            writer_3.export_frame_ascii(frame,series_prefix_3) 
+
 
     def flush(self):
         for p in self.writers:
