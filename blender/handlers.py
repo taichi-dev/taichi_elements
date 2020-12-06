@@ -10,11 +10,13 @@ from . import operators, particles_io
 
 
 # name of particles object
-PAR_OBJ_NAME = 'elements_particles'
+PAR_OBJ_NAME = 'taichi_elements_particles'
 # name of particles system object
-PSYS_OBJ_NAME = 'elements_particle_system'
+PSYS_OBJ_NAME = 'taichi_elements_particle_system'
 # name of mesh object
-MESH_OBJ_NAME = 'elements_particles_mesh'
+MESH_OBJ_NAME = 'taichi_elements_particles_mesh'
+# particle system modifier name
+PSYS_MOD_NAME = 'Taichi Elements Particles'
 
 
 # get elements node tree
@@ -82,7 +84,7 @@ def create_psys_obj(obj_name):
     psys_me = bpy.data.meshes.new(obj_name)
     # particle system object
     psys_obj = bpy.data.objects.new(PSYS_OBJ_NAME, psys_me)
-    psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+    psys_obj.modifiers.new(PSYS_MOD_NAME, 'PARTICLE_SYSTEM')
     # create geometry
     bm = bmesh.new()
     bmesh.ops.create_cube(bm)
@@ -101,7 +103,7 @@ def create_psys_obj(obj_name):
 # p_mat - particles materials ids
 def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
     if not len(psys_obj.particle_systems):
-        psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+        psys_obj.modifiers.new(PSYS_MOD_NAME, 'PARTICLE_SYSTEM')
         set_psys_settings(psys_obj)
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
