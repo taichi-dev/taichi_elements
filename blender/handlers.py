@@ -110,7 +110,7 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
         psys_stgs.particle_size = p_size[0]
         psys_stgs.display_size = p_size[0]
     # particles count
-    p_cnt = len(p_pos)
+    p_cnt = p_pos.shape[0] // 3
     psys_stgs.count = p_cnt
     psys_stgs.use_rotations = True
     psys_stgs.rotation_mode = 'NONE'
@@ -119,15 +119,9 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
     degp = bpy.context.evaluated_depsgraph_get()
     # particle system
     psys = psys_obj.evaluated_get(degp).particle_systems[0]
-    pos = []
-    for p in p_pos:
-        pos.extend((p[0], p[1], p[2]))
-    psys.particles.foreach_set('location', pos)
+    psys.particles.foreach_set('location', p_pos)
     if len(p_vel) != 1:
-        vel = []
-        for v in p_vel:
-            vel.extend((v[0], v[1], v[2]))
-        psys.particles.foreach_set('velocity', vel)
+        psys.particles.foreach_set('velocity', p_vel)
     # angular velocity
     ang = []
     if len(p_ang) != 1:

@@ -145,7 +145,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             os.makedirs(self.cache_folder)
 
         # file name
-        fname = 'particles_{0:0>6}.bin'.format(frame)
+        fname = 'particles_{0:0>6}'.format(frame)
         # particle file path
         pars_fpath = os.path.join(self.cache_folder, fname)
         # particles data
@@ -155,9 +155,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             particles_io.COL: np_color,
             particles_io.MAT: np_material
         }
-        data = particles_io.write_pars_v0(par_data)
+        data = particles_io.write_pars_v1(par_data, pars_fpath, fname)
 
-        with open(pars_fpath, 'wb') as file:
+        with open(pars_fpath + '.bin', 'wb') as file:
             file.write(data)
 
         write_obj = False
