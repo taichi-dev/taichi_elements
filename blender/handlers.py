@@ -2,8 +2,10 @@
 import os
 
 # blender modules
-import bpy
-import bmesh
+import bpy, bmesh
+
+# site package modules
+import numpy
 
 # addon modules
 from . import operators, particles_io
@@ -206,7 +208,8 @@ def create_mesh(node):
     if not me_obj:
         me_obj = create_pobj(obj_name)
     verts = nd_obj.vertices
-    if verts:
+    if type(verts) == numpy.ndarray:
+        verts = verts.reshape((verts.shape[0] // 3, 3))
         update_pmesh(me_obj, verts, obj_name)
     else:
         update_pmesh(me_obj, (), obj_name)
