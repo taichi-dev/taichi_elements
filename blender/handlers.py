@@ -2,19 +2,23 @@
 import os
 
 # blender modules
-import bpy
-import bmesh
+import bpy, bmesh
+
+# site package modules
+import numpy
 
 # addon modules
 from . import operators, particles_io
 
 
 # name of particles object
-PAR_OBJ_NAME = 'elements_particles'
+PAR_OBJ_NAME = 'taichi_elements_particles'
 # name of particles system object
-PSYS_OBJ_NAME = 'elements_particle_system'
+PSYS_OBJ_NAME = 'taichi_elements_particle_system'
 # name of mesh object
-MESH_OBJ_NAME = 'elements_particles_mesh'
+MESH_OBJ_NAME = 'taichi_elements_particles_mesh'
+# particle system modifier name
+PSYS_MOD_NAME = 'Taichi Elements Particles'
 
 
 # get elements node tree
@@ -82,7 +86,7 @@ def create_psys_obj(obj_name):
     psys_me = bpy.data.meshes.new(obj_name)
     # particle system object
     psys_obj = bpy.data.objects.new(PSYS_OBJ_NAME, psys_me)
-    psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+    psys_obj.modifiers.new(PSYS_MOD_NAME, 'PARTICLE_SYSTEM')
     # create geometry
     bm = bmesh.new()
     bmesh.ops.create_cube(bm)
@@ -101,7 +105,7 @@ def create_psys_obj(obj_name):
 # p_mat - particles materials ids
 def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
     if not len(psys_obj.particle_systems):
-        psys_obj.modifiers.new('Elements Particles', 'PARTICLE_SYSTEM')
+        psys_obj.modifiers.new(PSYS_MOD_NAME, 'PARTICLE_SYSTEM')
         set_psys_settings(psys_obj)
     # particle system settings
     psys_stgs = psys_obj.particle_systems[0].settings
@@ -110,7 +114,7 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
         psys_stgs.particle_size = p_size[0]
         psys_stgs.display_size = p_size[0]
     # particles count
-    p_cnt = len(p_pos)
+    p_cnt = p_pos.shape[0] // 3
     psys_stgs.count = p_cnt
     psys_stgs.use_rotations = True
     psys_stgs.rotation_mode = 'NONE'
@@ -119,15 +123,9 @@ def upd_psys_obj(psys_obj, p_pos, p_vel, p_ang, p_life, p_size):
     degp = bpy.context.evaluated_depsgraph_get()
     # particle system
     psys = psys_obj.evaluated_get(degp).particle_systems[0]
-    pos = []
-    for p in p_pos:
-        pos.extend((p[0], p[1], p[2]))
-    psys.particles.foreach_set('location', pos)
+    psys.particles.foreach_set('location', p_pos)
     if len(p_vel) != 1:
-        vel = []
-        for v in p_vel:
-            vel.extend((v[0], v[1], v[2]))
-        psys.particles.foreach_set('velocity', vel)
+        psys.particles.foreach_set('velocity', p_vel)
     # angular velocity
     ang = []
     if len(p_ang) != 1:
@@ -210,7 +208,8 @@ def create_mesh(node):
     if not me_obj:
         me_obj = create_pobj(obj_name)
     verts = nd_obj.vertices
-    if verts:
+    if type(verts) == numpy.ndarray:
+        verts = verts.reshape((verts.shape[0] // 3, 3))
         update_pmesh(me_obj, verts, obj_name)
     else:
         update_pmesh(me_obj, (), obj_name)

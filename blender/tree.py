@@ -3,7 +3,7 @@ import bpy
 
 class ElementsNodeTree(bpy.types.NodeTree):
     bl_idname = 'elements_node_tree'
-    bl_label = 'Elements'
+    bl_label = 'Taichi Elements'
     bl_icon = 'PHYSICS'
 
     @classmethod

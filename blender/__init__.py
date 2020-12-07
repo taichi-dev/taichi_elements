@@ -1,11 +1,11 @@
 # necessary for Blender to detect this addon
 bl_info = {
-    'name': 'Elements',
+    'name': 'Taichi Elements',
     'description': 'High-Performance Multi-Material Continuum Physics Engine',
     'author': 'Taichi Elements Developers',
     'version': (0, 0, 0),
     'blender': (2, 82, 0),
-    'location': 'Elements Window',
+    'location': 'Taichi Elements Window',
     'warning': 'Work in progress',
     'support': 'COMMUNITY',
     'wiki_url': 'https://taichi-elements.readthedocs.io/en/latest/',
