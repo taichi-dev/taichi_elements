@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 8)
+ti.require_version(0, 7, 10)
 
 
 @ti.data_oriented
@@ -55,6 +55,7 @@ class MPMSolver:
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
+        self.t = 0.0
         self.res = res
         self.n_particles = ti.field(ti.i32, shape=())
         self.dx = size / res[0]
@@ -66,7 +67,9 @@ class MPMSolver:
         self.max_num_particles = max_num_particles
         self.gravity = ti.Vector.field(self.dim, dtype=ti.f32, shape=())
         self.source_bound = ti.Vector.field(self.dim, dtype=ti.f32, shape=2)
-        self.source_velocity = ti.Vector.field(self.dim, dtype=ti.f32, shape=())
+        self.source_velocity = ti.Vector.field(self.dim,
+                                               dtype=ti.f32,
+                                               shape=())
         self.pid = ti.field(ti.i32)
         # position
         self.x = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -249,8 +252,9 @@ class MPMSolver:
             stress = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
             if self.material[p] != self.material_sand:
-                stress = 2 * mu * (self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
-                ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
+                stress = 2 * mu * (
+                    self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
+                    ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
             else:
                 sig = self.sand_projection(sig, p)
                 self.F[p] = U @ sig @ V.transpose()
@@ -288,7 +292,8 @@ class MPMSolver:
                 self.grid_v[I] += dt * self.gravity[None]
 
     @ti.kernel
-    def grid_bounding_box(self, dt: ti.f32, unbounded: ti.template()):
+    def grid_bounding_box(self, t: ti.f32, dt: ti.f32,
+                          unbounded: ti.template()):
         for I in ti.grouped(self.grid_m):
             for d in ti.static(range(self.dim)):
                 if ti.static(unbounded):
@@ -309,7 +314,7 @@ class MPMSolver:
         center = list(center)
 
         @ti.kernel
-        def collide(dt: ti.f32):
+        def collide(t: ti.f32, dt: ti.f32):
             for I in ti.grouped(self.grid_m):
                 offset = I * self.dx - ti.Vector(center)
                 if offset.norm_sqr() < radius * radius:
@@ -345,7 +350,7 @@ class MPMSolver:
             raise ValueError('friction must be 0 on sticky surfaces.')
 
         @ti.kernel
-        def collide(dt: ti.f32):
+        def collide(t: ti.f32, dt: ti.f32):
             for I in ti.grouped(self.grid_m):
                 offset = I * self.dx - ti.Vector(point)
                 n = ti.Vector(normal)
@@ -375,7 +380,7 @@ class MPMSolver:
 
     def add_bounding_box(self, unbounded):
         self.grid_postprocess.append(
-            lambda dt: self.grid_bounding_box(dt, unbounded))
+            lambda t, dt: self.grid_bounding_box(t, dt, unbounded))
 
     @ti.kernel
     def g2p(self, dt: ti.f32):
@@ -420,7 +425,8 @@ class MPMSolver:
             self.p2g(dt)
             self.grid_normalization_and_gravity(dt)
             for p in self.grid_postprocess:
-                p(dt)
+                p(self.t, dt)
+            self.t += dt
             self.g2p(dt)
 
         if print_stat:
@@ -493,6 +499,18 @@ class MPMSolver:
 
         self.seed(num_new_particles, material, color)
         self.n_particles[None] += num_new_particles
+
+    @ti.kernel
+    def add_texture_2d(self, offset_x: ti.f32, offset_y: ti.f32,
+                       texture: ti.ext_arr()):
+        for i, j in ti.ndrange(texture.shape[0], texture.shape[1]):
+            if texture[i, j] > 0.1:
+                pid = ti.atomic_add(self.n_particles[None], 1)
+                x = ti.Vector([
+                    offset_x + i * self.dx * 0.5, offset_y + j * self.dx * 0.5
+                ])
+                self.seed_particle(pid, x, self.material_elastic, 0xFFFFFF,
+                                   self.source_velocity[None])
 
     @ti.func
     def random_point_in_unit_sphere(self):
