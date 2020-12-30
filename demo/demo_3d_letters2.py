@@ -9,13 +9,13 @@ from utils import create_output_folder
 from engine.mpm_solver import MPMSolver
 
 with_gui = True
-write_to_disk = True
+write_to_disk = False
 
 # Try to run on GPU
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.7)
+        device_memory_fraction=0.8)
 
 max_num_particles = 4000000
 
@@ -51,7 +51,7 @@ def load_mesh(fn, scale, offset):
 # Use 512 for final simulation/render
 R = 256
 
-mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=0.5, E_scale=8)
+mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=0.5, E_scale=8, quant=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
@@ -64,7 +64,7 @@ triangles_small = load_mesh('taichi.ply', scale=0.0133, offset=(0.5, 0.5, 0.5))
 mpm.set_gravity((0, -25, 0))
 
 
-def visualize(particles):
+def visualize(particles, f):
     np_x = particles['position'] / 1.0
 
     # simple camera transform
@@ -74,7 +74,7 @@ def visualize(particles):
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 
     gui.circles(screen_pos, radius=0.8, color=particles['color'])
-    gui.show()
+    gui.show(f'quant/{f:06d}.png')
 
 
 counter = 0
@@ -111,9 +111,9 @@ for frame in range(15000):
                      translation=((i + 0.5) * 0.33, 0.13, 0.2))
 
     mpm.step(4e-3, print_stat=True)
-    if with_gui and frame % 3 == 0:
+    if with_gui and frame % 1 == 0:
         particles = mpm.particle_info()
-        visualize(particles)
+        visualize(particles, frame)
 
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/{frame:05d}.npz')

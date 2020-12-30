@@ -43,6 +43,7 @@ class MPMSolver:
     def __init__(
             self,
             res,
+            quant=True,
             size=1,
             max_num_particles=2**27,
             # Max 128 MB particles
@@ -52,6 +53,7 @@ class MPMSolver:
             E_scale=1,
             voxelizer_super_sample=2):
         self.dim = len(res)
+        self.quant = quant
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -78,7 +80,13 @@ class MPMSolver:
         # affine velocity field
         self.C = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
         # deformation gradient
-        self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
+
+        if quant:
+            ci16 = ti.type_factory.custom_int(16, True)
+            cft = ti.type_factory.custom_float(significand_type=ci16, scale=4 / (2 ** 15))
+            self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
+        else:
+            self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
         # material id
         self.material = ti.field(dtype=ti.i32)
         self.color = ti.field(dtype=ti.i32)
@@ -136,8 +144,17 @@ class MPMSolver:
         self.alpha = math.sqrt(2 / 3) * 2 * sin_phi / (3 - sin_phi)
 
         self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**20)
-        self.particle.place(self.x, self.v, self.C, self.F, self.material,
-                            self.color, self.Jp)
+        if self.quant:
+            self.particle.place(self.x, self.v, self.C, self.material,
+                                self.color, self.Jp)
+            self.particle._bit_struct(num_bits=32).place(self.F(0, 0), self.F(0, 1))
+            self.particle._bit_struct(num_bits=32).place(self.F(0, 2), self.F(1, 0))
+            self.particle._bit_struct(num_bits=32).place(self.F(1, 1), self.F(1, 2))
+            self.particle._bit_struct(num_bits=32).place(self.F(2, 0), self.F(2, 1))
+            self.particle._bit_struct(num_bits=32).place(self.F(2, 2))
+        else:
+            self.particle.place(self.x, self.v, self.C, self.F, self.material,
+                                self.color, self.Jp)
 
         self.total_substeps = 0
         self.unbounded = unbounded
