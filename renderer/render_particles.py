@@ -12,7 +12,7 @@ os.makedirs(output_folder, exist_ok=True)
 from renderer import res, Renderer
 
 res = 256
-renderer = Renderer(dx=1 / res, sphere_radius=0.3 / res, shutter_time=4e-3, taichi_logo=False)
+renderer = Renderer(dx=1 / res, sphere_radius=0.3 / res, shutter_time=5e-3, taichi_logo=False)
 
 with_gui = False
 if with_gui:

@@ -35,16 +35,16 @@ def load_mesh(fn, scale, offset):
     elements = plydata['face']
     num_tris = len(elements['vertex_indices'])
     triangles = np.zeros((num_tris, 9), dtype=np.float32)
-    
+
     for i, face in enumerate(elements['vertex_indices']):
         assert len(face) == 3
         for d in range(3):
             triangles[i, d * 3 + 0] = x[face[d]] * scale + offset[0]
             triangles[i, d * 3 + 1] = y[face[d]] * scale + offset[1]
             triangles[i, d * 3 + 2] = z[face[d]] * scale + offset[2]
-    
+
     print('loaded')
-    
+
     return triangles
 
 
@@ -66,13 +66,13 @@ mpm.set_gravity((0, -25, 0))
 
 def visualize(particles):
     np_x = particles['position'] / 1.0
-    
+
     # simple camera transform
     screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2**0.5) - 0.2
     screen_y = (np_x[:, 1])
-    
+
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
-    
+
     gui.circles(screen_pos, radius=0.8, color=particles['color'])
     gui.show()
 
@@ -87,9 +87,9 @@ for frame in range(15000):
     if mpm.n_particles[None] < max_num_particles:
         i = frame % 2
         j = frame / 4 % 4 - 1
-        
+
         r = 255 if frame // 2 % 3 == 0 else 128
-        g = 255 if frame // 2% 3 == 1 else 128
+        g = 255 if frame // 2 % 3 == 1 else 128
         b = 255 if frame // 2 % 3 == 2 else 128
         color = r * 65536 + g * 256 + b
         triangles = quantized if frame % 2 == 0 else simulation
@@ -98,12 +98,12 @@ for frame in range(15000):
                      color=color,
                      velocity=(0, -2, 0),
                      translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
-    
-    mpm.step(2e-3, print_stat=True)
+
+    mpm.step(1e-2, print_stat=True)
     if with_gui and frame % 3 == 0:
         particles = mpm.particle_info()
         visualize(particles)
-    
+
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/{frame:05d}.npz')
     print(f'Frame total time {time.time() - t:.3f}')
