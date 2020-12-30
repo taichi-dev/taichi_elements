@@ -110,7 +110,7 @@ for frame in range(15000):
                      velocity=(0, -6, 0),
                      translation=((i + 0.5) * 0.33, 0.13, 0.2))
 
-    mpm.step(4e-3, print_stat=True)
+    mpm.step(1.2e-2, print_stat=True)
     if with_gui and frame % 1 == 0:
         particles = mpm.particle_info()
         visualize(particles, frame)

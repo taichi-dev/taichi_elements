@@ -12,7 +12,7 @@ os.makedirs(output_folder, exist_ok=True)
 from renderer import res, Renderer
 
 res = 256
-renderer = Renderer(dx=1 / res, sphere_radius=0.3 / res, shutter_time=2e-3, taichi_logo=False)
+renderer = Renderer(dx=1 / res, sphere_radius=0.3 / res, shutter_time=4e-3, taichi_logo=False)
 
 with_gui = False
 if with_gui:
@@ -23,7 +23,7 @@ spp = 200
 
 def main():
     for f in range(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])):
-        print('frame ', f, end=' ')
+        print('frame', f, end=' ')
         output_fn = f'{output_folder}/{f:05d}.png'
         if os.path.exists(output_fn):
             print('skip.')
@@ -32,9 +32,14 @@ def main():
             print('rendering...')
         Path(output_fn).touch()
         t = time.time()
+        
         renderer.initialize_particles(f'{sys.argv[1]}/{f:05d}.npz')
-        print('Average particle_list_length',
-              renderer.average_particle_list_length())
+        
+        total_voxels = renderer.total_non_empty_voxels()
+        total_inserted_particles = renderer.total_inserted_particles()
+        print('Total particles (with motion blur)', total_inserted_particles)
+        print('Total nonempty voxels', total_voxels)
+        print('Average particle_list_length', total_inserted_particles / total_voxels)
         img = renderer.render_frame(spp=spp)
 
         if with_gui:

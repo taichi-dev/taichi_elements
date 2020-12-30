@@ -30,7 +30,7 @@ class Renderer:
                  dx=1 / 1024,
                  sphere_radius=0.3 / 1024,
                  render_voxel=False,
-                 shutter_time=1e-3,
+                 shutter_time=0.0,
                  taichi_logo=True):
         self.vignette_strength = 0.9
         self.vignette_radius = 0.0
@@ -493,19 +493,31 @@ class Renderer:
                                              256**(2 - c)) % 256 * (1 / 255)
 
     @ti.kernel
-    def average_particle_list_length(self) -> ti.f32:
-        total_non_empty_voxels = 0
+    def total_non_empty_voxels(self) -> ti.i32:
+        counter = 0
 
         for I in ti.grouped(self.voxel_has_particle):
             if self.voxel_has_particle[I]:
-                total_non_empty_voxels += 1
+                counter += 1
 
-        return self.num_particles[None] / total_non_empty_voxels
+        return counter
+    
+    @ti.kernel
+    def total_inserted_particles(self) -> ti.i32:
+        counter = 0
+    
+        for I in ti.grouped(self.voxel_has_particle):
+            if self.voxel_has_particle[I]:
+                num_particles = ti.length(
+                    self.pid.parent(), I - ti.Vector(self.particle_grid_offset))
+                counter += num_particles
+    
+        return counter
 
     def reset(self):
         self.particle_bucket.deactivate_all()
-        self.voxel_grid_density.snode().parent(n=2).deactivate_all()
-        self.voxel_has_particle.snode().parent(n=2).deactivate_all()
+        self.voxel_grid_density.snode.parent(n=2).deactivate_all()
+        self.voxel_has_particle.snode.parent(n=2).deactivate_all()
         self.color_buffer.fill(0)
 
     def initialize_particles(self, particle_fn):
