@@ -73,8 +73,6 @@ class MPMSolver:
                                                dtype=ti.f32,
                                                shape=())
         self.pid = ti.field(ti.i32)
-        # velocity
-        self.v = ti.Vector.field(self.dim, dtype=ti.f32)
         # affine velocity field
         self.C = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
         # deformation gradient
@@ -84,10 +82,16 @@ class MPMSolver:
             cft = ti.type_factory.custom_float(significand_type=ci21, scale=1 / (2 ** 19))
             self.x = ti.Vector.field(self.dim, dtype=cft)
             
+            cu6 = ti.type_factory.custom_int(7, False)
+            ci19 = ti.type_factory.custom_int(19, True)
+            cft = ti.type_factory.custom_float(significand_type=ci19, exponent_type=cu6)
+            self.v = ti.Vector.field(self.dim, dtype=cft)
+            
             ci16 = ti.type_factory.custom_int(16, True)
             cft = ti.type_factory.custom_float(significand_type=ci16, scale=4 / (2 ** 15))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
         else:
+            self.v = ti.Vector.field(self.dim, dtype=ti.f32)
             self.x = ti.Vector.field(self.dim, dtype=ti.f32)
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
         # material id
@@ -148,9 +152,10 @@ class MPMSolver:
 
         self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**20)
         if self.quant:
-            self.particle.place(self.v, self.C, self.material,
+            self.particle.place(self.C, self.material,
                                 self.color, self.Jp)
             self.particle._bit_struct(num_bits=64).place(self.x)
+            self.particle._bit_struct(num_bits=64).place(self.v, shared_exponent=True)
             self.particle._bit_struct(num_bits=32).place(self.F(0, 0), self.F(0, 1))
             self.particle._bit_struct(num_bits=32).place(self.F(0, 2), self.F(1, 0))
             self.particle._bit_struct(num_bits=32).place(self.F(1, 1), self.F(1, 2))

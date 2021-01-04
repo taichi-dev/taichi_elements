@@ -58,6 +58,28 @@ mpm.add_surface_collider(point=(0, 0, 0),
                          surface=mpm.surface_slip,
                          friction=0.5)
 
+mpm.add_surface_collider(point=(0, 1.9, 0),
+                         normal=(0, -1, 0),
+                         surface=mpm.surface_slip,
+                         friction=0.5)
+
+for d in range(2):
+    point = [0, 0, 0]
+    normal = [0, 0, 0]
+    point[d] = 1.9
+    normal[d] = -1
+    mpm.add_surface_collider(point=point,
+                             normal=normal,
+                             surface=mpm.surface_slip,
+                             friction=0.5)
+
+    point[d] = -1.9
+    normal[d] = 1
+    mpm.add_surface_collider(point=point,
+                             normal=normal,
+                             surface=mpm.surface_slip,
+                             friction=0.5)
+
 quantized = load_mesh('quantized.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
 simulation = load_mesh('simulation.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
 
