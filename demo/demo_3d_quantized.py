@@ -29,12 +29,12 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.7)
+        device_memory_fraction=0.9)
 
 max_num_particles = 150000000
 
 if with_gui:
-    gui = ti.GUI("MLS-MPM", res=1024, background_color=0x112F41)
+    gui = ti.GUI("MLS-MPM", res=1024, background_color=0x112F41, show_gui=False)
 
 if write_to_disk:
     # output_dir = create_output_folder(args.out_dir)
@@ -129,22 +129,24 @@ start_t = time.time()
 for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
-    if mpm.n_particles[None] < max_num_particles:
-        i = frame % 2
-        j = frame / 4 % 4 - 1
+    frame_split = 5
+    for subframe in range(frame * frame_split, (frame + 1) * frame_split): 
+        if mpm.n_particles[None] < max_num_particles:
+            i = subframe % 2
+            j = subframe / 4 % 4 - 1
 
-        r = 255 if frame // 2 % 3 == 0 else 128
-        g = 255 if frame // 2 % 3 == 1 else 128
-        b = 255 if frame // 2 % 3 == 2 else 128
-        color = r * 65536 + g * 256 + b
-        triangles = quantized if frame % 2 == 0 else simulation
-        mpm.add_mesh(triangles=triangles,
-                     material=MPMSolver.material_elastic,
-                     color=color,
-                     velocity=(0, -2, 0),
-                     translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
+            r = 255 if subframe // 2 % 3 == 0 else 128
+            g = 255 if subframe // 2 % 3 == 1 else 128
+            b = 255 if subframe // 2 % 3 == 2 else 128
+            color = r * 65536 + g * 256 + b
+            triangles = quantized if subframe % 2 == 0 else simulation
+            mpm.add_mesh(triangles=triangles,
+                         material=MPMSolver.material_elastic,
+                         color=color,
+                         velocity=(0, -2, 0),
+                         translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
 
-    mpm.step(1e-2, print_stat=True)
+        mpm.step(1e-2 / frame_split, print_stat=True)
     if with_gui and frame % 3 == 0:
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
