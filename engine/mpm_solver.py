@@ -73,8 +73,6 @@ class MPMSolver:
                                                dtype=ti.f32,
                                                shape=())
         self.pid = ti.field(ti.i32)
-        # position
-        self.x = ti.Vector.field(self.dim, dtype=ti.f32)
         # velocity
         self.v = ti.Vector.field(self.dim, dtype=ti.f32)
         # affine velocity field
@@ -82,10 +80,15 @@ class MPMSolver:
         # deformation gradient
 
         if quant:
+            ci21 = ti.type_factory.custom_int(21, True)
+            cft = ti.type_factory.custom_float(significand_type=ci21, scale=1 / (2 ** 19))
+            self.x = ti.Vector.field(self.dim, dtype=cft)
+            
             ci16 = ti.type_factory.custom_int(16, True)
             cft = ti.type_factory.custom_float(significand_type=ci16, scale=4 / (2 ** 15))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
         else:
+            self.x = ti.Vector.field(self.dim, dtype=ti.f32)
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
         # material id
         self.material = ti.field(dtype=ti.i32)
@@ -145,8 +148,9 @@ class MPMSolver:
 
         self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**20)
         if self.quant:
-            self.particle.place(self.x, self.v, self.C, self.material,
+            self.particle.place(self.v, self.C, self.material,
                                 self.color, self.Jp)
+            self.particle._bit_struct(num_bits=64).place(self.x)
             self.particle._bit_struct(num_bits=32).place(self.F(0, 0), self.F(0, 1))
             self.particle._bit_struct(num_bits=32).place(self.F(0, 2), self.F(1, 0))
             self.particle._bit_struct(num_bits=32).place(self.F(1, 1), self.F(1, 2))
