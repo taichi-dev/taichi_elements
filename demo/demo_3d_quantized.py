@@ -7,9 +7,23 @@ import os
 import utils
 from utils import create_output_folder
 from engine.mpm_solver import MPMSolver
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--show', action='store_true', help='Run with gui')
+    parser.add_argument('-f', '--frames', type=int, default=10000, help='Number of frames')
+    parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
+    args = parser.parse_args()
+    print(args)
+    return args
+
+
+args = parse_args()
+
 
 with_gui = True
-write_to_disk = True
+write_to_disk = args.out_dir is not None
 
 # Try to run on GPU
 ti.init(arch=ti.cuda,
@@ -17,13 +31,19 @@ ti.init(arch=ti.cuda,
         use_unified_memory=False,
         device_memory_fraction=0.7)
 
-max_num_particles = 10000000
+max_num_particles = 150000000
 
 if with_gui:
-    gui = ti.GUI("MLS-MPM", res=512, background_color=0x112F41)
+    gui = ti.GUI("MLS-MPM", res=1024, background_color=0x112F41)
 
 if write_to_disk:
-    output_dir = create_output_folder('./sim')
+    # output_dir = create_output_folder(args.out_dir)
+    output_dir = args.out_dir
+    os.makedirs(f'{output_dir}/particles')
+    os.makedirs(f'{output_dir}/previews')
+    print("Writing 2D vis and binary particle data to", output_dir)
+else:
+    output_dir = None
 
 
 def load_mesh(fn, scale, offset):
@@ -49,7 +69,7 @@ def load_mesh(fn, scale, offset):
 
 
 # Use 512 for final simulation/render
-R = 256
+R = 512
 
 mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=1, quant=True)
 
@@ -86,7 +106,7 @@ simulation = load_mesh('simulation.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
 mpm.set_gravity((0, -25, 0))
 
 
-def visualize(particles):
+def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
 
     # simple camera transform
@@ -96,14 +116,17 @@ def visualize(particles):
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 
     gui.circles(screen_pos, radius=0.8, color=particles['color'])
-    gui.show()
+    if output_dir is None:
+        gui.show()
+    else:
+        gui.show(f'{output_dir}/previews/{frame:05d}.png')
 
 
 counter = 0
 
 start_t = time.time()
 
-for frame in range(15000):
+for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
     if mpm.n_particles[None] < max_num_particles:
@@ -124,9 +147,9 @@ for frame in range(15000):
     mpm.step(1e-2, print_stat=True)
     if with_gui and frame % 3 == 0:
         particles = mpm.particle_info()
-        visualize(particles)
+        visualize(particles, frame, output_dir)
 
     if write_to_disk:
-        mpm.write_particles(f'{output_dir}/{frame:05d}.npz')
+        mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')
