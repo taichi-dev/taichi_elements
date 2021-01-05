@@ -105,6 +105,8 @@ simulation = load_mesh('simulation.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
+print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
+
 
 def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
@@ -120,7 +122,6 @@ def visualize(particles, frame, output_dir=None):
         gui.show()
     else:
         gui.show(f'{output_dir}/previews/{frame:05d}.png')
-
 
 counter = 0
 
