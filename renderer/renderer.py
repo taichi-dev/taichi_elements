@@ -446,8 +446,9 @@ class Renderer:
                     offset_end_grid[k] = offset_begin_grid[k]
                     offset_begin_grid[k] = t
 
-            offset_begin_grid = int(ti.floor(offset_begin_grid * self.inv_dx))
-            offset_end_grid = int(ti.ceil(offset_end_grid * self.inv_dx)) + 1
+            offset_begin_grid = int(ti.floor(
+                offset_begin_grid * self.inv_dx)) - 1
+            offset_end_grid = int(ti.ceil(offset_end_grid * self.inv_dx)) + 2
 
             for i in range(offset_begin_grid[0], offset_end_grid[0]):
                 for j in range(offset_begin_grid[1], offset_end_grid[1]):
@@ -493,19 +494,32 @@ class Renderer:
                                              256**(2 - c)) % 256 * (1 / 255)
 
     @ti.kernel
-    def average_particle_list_length(self) -> ti.f32:
-        total_non_empty_voxels = 0
+    def total_non_empty_voxels(self) -> ti.i32:
+        counter = 0
 
         for I in ti.grouped(self.voxel_has_particle):
             if self.voxel_has_particle[I]:
-                total_non_empty_voxels += 1
+                counter += 1
 
-        return self.num_particles[None] / total_non_empty_voxels
+        return counter
+
+    @ti.kernel
+    def total_inserted_particles(self) -> ti.i32:
+        counter = 0
+
+        for I in ti.grouped(self.voxel_has_particle):
+            if self.voxel_has_particle[I]:
+                num_particles = ti.length(
+                    self.pid.parent(),
+                    I - ti.Vector(self.particle_grid_offset))
+                counter += num_particles
+
+        return counter
 
     def reset(self):
         self.particle_bucket.deactivate_all()
-        self.voxel_grid_density.snode().parent(n=2).deactivate_all()
-        self.voxel_has_particle.snode().parent(n=2).deactivate_all()
+        self.voxel_grid_density.snode.parent(n=2).deactivate_all()
+        self.voxel_has_particle.snode.parent(n=2).deactivate_all()
         self.color_buffer.fill(0)
 
     def initialize_particles(self, particle_fn):

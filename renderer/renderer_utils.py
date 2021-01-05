@@ -68,50 +68,36 @@ def ray_aabb_intersection(box_min, box_max, o, d):
 # T*T + 2Td x + x^2 = r * r
 # x^2 + 2Td x + (T * T - r * r) = 0
 
-refine = True
-
 
 @ti.func
 def intersect_sphere(pos, d, center, radius):
     T = pos - center
     A = 1.0
+    invA = 1 / A
+    B = 2.0 * T.dot(d)
+    hit_pos = ti.Vector([0.0, 0.0, 0.0])
+    ratio = 0.5 * invA
+    ret1 = ratio * (-B)
+    dist = ret1
+
+    old_dist = dist
+    new_pos = pos + d * dist
+    T = new_pos - center
+    A = 1.0
     B = 2.0 * T.dot(d)
     C = T.dot(T) - radius * radius
-    delta = B * B - 4.0 * A * C
-    dist = inf
-    hit_pos = ti.Vector([0.0, 0.0, 0.0])
-
-    if delta > -1e-4:
-        delta = ti.max(delta, 0)
+    delta = B * B - 4 * A * C
+    if delta > 0:
         sdelta = ti.sqrt(delta)
-        ratio = 0.5 / A
-        ret1 = ratio * (-B - sdelta)
-        dist = ret1
-        if ti.static(refine):
-            if dist < inf:
-                # refinement
-                old_dist = dist
-                new_pos = pos + d * dist
-                T = new_pos - center
-                A = 1.0
-                B = 2.0 * T.dot(d)
-                C = T.dot(T) - radius * radius
-                delta = B * B - 4 * A * C
-                if delta > 0:
-                    sdelta = ti.sqrt(delta)
-                    ratio = 0.5 / A
-                    ret1 = ratio * (-B - sdelta) + old_dist
-                    if ret1 > 0:
-                        dist = ret1
-                        hit_pos = new_pos + ratio * (-B - sdelta) * d
-                    else:
-                        pass
-                        #ret2 = ratio * (-B + sdelta) + old_dist
-                        #if ret2 > 0:
-                        #  dist = ret2
-                        #  hit_pos = new_pos + ratio * (-B + sdelta) * d
-                else:
-                    dist = inf
+        ratio = 0.5 * invA
+        ret1 = ratio * (-B - sdelta) + old_dist
+        if ret1 > 0:
+            dist = ret1
+            hit_pos = new_pos + ratio * (-B - sdelta) * d
+        else:
+            pass
+    else:
+        dist = inf
 
     return dist, hit_pos
 
