@@ -30,7 +30,7 @@ class Renderer:
                  dx=1 / 1024,
                  sphere_radius=0.3 / 1024,
                  render_voxel=False,
-                 shutter_time=0.0,
+                 shutter_time=1e-3,
                  taichi_logo=True):
         self.vignette_strength = 0.9
         self.vignette_radius = 0.0
@@ -446,7 +446,8 @@ class Renderer:
                     offset_end_grid[k] = offset_begin_grid[k]
                     offset_begin_grid[k] = t
 
-            offset_begin_grid = int(ti.floor(offset_begin_grid * self.inv_dx)) - 1
+            offset_begin_grid = int(ti.floor(
+                offset_begin_grid * self.inv_dx)) - 1
             offset_end_grid = int(ti.ceil(offset_end_grid * self.inv_dx)) + 2
 
             for i in range(offset_begin_grid[0], offset_end_grid[0]):
@@ -501,17 +502,18 @@ class Renderer:
                 counter += 1
 
         return counter
-    
+
     @ti.kernel
     def total_inserted_particles(self) -> ti.i32:
         counter = 0
-    
+
         for I in ti.grouped(self.voxel_has_particle):
             if self.voxel_has_particle[I]:
                 num_particles = ti.length(
-                    self.pid.parent(), I - ti.Vector(self.particle_grid_offset))
+                    self.pid.parent(),
+                    I - ti.Vector(self.particle_grid_offset))
                 counter += num_particles
-    
+
         return counter
 
     def reset(self):

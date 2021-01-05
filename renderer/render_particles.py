@@ -11,8 +11,11 @@ os.makedirs(output_folder, exist_ok=True)
 
 from renderer import res, Renderer
 
-res = 256
-renderer = Renderer(dx=1 / res, sphere_radius=0.3 / res, shutter_time=5e-3, taichi_logo=False)
+res = 512
+renderer = Renderer(dx=1 / res,
+                    sphere_radius=0.3 / res,
+                    shutter_time=2e-3,
+                    taichi_logo=False)
 
 with_gui = False
 if with_gui:
@@ -32,14 +35,15 @@ def main():
             print('rendering...')
         Path(output_fn).touch()
         t = time.time()
-        
+
         renderer.initialize_particles(f'{sys.argv[1]}/{f:05d}.npz')
-        
+
         total_voxels = renderer.total_non_empty_voxels()
         total_inserted_particles = renderer.total_inserted_particles()
         print('Total particles (with motion blur)', total_inserted_particles)
         print('Total nonempty voxels', total_voxels)
-        print('Average particle_list_length', total_inserted_particles / total_voxels)
+        print('Average particle_list_length',
+              total_inserted_particles / total_voxels)
         img = renderer.render_frame(spp=spp)
 
         if with_gui:
