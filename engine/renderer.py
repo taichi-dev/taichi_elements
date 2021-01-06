@@ -303,7 +303,8 @@ class Renderer:
                         p = self.pid[ipos, k]
                         v = self.particle_v[p]
                         x = self.particle_x[p] + t * v
-                        color = ti.cast(self.particle_color[p], ti.u32) * (1 / 255.0)
+                        color = ti.cast(self.particle_color[p],
+                                        ti.u32) * (1 / 255.0)
                         # ray-sphere intersection
                         dist, poss = intersect_sphere(eye_pos, d, x,
                                                       self.sphere_radius)

@@ -36,7 +36,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.9)
+        device_memory_fraction=0.6)
 
 max_num_particles = 150000000
 
@@ -44,7 +44,7 @@ if with_gui:
     gui = ti.GUI("MLS-MPM",
                  res=1024,
                  background_color=0x112F41,
-                 show_gui=False)
+                 show_gui=args.show)
 
 if write_to_disk:
     # output_dir = create_output_folder(args.out_dir)
@@ -79,7 +79,7 @@ def load_mesh(fn, scale, offset):
 
 
 # Use 512 for final simulation/render
-R = 512
+R = 256
 
 mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=1, quant=True)
 
