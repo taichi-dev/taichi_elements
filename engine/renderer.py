@@ -2,8 +2,6 @@ import taichi as ti
 import numpy as np
 import math
 import time
-import os
-import sys
 from renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
   intersect_sphere, sphere_aabb_intersect_motion, inside_taichi
 
@@ -44,7 +42,7 @@ class Renderer:
 
         self.particle_x = ti.Vector.field(3, dtype=ti.f32)
         self.particle_v = ti.Vector.field(3, dtype=ti.f32)
-        self.particle_color = ti.Vector.field(3, dtype=ti.f32)
+        self.particle_color = ti.Vector.field(3, dtype=ti.u8)
         self.pid = ti.field(ti.i32)
         self.num_particles = ti.field(ti.i32, shape=())
 
@@ -305,7 +303,7 @@ class Renderer:
                         p = self.pid[ipos, k]
                         v = self.particle_v[p]
                         x = self.particle_x[p] + t * v
-                        color = self.particle_color[p]
+                        color = self.particle_color[p] * (1 / 255.0)
                         # ray-sphere intersection
                         dist, poss = intersect_sphere(eye_pos, d, x,
                                                       self.sphere_radius)
@@ -489,9 +487,7 @@ class Renderer:
             for c in ti.static(range(3)):
                 self.particle_x[i][c] = x[i, c]
                 self.particle_v[i][c] = v[i, c]
-
-                self.particle_color[i][c] = (color[i] //
-                                             256**(2 - c)) % 256 * (1 / 255)
+                self.particle_color[i][c] = color[i, c]
 
     @ti.kernel
     def total_non_empty_voxels(self) -> ti.i32:
@@ -522,14 +518,14 @@ class Renderer:
         self.voxel_has_particle.snode.parent(n=2).deactivate_all()
         self.color_buffer.fill(0)
 
-    def initialize_particles(self, particle_fn):
+    def initialize_particles_from_taichi_elements(self, particle_fn):
         self.reset()
 
-        data = np.load(particle_fn)
-        np_x = data['x']
+        from particle_io import ParticleIO
+
+        np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
+        print(np_x, np_v)
         num_part = len(np_x)
-        np_v = data['v']
-        np_c = data['c']
 
         assert num_part <= self.max_num_particles
 
@@ -544,7 +540,7 @@ class Renderer:
         self.num_particles[None] = num_part
         print('num_input_particles =', num_part)
 
-        self.initialize_particle(np_x, np_v, np_c)
+        self.initialize_particle(np_x, np_v, np_color)
         self.initialize_particle_grid()
 
     def render_frame(self, spp):

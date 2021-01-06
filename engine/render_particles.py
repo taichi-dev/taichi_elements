@@ -36,7 +36,8 @@ def main():
         Path(output_fn).touch()
         t = time.time()
 
-        renderer.initialize_particles(f'{sys.argv[1]}/{f:05d}.npz')
+        renderer.initialize_particles_from_taichi_elements(
+            f'{sys.argv[1]}/{f:05d}.npz')
 
         total_voxels = renderer.total_non_empty_voxels()
         total_inserted_particles = renderer.total_inserted_particles()
