@@ -82,6 +82,7 @@ class MPMSolver:
         # deformation gradient
 
         if quant:
+            assert self.dim == 3
             ci21 = ti.type_factory.custom_int(21, True)
             cft = ti.type_factory.custom_float(significand_type=ci21,
                                                scale=1 / (2**19))
@@ -101,6 +102,8 @@ class MPMSolver:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
             self.x = ti.Vector.field(self.dim, dtype=ti.f32)
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
+
+        self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
         # material id
         self.material = ti.field(dtype=ti.i32)
         self.color = ti.field(dtype=ti.i32)
@@ -282,6 +285,11 @@ class MPMSolver:
                     weight *= w[offset[d]][d]
                 new_v += weight * g_v
                 C += 4 * self.inv_dx * weight * g_v.outer_product(dpos)
+
+            if p >= self.last_time_final_particles[None]:
+                # New particles. No G2P.
+                new_v = self.v[p]
+                C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
 
@@ -357,6 +365,8 @@ class MPMSolver:
                            offset] += weight * (self.p_mass * self.v[p] +
                                                 affine @ dpos)
                 grid_m_out[base + offset] += weight * self.p_mass
+
+        self.last_time_final_particles[None] = self.n_particles[None]
 
     @ti.kernel
     def p2g(self, dt: ti.f32):
