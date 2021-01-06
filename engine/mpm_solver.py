@@ -126,7 +126,7 @@ class MPMSolver:
         else:
             self.leaf_block_size = 8
 
-        self.grids = []
+        self.grid = []
         self.grid_v = []
         self.grid_m = []
         self.pid = []
@@ -142,7 +142,7 @@ class MPMSolver:
             grid = ti.root.pointer(indices, self.grid_size // grid_block_size)
             block = grid.pointer(indices,
                                  grid_block_size // self.leaf_block_size)
-            self.grids.append(grid)
+            self.grid.append(grid)
 
             def block_component(c):
                 block.dense(indices, self.leaf_block_size).place(c,
@@ -221,6 +221,12 @@ class MPMSolver:
 
         self.writers = []
 
+        if not self.use_g2p2g:
+            self.grid = self.grid[0]
+            self.grid_v = self.grid_v[0]
+            self.grid_m = self.grid_m[0]
+            self.pid = self.pid[0]
+
     def stencil_range(self):
         return ti.ndrange(*((3, ) * self.dim))
 
@@ -253,12 +259,11 @@ class MPMSolver:
         return sigma_out
 
     @ti.kernel
-    def build_pid(self):
+    def build_pid(self, pid: ti.template()):
         ti.block_dim(64)
         for p in self.x:
             base = int(ti.floor(self.x[p] * self.inv_dx - 0.5))
-            ti.append(self.pid.parent(), base - ti.Vector(list(self.offset)),
-                      p)
+            ti.append(pid.parent(), base - ti.Vector(list(self.offset)), p)
 
     @ti.kernel
     def g2p2g(self, dt: ti.f32, grid_v_in: ti.template(),
@@ -458,22 +463,21 @@ class MPMSolver:
 
     @ti.kernel
     def grid_bounding_box(self, t: ti.f32, dt: ti.f32,
-                          unbounded: ti.template()):
-        for I in ti.grouped(self.grid_m):
+                          unbounded: ti.template(), grid_v: ti.template()):
+        for I in ti.grouped(grid_v):
             for d in ti.static(range(self.dim)):
                 if ti.static(unbounded):
-                    if I[d] < -self.grid_size // 2 + self.padding and self.grid_v[
+                    if I[d] < -self.grid_size // 2 + self.padding and grid_v[
                             I][d] < 0:
-                        self.grid_v[I][d] = 0  # Boundary conditions
+                        grid_v[I][d] = 0  # Boundary conditions
                     if I[d] >= self.grid_size // 2 - self.padding and self.grid_v[
                             I][d] > 0:
-                        self.grid_v[I][d] = 0
+                        grid_v[I][d] = 0
                 else:
-                    if I[d] < self.padding and self.grid_v[I][d] < 0:
-                        self.grid_v[I][d] = 0  # Boundary conditions
-                    if I[d] >= self.res[d] - self.padding and self.grid_v[I][
-                            d] > 0:
-                        self.grid_v[I][d] = 0
+                    if I[d] < self.padding and grid_v[I][d] < 0:
+                        grid_v[I][d] = 0  # Boundary conditions
+                    if I[d] >= self.res[d] - self.padding and grid_v[I][d] > 0:
+                        grid_v[I][d] = 0
 
     def add_sphere_collider(self, center, radius, surface=surface_sticky):
         center = list(center)
@@ -545,7 +549,8 @@ class MPMSolver:
 
     def add_bounding_box(self, unbounded):
         self.grid_postprocess.append(
-            lambda t, dt: self.grid_bounding_box(t, dt, unbounded))
+            lambda t, dt, grid_v: self.grid_bounding_box(
+                t, dt, unbounded, grid_v))
 
     @ti.kernel
     def g2p(self, dt: ti.f32):
@@ -585,26 +590,26 @@ class MPMSolver:
             self.total_substeps += 1
             dt = frame_dt / substeps
 
-            if self.g2p2g:
+            if self.use_g2p2g:
                 output_grid = 1 - self.input_grid
-                print(self.input_grid, '->', output_grid)
-                self.grids[output_grid].deactivate_all()
+                self.grid[output_grid].deactivate_all()
                 self.g2p2g(dt, self.grid_v[self.input_grid],
                            self.grid_v[output_grid], self.grid_m[output_grid])
                 self.grid_normalization_and_gravity(dt,
                                                     self.grid_v[output_grid],
                                                     self.grid_m[output_grid])
+                for p in self.grid_postprocess:
+                    p(self.t, dt, self.grid_v[output_grid])
                 self.input_grid = output_grid
-                # for p in self.grid_postprocess:
-                #    p(self.t, dt)
                 self.t += dt
             else:
                 self.grid.deactivate_all()
-                self.build_pid()
+                self.build_pid(self.pid)
                 self.p2g(dt)
-                self.grid_normalization_and_gravity(dt)
+                self.grid_normalization_and_gravity(dt, self.grid_v,
+                                                    self.grid_m)
                 for p in self.grid_postprocess:
-                    p(self.t, dt)
+                    p(self.t, dt, self.grid_v)
                 self.t += dt
                 self.g2p(dt)
 
