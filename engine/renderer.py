@@ -303,7 +303,7 @@ class Renderer:
                         p = self.pid[ipos, k]
                         v = self.particle_v[p]
                         x = self.particle_x[p] + t * v
-                        color = self.particle_color[p] * (1 / 255.0)
+                        color = ti.cast(self.particle_color[p], ti.u32) * (1 / 255.0)
                         # ray-sphere intersection
                         dist, poss = intersect_sphere(eye_pos, d, x,
                                                       self.sphere_radius)
@@ -524,7 +524,6 @@ class Renderer:
         from particle_io import ParticleIO
 
         np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
-        print(np_x, np_v)
         num_part = len(np_x)
 
         assert num_part <= self.max_num_particles
