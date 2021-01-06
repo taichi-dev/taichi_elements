@@ -699,26 +699,6 @@ class MPMSolver:
         self.n_particles[None] = 0
         ti.deactivate(self.x.loop_range().parent().snode(), [])
 
-    def dump(self, fn, particles):
-        t = time.time()
-        output_fn = fn
-
-        np.savez_compressed(output_fn,
-                            x=particles['position'],
-                            v=particles['velocity'],
-                            c=particles['color'])
-
-        print(f'Writing to disk: {time.time() - t:.3f} s')
-
     def write_particles(self, fn):
-        particles = self.particle_info()
-
-        p = mp.Process(target=self.dump, args=(fn, particles))
-        p.start()
-
-        self.writers.append(p)
-
-    def flush(self):
-        for p in self.writers:
-            p.join()
-        self.writers = []
+        from .particle_io import ParticleIO
+        ParticleIO.write_particles(self, fn)

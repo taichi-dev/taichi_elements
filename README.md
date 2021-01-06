@@ -9,8 +9,7 @@ The plan is
 
 # Using `taichi_elements` in Python
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
- - Go to `demo` folder
- - `python3 demo_2d.py` and you will see
+ - `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
  
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
@@ -19,8 +18,8 @@ The plan is
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
  - Download [`taichi.ply`](https://github.com/taichi-dev/taichi_elements_blender_examples/releases/download/ply/taichi.ply) and run `python3 demo_3d_letters.py` (wait for at least 10 frames)
    - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
- - `python3 ../renderer/render_particles [particle_input_folder] [begin] [end] [step] [render_output_folder]`
-   - E.g., `../renderer/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
+ - `python3 engine/render_particles [particle_input_folder] [begin] [end] [step] [render_output_folder]`
+   - E.g., `python3 engine/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
