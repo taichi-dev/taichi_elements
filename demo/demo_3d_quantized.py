@@ -21,6 +21,10 @@ def parse_args():
                         type=int,
                         default=10000,
                         help='Number of frames')
+    parser.add_argument('-t',
+                        '--thin',
+                        action='store_true',
+                        help='Use thin letters')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
     args = parser.parse_args()
     print(args)
@@ -36,9 +40,9 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.6)
+        device_memory_fraction=0.8)
 
-max_num_particles = 150000000
+max_num_particles = 400000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -57,6 +61,8 @@ else:
 
 
 def load_mesh(fn, scale, offset):
+    if isinstance(scale, (int, float)):
+        scale = (scale, scale, scale)
     print(f'loading {fn}')
     plydata = PlyData.read(fn)
     x = plydata['vertex']['x']
@@ -69,9 +75,9 @@ def load_mesh(fn, scale, offset):
     for i, face in enumerate(elements['vertex_indices']):
         assert len(face) == 3
         for d in range(3):
-            triangles[i, d * 3 + 0] = x[face[d]] * scale + offset[0]
-            triangles[i, d * 3 + 1] = y[face[d]] * scale + offset[1]
-            triangles[i, d * 3 + 2] = z[face[d]] * scale + offset[2]
+            triangles[i, d * 3 + 0] = x[face[d]] * scale[0] + offset[0]
+            triangles[i, d * 3 + 1] = y[face[d]] * scale[1] + offset[1]
+            triangles[i, d * 3 + 2] = z[face[d]] * scale[2] + offset[2]
 
     print('loaded')
 
@@ -115,8 +121,13 @@ for d in range(2):
                              surface=mpm.surface_slip,
                              friction=0.5)
 
-quantized = load_mesh('quantized.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
-simulation = load_mesh('simulation.ply', scale=0.02, offset=(0.5, 0.6, 0.5))
+if args.thin:
+    scale = (0.02, 0.02, 0.02)
+else:
+    scale = (0.02, 0.02, 0.8)
+
+quantized = load_mesh('quantized.ply', scale=scale, offset=(0.5, 0.6, 0.5))
+simulation = load_mesh('simulation.ply', scale=scale, offset=(0.5, 0.6, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
@@ -126,8 +137,8 @@ print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
 
-    # simple camera transform
-    screen_x = ((np_x[:, 0] + np_x[:, 2]) / 2**0.5) - 0.2
+    del np_x
+    screen_x = (np_x[:, 0])
     screen_y = (np_x[:, 1])
 
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
@@ -143,25 +154,49 @@ counter = 0
 
 start_t = time.time()
 
+
+def seed_letters(subframe):
+    i = subframe % 2
+    j = subframe / 4 % 4 - 1
+
+    r = 255 if subframe // 2 % 3 == 0 else 128
+    g = 255 if subframe // 2 % 3 == 1 else 128
+    b = 255 if subframe // 2 % 3 == 2 else 128
+    color = r * 65536 + g * 256 + b
+    triangles = quantized if subframe % 2 == 0 else simulation
+    mpm.add_mesh(triangles=triangles,
+                 material=MPMSolver.material_elastic,
+                 color=color,
+                 velocity=(0, -2, 0),
+                 translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
+
+
+def seed_bars(subframe):
+    r = 255 if subframe % 3 == 0 else 128
+    g = 255 if subframe % 3 == 1 else 128
+    b = 255 if subframe % 3 == 2 else 128
+    color = r * 65536 + g * 256 + b
+    for i, t in zip(range(2), [quantized, simulation]):
+        mpm.add_mesh(triangles=t,
+                     material=MPMSolver.material_elastic,
+                     color=color,
+                     velocity=(0, -10, 0),
+                     translation=((i - 0.5) * 0.6, 0, 0.1))
+
+
 for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
-    frame_split = 5
+    if args.thin:
+        frame_split = 5
+    else:
+        frame_split = 1
     for subframe in range(frame * frame_split, (frame + 1) * frame_split):
         if mpm.n_particles[None] < max_num_particles:
-            i = subframe % 2
-            j = subframe / 4 % 4 - 1
-
-            r = 255 if subframe // 2 % 3 == 0 else 128
-            g = 255 if subframe // 2 % 3 == 1 else 128
-            b = 255 if subframe // 2 % 3 == 2 else 128
-            color = r * 65536 + g * 256 + b
-            triangles = quantized if subframe % 2 == 0 else simulation
-            mpm.add_mesh(triangles=triangles,
-                         material=MPMSolver.material_elastic,
-                         color=color,
-                         velocity=(0, -2, 0),
-                         translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
+            if args.thin:
+                seed_letters(subframe)
+            else:
+                seed_bars(subframe)
 
         mpm.step(1e-2 / frame_split, print_stat=True)
     if with_gui and frame % 3 == 0:

@@ -56,6 +56,7 @@ class MPMSolver:
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
+        self.allowed_cfl = 0.999  # G2P2G only
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -301,6 +302,11 @@ class MPMSolver:
                 # New particles. No G2P.
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+
+            for d in ti.static(range(self.dim)):
+                new_v[d] = min(max(new_v[d], -self.dx * self.allowed_cfl / dt),
+                               self.dx * self.allowed_cfl)
+
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
 
@@ -633,7 +639,6 @@ class MPMSolver:
                 self.g2p(dt)
             self.all_time_max_velocity = max(self.all_time_max_velocity,
                                              self.compute_max_velocity())
-            print('*** CFL: ', self.all_time_max_velocity * dt / self.dx)
 
         if print_stat:
             ti.kernel_profiler_print()
@@ -641,6 +646,7 @@ class MPMSolver:
                 ti.memory_profiler_print()
             except:
                 pass
+            print(f'CFL: {self.all_time_max_velocity * dt / self.dx}')
             print(f'num particles={self.n_particles[None]}')
             print(f'  frame time {time.time() - begin_t:.3f} s')
             print(
