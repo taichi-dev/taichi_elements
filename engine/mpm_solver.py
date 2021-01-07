@@ -75,6 +75,7 @@ class MPMSolver:
                                                dtype=ti.f32,
                                                shape=())
         self.input_grid = 0
+        self.all_time_max_velocity = 0.0
 
         # affine velocity field
         if not self.use_g2p2g:
@@ -175,7 +176,7 @@ class MPMSolver:
         self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**20)
 
         if self.quant:
-            if not self.g2p2g:
+            if not self.use_g2p2g:
                 self.particle.place(self.C)
             self.particle.place(self.material, self.color, self.Jp)
             self.particle._bit_struct(num_bits=64).place(self.x)
@@ -470,7 +471,7 @@ class MPMSolver:
                     if I[d] < -self.grid_size // 2 + self.padding and grid_v[
                             I][d] < 0:
                         grid_v[I][d] = 0  # Boundary conditions
-                    if I[d] >= self.grid_size // 2 - self.padding and self.grid_v[
+                    if I[d] >= self.grid_size // 2 - self.padding and grid_v[
                             I][d] > 0:
                         grid_v[I][d] = 0
                 else:
@@ -519,15 +520,15 @@ class MPMSolver:
             raise ValueError('friction must be 0 on sticky surfaces.')
 
         @ti.kernel
-        def collide(t: ti.f32, dt: ti.f32):
-            for I in ti.grouped(self.grid_m):
+        def collide(t: ti.f32, dt: ti.f32, grid_v: ti.template()):
+            for I in ti.grouped(grid_v):
                 offset = I * self.dx - ti.Vector(point)
                 n = ti.Vector(normal)
                 if offset.dot(n) < 0:
                     if ti.static(surface == self.surface_sticky):
-                        self.grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
+                        grid_v[I] = ti.Vector.zero(ti.f32, self.dim)
                     else:
-                        v = self.grid_v[I]
+                        v = grid_v[I]
                         normal_component = n.dot(v)
 
                         if ti.static(surface == self.surface_slip):
@@ -543,7 +544,7 @@ class MPMSolver:
                                 0,
                                 v.norm() + normal_component * friction)
 
-                        self.grid_v[I] = v
+                        grid_v[I] = v
 
         self.grid_postprocess.append(collide)
 
@@ -580,6 +581,17 @@ class MPMSolver:
             self.v[p], self.C[p] = new_v, new_C
             self.x[p] += dt * self.v[p]  # advection
 
+    @ti.kernel
+    def compute_max_velocity(self) -> ti.f32:
+        max_velocity = 0.0
+        for p in self.v:
+            v = self.v[p]
+            v_max = 0.0
+            for i in ti.static(range(self.dim)):
+                v_max = max(v_max, abs(v[i]))
+            ti.atomic_max(max_velocity, v_max)
+        return max_velocity
+
     def step(self, frame_dt, print_stat=False):
         begin_t = time.time()
         begin_substep = self.total_substeps
@@ -612,6 +624,9 @@ class MPMSolver:
                     p(self.t, dt, self.grid_v)
                 self.t += dt
                 self.g2p(dt)
+            self.all_time_max_velocity = max(self.all_time_max_velocity,
+                                             self.compute_max_velocity())
+            print('*** CFL: ', self.all_time_max_velocity * dt / self.dx)
 
         if print_stat:
             ti.kernel_profiler_print()

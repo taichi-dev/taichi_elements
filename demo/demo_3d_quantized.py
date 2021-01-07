@@ -51,7 +51,7 @@ if write_to_disk:
     output_dir = args.out_dir
     os.makedirs(f'{output_dir}/particles')
     os.makedirs(f'{output_dir}/previews')
-    print("Writing 2D vis and binary particle data to", output_dir)
+    print("Writing 2D vis and binary particle data to folder", output_dir)
 else:
     output_dir = None
 
@@ -81,7 +81,12 @@ def load_mesh(fn, scale, offset):
 # Use 512 for final simulation/render
 R = 256
 
-mpm = MPMSolver(res=(R, R, R), size=1, unbounded=True, dt_scale=1, quant=True)
+mpm = MPMSolver(res=(R, R, R),
+                size=1,
+                unbounded=True,
+                dt_scale=1,
+                quant=True,
+                use_g2p2g=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
