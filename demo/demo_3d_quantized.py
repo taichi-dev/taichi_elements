@@ -86,7 +86,7 @@ mpm = MPMSolver(res=(R, R, R),
                 unbounded=True,
                 dt_scale=1,
                 quant=True,
-                use_g2p2g=False)
+                use_g2p2g=True)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
