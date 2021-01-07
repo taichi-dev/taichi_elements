@@ -40,7 +40,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.8)
+        device_memory_fraction=0.95)
 
 max_num_particles = 400000000
 
@@ -137,7 +137,6 @@ print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
 
-    del np_x
     screen_x = (np_x[:, 0])
     screen_y = (np_x[:, 1])
 
