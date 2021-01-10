@@ -82,17 +82,22 @@ mpm.add_surface_collider(point=(0, 1.9, 0),
                          surface=mpm.surface_slip,
                          friction=0.5)
 
-for d in range(2):
+bound = 1.9
+
+for d in [0, 2]:
     point = [0, 0, 0]
     normal = [0, 0, 0]
-    point[d] = 1.9
+    b = bound
+    if d == 2:
+        b /= 2
+    point[d] = b
     normal[d] = -1
     mpm.add_surface_collider(point=point,
                              normal=normal,
                              surface=mpm.surface_slip,
                              friction=0.5)
 
-    point[d] = -1.9
+    point[d] = -b
     normal[d] = 1
     mpm.add_surface_collider(point=point,
                              normal=normal,
@@ -108,16 +113,19 @@ mpm.set_gravity((0, -25, 0))
 
 print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 
+mpm.add_cube(lower_corner=(-bound, 0, -bound / 2), cube_size=(bound * 0.3, 0.3, bound), material=mpm.material_water, color=0x99aaff)
+print(f'Water particles: {mpm.n_particles[None] / 1e6:.4f} M')
+
 
 def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
 
-    screen_x = np_x[:, 0]
-    screen_y = np_x[:, 1]
+    screen_x = np_x[:, 0] * 0.25 + 0.5
+    screen_y = np_x[:, 1] * 0.25 + 0.5
 
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 
-    gui.circles(screen_pos, radius=0.8, color=particles['color'])
+    gui.circles(screen_pos, radius=1.0, color=particles['color'])
     if output_dir is None:
         gui.show()
     else:
