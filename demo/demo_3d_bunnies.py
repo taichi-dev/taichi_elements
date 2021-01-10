@@ -73,7 +73,8 @@ mpm = MPMSolver(res=(R, R, R),
                 unbounded=True,
                 dt_scale=1,
                 quant=True,
-                use_g2p2g=True)
+                use_g2p2g=False,
+                support_plasticity=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
@@ -118,9 +119,8 @@ print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 def visualize(particles, frame, output_dir=None):
     np_x = particles['position'] / 1.0
 
-    del np_x
-    screen_x = (np_x[:, 0])
-    screen_y = (np_x[:, 1])
+    screen_x = np_x[:, 0]
+    screen_y = np_x[:, 1]
 
     screen_pos = np.stack([screen_x, screen_y], axis=-1)
 

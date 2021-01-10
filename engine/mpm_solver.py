@@ -52,7 +52,8 @@ class MPMSolver:
             dt_scale=1,
             E_scale=1,
             voxelizer_super_sample=2,
-            use_g2p2g=True):
+            use_g2p2g=True,
+            support_plasticity=True):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
@@ -77,6 +78,7 @@ class MPMSolver:
                                                shape=())
         self.input_grid = 0
         self.all_time_max_velocity = 0.0
+        self.support_plasticity = support_plasticity
 
         # affine velocity field
         if not self.use_g2p2g:
@@ -110,7 +112,8 @@ class MPMSolver:
         self.material = ti.field(dtype=ti.i32)
         self.color = ti.field(dtype=ti.i32)
         # plastic deformation volume ratio
-        self.Jp = ti.field(dtype=ti.f32)
+        if self.support_plasticity:
+            self.Jp = ti.field(dtype=ti.f32)
 
         if self.dim == 2:
             indices = ti.ij
@@ -180,7 +183,9 @@ class MPMSolver:
         if self.quant:
             if not self.use_g2p2g:
                 self.particle.place(self.C)
-            self.particle.place(self.material, self.color, self.Jp)
+            self.particle.place(self.material, self.color)
+            if self.support_plasticity:
+                self.particle.place(self.Jp)
             self.particle.bit_struct(num_bits=64).place(self.x)
             self.particle.bit_struct(num_bits=64).place(self.v,
                                                          shared_exponent=True)
@@ -195,7 +200,9 @@ class MPMSolver:
             self.particle.bit_struct(num_bits=32).place(self.F(2, 2))
         else:
             self.particle.place(self.x, self.v, self.F, self.material,
-                                self.color, self.Jp)
+                                self.color)
+            if self.support_plasticity:
+                self.particle.place(self.Jp)
             if not self.use_g2p2g:
                 self.particle.place(self.C)
 
@@ -322,7 +329,9 @@ class MPMSolver:
             self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
                          dt * C) @ self.F[p]
             # Hardening coefficient: snow gets harder when compressed
-            h = ti.exp(10 * (1.0 - self.Jp[p]))
+            h = 1.0
+            if ti.static(self.support_plasticity):
+                h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
                     p] == self.material_elastic:  # jelly, make it softer
                 h = 0.3
@@ -337,7 +346,8 @@ class MPMSolver:
                     if self.material[p] == self.material_snow:  # Snow
                         new_sig = min(max(sig[d, d], 1 - 2.5e-2),
                                       1 + 4.5e-3)  # Plasticity
-                    self.Jp[p] *= sig[d, d] / new_sig
+                    if ti.static(self.support_plasticity):
+                        self.Jp[p] *= sig[d, d] / new_sig
                     sig[d, d] = new_sig
                     J *= new_sig
             if self.material[p] == self.material_water:
@@ -356,18 +366,19 @@ class MPMSolver:
                     self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
                     ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
             else:
-                sig = self.sand_projection(sig, p)
-                self.F[p] = U @ sig @ V.transpose()
-                log_sig_sum = 0.0
-                center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-                for i in ti.static(range(self.dim)):
-                    log_sig_sum += ti.log(sig[i, i])
-                    center[i, i] = 2.0 * self.mu_0 * ti.log(
-                        sig[i, i]) * (1 / sig[i, i])
-                for i in ti.static(range(self.dim)):
-                    center[i,
-                           i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
-                stress = U @ center @ V.transpose() @ self.F[p].transpose()
+                if ti.static(self.support_plasticity):
+                    sig = self.sand_projection(sig, p)
+                    self.F[p] = U @ sig @ V.transpose()
+                    log_sig_sum = 0.0
+                    center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+                    for i in ti.static(range(self.dim)):
+                        log_sig_sum += ti.log(sig[i, i])
+                        center[i, i] = 2.0 * self.mu_0 * ti.log(
+                            sig[i, i]) * (1 / sig[i, i])
+                    for i in ti.static(range(self.dim)):
+                        center[i,
+                               i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
+                    stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             affine = stress + self.p_mass * C
@@ -404,7 +415,9 @@ class MPMSolver:
             self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
                          dt * self.C[p]) @ self.F[p]
             # Hardening coefficient: snow gets harder when compressed
-            h = ti.exp(10 * (1.0 - self.Jp[p]))
+            h = 1.0
+            if ti.static(self.support_plasticity):
+                h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
                     p] == self.material_elastic:  # jelly, make it softer
                 h = 0.3
@@ -419,7 +432,8 @@ class MPMSolver:
                     if self.material[p] == self.material_snow:  # Snow
                         new_sig = min(max(sig[d, d], 1 - 2.5e-2),
                                       1 + 4.5e-3)  # Plasticity
-                    self.Jp[p] *= sig[d, d] / new_sig
+                    if ti.static(self.support_plasticity):
+                        self.Jp[p] *= sig[d, d] / new_sig
                     sig[d, d] = new_sig
                     J *= new_sig
             if self.material[p] == self.material_water:
@@ -438,18 +452,19 @@ class MPMSolver:
                     self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
                     ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
             else:
-                sig = self.sand_projection(sig, p)
-                self.F[p] = U @ sig @ V.transpose()
-                log_sig_sum = 0.0
-                center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-                for i in ti.static(range(self.dim)):
-                    log_sig_sum += ti.log(sig[i, i])
-                    center[i, i] = 2.0 * self.mu_0 * ti.log(
-                        sig[i, i]) * (1 / sig[i, i])
-                for i in ti.static(range(self.dim)):
-                    center[i,
-                           i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
-                stress = U @ center @ V.transpose() @ self.F[p].transpose()
+                if ti.static(self.support_plasticity):
+                    sig = self.sand_projection(sig, p)
+                    self.F[p] = U @ sig @ V.transpose()
+                    log_sig_sum = 0.0
+                    center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
+                    for i in ti.static(range(self.dim)):
+                        log_sig_sum += ti.log(sig[i, i])
+                        center[i, i] = 2.0 * self.mu_0 * ti.log(
+                            sig[i, i]) * (1 / sig[i, i])
+                    for i in ti.static(range(self.dim)):
+                        center[i,
+                               i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
+                    stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             affine = stress + self.p_mass * self.C[p]
@@ -661,10 +676,11 @@ class MPMSolver:
         self.color[i] = color
         self.material[i] = material
 
-        if material == self.material_sand:
-            self.Jp[i] = 0
-        else:
-            self.Jp[i] = 1
+        if ti.static(self.support_plasticity):
+            if material == self.material_sand:
+                self.Jp[i] = 0
+            else:
+                self.Jp[i] = 1
 
     @ti.kernel
     def seed(self, new_particles: ti.i32, new_material: ti.i32, color: ti.i32):
