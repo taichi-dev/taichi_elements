@@ -26,10 +26,6 @@ def parse_args():
                         type=int,
                         default=256,
                         help='1 / dx')
-    parser.add_argument('-t',
-                        '--thin',
-                        action='store_true',
-                        help='Use thin letters')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
     args = parser.parse_args()
     print(args)
@@ -103,13 +99,10 @@ for d in range(2):
                              surface=mpm.surface_slip,
                              friction=0.5)
 
-if args.thin:
-    scale = (0.02, 0.02, 0.02)
-else:
-    scale = (0.02, 0.02, 0.8)
+scale = (0.06, 0.06, 0.06)
 
-quantized = load_mesh('quantized.ply', scale=scale, offset=(0.5, 0.6, 0.5))
-simulation = load_mesh('simulation.ply', scale=scale, offset=(0.5, 0.6, 0.5))
+quantized = load_mesh('bunny_low.ply', scale=scale, offset=(0.5, 0.6, 0.5))
+simulation = load_mesh('bunny_low.ply', scale=scale, offset=(0.5, 0.6, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
@@ -168,19 +161,13 @@ def seed_bars(subframe):
 for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
-    if args.thin:
-        frame_split = 5
-    else:
-        frame_split = 1
+    frame_split = 1
     for subframe in range(frame * frame_split, (frame + 1) * frame_split):
         if mpm.n_particles[None] < max_num_particles:
-            if args.thin:
-                seed_letters(subframe)
-            else:
-                seed_bars(subframe)
+            seed_letters(subframe)
 
         mpm.step(1e-2 / frame_split, print_stat=True)
-    if with_gui and frame % 3 == 0:
+    if with_gui:
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
 
