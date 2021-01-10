@@ -181,18 +181,18 @@ class MPMSolver:
             if not self.use_g2p2g:
                 self.particle.place(self.C)
             self.particle.place(self.material, self.color, self.Jp)
-            self.particle._bit_struct(num_bits=64).place(self.x)
-            self.particle._bit_struct(num_bits=64).place(self.v,
+            self.particle.bit_struct(num_bits=64).place(self.x)
+            self.particle.bit_struct(num_bits=64).place(self.v,
                                                          shared_exponent=True)
-            self.particle._bit_struct(num_bits=32).place(
+            self.particle.bit_struct(num_bits=32).place(
                 self.F(0, 0), self.F(0, 1))
-            self.particle._bit_struct(num_bits=32).place(
+            self.particle.bit_struct(num_bits=32).place(
                 self.F(0, 2), self.F(1, 0))
-            self.particle._bit_struct(num_bits=32).place(
+            self.particle.bit_struct(num_bits=32).place(
                 self.F(1, 1), self.F(1, 2))
-            self.particle._bit_struct(num_bits=32).place(
+            self.particle.bit_struct(num_bits=32).place(
                 self.F(2, 0), self.F(2, 1))
-            self.particle._bit_struct(num_bits=32).place(self.F(2, 2))
+            self.particle.bit_struct(num_bits=32).place(self.F(2, 2))
         else:
             self.particle.place(self.x, self.v, self.F, self.material,
                                 self.color, self.Jp)
@@ -863,6 +863,21 @@ class MPMSolver:
     def copy_dynamic(self, np_x: ti.ext_arr(), input_x: ti.template()):
         for i in self.x:
             np_x[i] = input_x[i]
+
+    @ti.kernel
+    def copy_ranged(self, np_x: ti.ext_arr(), input_x: ti.template(),
+                    begin: ti.i32, end: ti.i32):
+        ti.no_activate(self.particle)
+        for i in range(begin, end):
+            np_x[i] = input_x[i]
+
+    @ti.kernel
+    def copy_ranged_nd(self, np_x: ti.ext_arr(), input_x: ti.template(),
+                       begin: ti.i32, end: ti.i32):
+        ti.no_activate(self.particle)
+        for i in range(begin, end):
+            for j in ti.static(range(self.dim)):
+                np_x[i, j] = input_x[i, j]
 
     def particle_info(self):
         np_x = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
