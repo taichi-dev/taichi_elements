@@ -21,11 +21,7 @@ def parse_args():
                         type=int,
                         default=10000,
                         help='Number of frames')
-    parser.add_argument('-r',
-                        '--res',
-                        type=int,
-                        default=256,
-                        help='1 / dx')
+    parser.add_argument('-r', '--res', type=int, default=256, help='1 / dx')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
     args = parser.parse_args()
     print(args)
@@ -59,7 +55,6 @@ if write_to_disk:
     print("Writing 2D vis and binary particle data to folder", output_dir)
 else:
     output_dir = None
-
 
 # Use 512 for final simulation/render
 R = args.res
@@ -113,7 +108,10 @@ mpm.set_gravity((0, -25, 0))
 
 print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 
-mpm.add_cube(lower_corner=(-bound, 0, -bound / 2), cube_size=(bound * 0.3, 0.3, bound), material=mpm.material_water, color=0x99aaff)
+mpm.add_cube(lower_corner=(-bound, 0, -bound / 2),
+             cube_size=(bound * 0.3, 0.3, bound),
+             material=mpm.material_water,
+             color=0x99aaff)
 print(f'Water particles: {mpm.n_particles[None] / 1e6:.4f} M')
 
 
@@ -149,21 +147,8 @@ def seed_letters(subframe):
     mpm.add_mesh(triangles=triangles,
                  material=MPMSolver.material_elastic,
                  color=color,
-                 velocity=(0, -2, 0),
+                 velocity=(0, -5, 0),
                  translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
-
-
-def seed_bars(subframe):
-    r = 255 if subframe % 3 == 0 else 128
-    g = 255 if subframe % 3 == 1 else 128
-    b = 255 if subframe % 3 == 2 else 128
-    color = r * 65536 + g * 256 + b
-    for i, t in zip(range(2), [quantized, simulation]):
-        mpm.add_mesh(triangles=t,
-                     material=MPMSolver.material_elastic,
-                     color=color,
-                     velocity=(0, -10, 0),
-                     translation=((i - 0.5) * 0.6, 0, 0.1))
 
 
 for frame in range(args.frames):

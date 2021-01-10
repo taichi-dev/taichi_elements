@@ -188,7 +188,7 @@ class MPMSolver:
                 self.particle.place(self.Jp)
             self.particle.bit_struct(num_bits=64).place(self.x)
             self.particle.bit_struct(num_bits=64).place(self.v,
-                                                         shared_exponent=True)
+                                                        shared_exponent=True)
             self.particle.bit_struct(num_bits=32).place(
                 self.F(0, 0), self.F(0, 1))
             self.particle.bit_struct(num_bits=32).place(
@@ -377,7 +377,8 @@ class MPMSolver:
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
                         center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
+                               i] += self.lambda_0 * log_sig_sum * (1 /
+                                                                    sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
@@ -463,7 +464,8 @@ class MPMSolver:
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
                         center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 / sig[i, i])
+                               i] += self.lambda_0 * log_sig_sum * (1 /
+                                                                    sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress

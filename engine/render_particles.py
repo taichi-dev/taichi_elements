@@ -3,29 +3,59 @@ import os
 import sys
 import time
 from pathlib import Path
+import argparse
 
 ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_fraction=0.8)
 
-output_folder = sys.argv[5]
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-b',
+                        '--begin',
+                        type=int,
+                        default=0,
+                        help='Beginning frame')
+    parser.add_argument('-e',
+                        '--end',
+                        type=int,
+                        default=10000,
+                        help='Ending frame')
+    parser.add_argument('-s', '--step', type=int, default=1, help='Frame step')
+    parser.add_argument('-r',
+                        '--res',
+                        type=int,
+                        default=512,
+                        help='Grid resolution')
+    parser.add_argument('-g', '--gui', action='store_true', help='Show GUI')
+    parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
+    parser.add_argument('-i', '--in-dir', type=str, help='Input folder')
+    args = parser.parse_args()
+    print(args)
+    return args
+
+
+args = parse_args()
+
+output_folder = args.out_dir
 os.makedirs(output_folder, exist_ok=True)
 
-from renderer import res, Renderer
+from renderer import Renderer
 
-res = 512
+res = args.res
 renderer = Renderer(dx=1 / res,
                     sphere_radius=0.3 / res,
                     shutter_time=2e-3,
                     taichi_logo=False)
 
-with_gui = False
+with_gui = args.gui
 if with_gui:
-    gui = ti.GUI('Particle Renderer', res)
+    gui = ti.GUI('Particle Renderer', (1280, 720))
 
 spp = 200
 
 
 def main():
-    for f in range(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])):
+    for f in range(args.begin, args.end, args.step):
         print('frame', f, end=' ')
         output_fn = f'{output_folder}/{f:05d}.png'
         if os.path.exists(output_fn):
@@ -37,7 +67,7 @@ def main():
         t = time.time()
 
         renderer.initialize_particles_from_taichi_elements(
-            f'{sys.argv[1]}/{f:05d}.npz')
+            f'{args.in_dir}/{f:05d}.npz')
 
         total_voxels = renderer.total_non_empty_voxels()
         total_inserted_particles = renderer.total_inserted_particles()

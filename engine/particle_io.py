@@ -31,10 +31,10 @@ class ParticleIO:
                 ranges[c, d, 1] = max(ranges[c, d, 0] + 1e-5, ranges[c, d, 1])
             np_x = ((np_x - ranges[0, d, 0]) *
                     (1 / (ranges[0, d, 1] - ranges[0, d, 0])) *
-                    (2**ParticleIO.x_bits - 1) + 0.5).astype(np.uint32)
+                    (2**ParticleIO.x_bits - 1) + 0.499).astype(np.uint32)
             np_v = ((np_v - ranges[1, d, 0]) *
                     (1 / (ranges[1, d, 1] - ranges[1, d, 0])) *
-                    (2**ParticleIO.v_bits - 1) + 0.5).astype(np.uint32)
+                    (2**ParticleIO.v_bits - 1) + 0.499).astype(np.uint32)
             x_and_v[:, d] = (np_x << ParticleIO.v_bits) + np_v
             del np_x, np_v
 
@@ -64,6 +64,6 @@ class ParticleIO:
             np.float32) / (2**ParticleIO.v_bits - 1)
         for c in range(3):
             v[:,
-              c] = v[:, c] * (ranges[1, c, 1] - ranges[0, c, 1]) + ranges[1, c,
+              c] = v[:, c] * (ranges[1, c, 1] - ranges[1, c, 0]) + ranges[1, c,
                                                                           0]
         return x, v, color
