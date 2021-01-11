@@ -99,15 +99,22 @@ for d in [0, 2]:
 
 bunnies = []
 LOD = 5
-h_start = 0.2
+h_start = 0.1
 total_bunnies = 0
 for l in range(LOD):
+    print(f"Generating layer {l}")
     scale = 1 / 2**l * 0.5
     bunnies.append(
         load_mesh('bunny_low.ply', scale=scale * 0.6, offset=(0.5, 0.5, 0.5)))
     bb_size = scale
-    bb_count = 2**l
+    bb_count = 2**(l + 1)
     layers = max(l - 1, 1)
+
+    r = 255 if l % 3 == 0 else 128
+    g = 255 if l % 3 == 1 else 128
+    b = 255 if l % 3 == 2 else 128
+    color = r * 65536 + g * 256 + b
+
     for k in range(layers):
         for i in range(bb_count):
             for j in range(bb_count):
@@ -116,7 +123,7 @@ for l in range(LOD):
                         j + 0.5) * bb_size
                 mpm.add_mesh(triangles=bunnies[l],
                              material=MPMSolver.material_elastic,
-                             color=0xFF00FF,
+                             color=color,
                              velocity=(0, -5, 0),
                              translation=(x, y, z))
                 total_bunnies += 1

@@ -109,8 +109,12 @@ class MPMSolver:
 
         self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
         # material id
-        self.material = ti.field(dtype=ti.i32)
-        self.color = ti.field(dtype=ti.i32)
+        if quant:
+            self.material = ti.field(dtype=ti.quant.int(16, False))
+            self.color = ti.field(dtype=ti.i32)
+        else:
+            self.material = ti.field(dtype=ti.i32)
+            self.color = ti.field(dtype=ti.i32)
         # plastic deformation volume ratio
         if self.support_plasticity:
             self.Jp = ti.field(dtype=ti.f32)
@@ -183,7 +187,6 @@ class MPMSolver:
         if self.quant:
             if not self.use_g2p2g:
                 self.particle.place(self.C)
-            self.particle.place(self.material, self.color)
             if self.support_plasticity:
                 self.particle.place(self.Jp)
             self.particle.bit_struct(num_bits=64).place(self.x)
@@ -197,7 +200,9 @@ class MPMSolver:
                 self.F(1, 1), self.F(1, 2))
             self.particle.bit_struct(num_bits=32).place(
                 self.F(2, 0), self.F(2, 1))
-            self.particle.bit_struct(num_bits=32).place(self.F(2, 2))
+            self.particle.bit_struct(num_bits=32).place(
+                self.F(2, 2), self.material)
+            self.particle.place(self.color)
         else:
             self.particle.place(self.x, self.v, self.F, self.material,
                                 self.color)
@@ -844,7 +849,7 @@ class MPMSolver:
         t = time.time()
         self.seed_from_voxels(material, color, sample_density)
         ti.sync()
-        print('Voxelization time:', (time.time() - t) * 1000, 'ms')
+        # print('Voxelization time:', (time.time() - t) * 1000, 'ms')
 
     @ti.kernel
     def seed_from_external_array(self, num_particles: ti.i32,
