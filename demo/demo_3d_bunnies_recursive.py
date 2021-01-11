@@ -23,10 +23,15 @@ def parse_args():
                         help='Number of frames')
     parser.add_argument('-r', '--res', type=int, default=256, help='1 / dx')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
+    parser.add_argument('-l', '--lod', type=int, help='LOG')
     parser.add_argument('-p',
-                        '--output-plt',
+                        '--output-ply',
                         type=str,
-                        help='Output PLF files too')
+                        help='Output PLY files too')
+    parser.add_argument('-m',
+                        '--max-num-particles',
+                        type=int,
+                        help='Max num particles (millions)')
     args = parser.parse_args()
     print(args)
     return args
@@ -41,7 +46,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.8)
+        device_memory_GB=9)
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -100,9 +105,12 @@ for d in [0, 2]:
                              friction=0.5)
 
 bunnies = []
-LOD = 5
+LOD = args.lod
 h_start = 0.1
 total_bunnies = 0
+
+max_num_particles = args.max_num_particles * 1000000
+
 for l in range(LOD):
     print(f"Generating LOD {l}")
     scale = 1 / 2**l * 0.5
@@ -124,11 +132,13 @@ for l in range(LOD):
                 x, y, z = -1 + (
                     i + 0.5) * bb_size, h_start + bb_size * 1.1 * k, -1 + (
                         j + 0.5) * bb_size
-                mpm.add_mesh(triangles=bunnies[l],
-                             material=MPMSolver.material_elastic,
-                             color=color,
-                             velocity=(0, -5, 0),
-                             translation=(x, y, z))
+                if mpm.n_particles[None] < max_num_particles:
+                    mpm.add_mesh(triangles=bunnies[l],
+                                 material=MPMSolver.material_elastic,
+                                 color=color,
+                                 velocity=(0, -5, 0),
+                                 translation=(x, y, z))
+                print(f'Total particles: {mpm.n_particles[None] / 1e6:.4f} M')
                 total_bunnies += 1
     h_start += bb_size * layers
 

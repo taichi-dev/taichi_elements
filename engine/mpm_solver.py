@@ -45,8 +45,8 @@ class MPMSolver:
             res,
             quant=False,
             size=1,
-            max_num_particles=2**27,
-            # Max 128 MB particles
+            max_num_particles=2**30,
+            # Max 1 G particles
             padding=3,
             unbounded=False,
             dt_scale=1,
@@ -182,7 +182,7 @@ class MPMSolver:
         sin_phi = math.sin(friction_angle)
         self.alpha = math.sqrt(2 / 3) * 2 * sin_phi / (3 - sin_phi)
 
-        self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**20)
+        self.particle = ti.root.dynamic(ti.i, max_num_particles, 2**23)
 
         if self.quant:
             if not self.use_g2p2g:
@@ -892,7 +892,7 @@ class MPMSolver:
                     begin: ti.i32, end: ti.i32):
         ti.no_activate(self.particle)
         for i in range(begin, end):
-            np_x[i] = input_x[i]
+            np_x[i - begin] = input_x[i]
 
     @ti.kernel
     def copy_ranged_nd(self, np_x: ti.ext_arr(), input_x: ti.template(),
@@ -900,7 +900,7 @@ class MPMSolver:
         ti.no_activate(self.particle)
         for i in range(begin, end):
             for j in ti.static(range(self.dim)):
-                np_x[i, j] = input_x[i, j]
+                np_x[i - begin, j] = input_x[i, j]
 
     def particle_info(self):
         np_x = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
