@@ -37,7 +37,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.8)
+        device_memory_fraction=0.6)
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -165,5 +165,6 @@ for frame in range(args.frames):
 
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
+        mpm.write_particles_ply(f'{output_dir}/particles/{frame:05d}.ply')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')

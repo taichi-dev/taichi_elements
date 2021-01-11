@@ -21,6 +21,24 @@ def load_mesh(fn, scale=1, offset=(0, 0, 0)):
             triangles[i, d * 3 + 1] = y[face[d]] * scale[1] + offset[1]
             triangles[i, d * 3 + 2] = z[face[d]] * scale[2] + offset[2]
 
-    print('loaded')
-
     return triangles
+
+
+def write_point_cloud(fn, pos_and_color):
+    num_particles = len(pos_and_color)
+    with open(fn, 'wb') as f:
+        header = f"""ply
+format binary_little_endian 1.0
+comment Created by taichi
+element vertex {num_particles}
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+property uchar placeholder
+end_header
+"""
+        f.write(str.encode(header))
+        f.write(pos_and_color.tobytes())
