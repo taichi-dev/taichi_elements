@@ -43,7 +43,7 @@ def parse_args():
 
 args = parse_args()
 
-with_gui = True
+with_gui = args.show
 write_to_disk = args.out_dir is not None
 
 # Try to run on GPU
