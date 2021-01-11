@@ -32,6 +32,10 @@ def parse_args():
                         '--max-num-particles',
                         type=int,
                         help='Max num particles (millions)')
+    parser.add_argument('--gpu-memory',
+                        type=float,
+                        default=9,
+                        help='GPU memory')
     args = parser.parse_args()
     print(args)
     return args
@@ -46,7 +50,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=9)
+        device_memory_GB=args.gpu_memory)
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
