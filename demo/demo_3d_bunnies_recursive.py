@@ -23,6 +23,10 @@ def parse_args():
                         help='Number of frames')
     parser.add_argument('-r', '--res', type=int, default=256, help='1 / dx')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
+    parser.add_argument('-p',
+                        '--output-plt',
+                        type=str,
+                        help='Output PLF files too')
     args = parser.parse_args()
     print(args)
     return args
@@ -37,7 +41,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.6)
+        device_memory_fraction=0.8)
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -81,20 +85,18 @@ for d in [0, 2]:
     point = [0, 0, 0]
     normal = [0, 0, 0]
     b = bound
-    if d == 2:
-        b /= 2
     point[d] = b
     normal[d] = -1
     mpm.add_surface_collider(point=point,
                              normal=normal,
-                             surface=mpm.surface_slip,
+                             surface=mpm.surface_separate,
                              friction=0.5)
 
     point[d] = -b
     normal[d] = 1
     mpm.add_surface_collider(point=point,
                              normal=normal,
-                             surface=mpm.surface_slip,
+                             surface=mpm.surface_separate,
                              friction=0.5)
 
 bunnies = []
@@ -102,7 +104,7 @@ LOD = 5
 h_start = 0.1
 total_bunnies = 0
 for l in range(LOD):
-    print(f"Generating layer {l}")
+    print(f"Generating LOD {l}")
     scale = 1 / 2**l * 0.5
     bunnies.append(
         load_mesh('bunny_low.ply', scale=scale * 0.6, offset=(0.5, 0.5, 0.5)))
@@ -116,10 +118,11 @@ for l in range(LOD):
     color = r * 65536 + g * 256 + b
 
     for k in range(layers):
+        print(f"  Generating layer {k}")
         for i in range(bb_count):
             for j in range(bb_count):
-                x, y, z = -0.5 + (
-                    i + 0.5) * bb_size, h_start + bb_size * 1.1 * k, -0.5 + (
+                x, y, z = -1 + (
+                    i + 0.5) * bb_size, h_start + bb_size * 1.1 * k, -1 + (
                         j + 0.5) * bb_size
                 mpm.add_mesh(triangles=bunnies[l],
                              material=MPMSolver.material_elastic,
@@ -158,13 +161,14 @@ start_t = time.time()
 for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
-    mpm.step(2e-3, print_stat=True)
+    mpm.step(1e-2, print_stat=True)
     if with_gui:
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
 
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
-        mpm.write_particles_ply(f'{output_dir}/particles/{frame:05d}.ply')
+        if args.output_ply:
+            mpm.write_particles_ply(f'{output_dir}/particles/{frame:05d}.ply')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')
