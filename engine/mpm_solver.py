@@ -632,6 +632,7 @@ class MPMSolver:
         substeps = int(frame_dt / self.default_dt) + 1
 
         for i in range(substeps):
+            print('.', end='', flush=True)
             self.total_substeps += 1
             dt = frame_dt / substeps
 
@@ -661,6 +662,7 @@ class MPMSolver:
                 self.g2p(dt)
             self.all_time_max_velocity = max(self.all_time_max_velocity,
                                              self.compute_max_velocity())
+        print()
 
         if print_stat:
             ti.kernel_profiler_print()
