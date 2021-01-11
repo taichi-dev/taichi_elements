@@ -62,7 +62,7 @@ mpm = MPMSolver(res=(R, R, R),
                 unbounded=True,
                 dt_scale=1,
                 quant=True,
-                use_g2p2g=False,
+                use_g2p2g=True,
                 support_plasticity=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),
@@ -98,7 +98,7 @@ for d in [0, 2]:
                              friction=0.5)
 
 bunnies = []
-LOD = 6
+LOD = 5
 h_start = 0.2
 total_bunnies = 0
 for l in range(LOD):
@@ -114,11 +114,10 @@ for l in range(LOD):
                 x, y, z = -0.5 + (
                     i + 0.5) * bb_size, h_start + bb_size * 1.1 * k, -0.5 + (
                         j + 0.5) * bb_size
-                print(x, y, z)
                 mpm.add_mesh(triangles=bunnies[l],
                              material=MPMSolver.material_elastic,
                              color=0xFF00FF,
-                             velocity=(0, 0, 0),
+                             velocity=(0, -5, 0),
                              translation=(x, y, z))
                 total_bunnies += 1
     h_start += bb_size * layers
