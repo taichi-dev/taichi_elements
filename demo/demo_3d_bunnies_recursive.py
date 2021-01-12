@@ -110,14 +110,14 @@ for d in [0, 2]:
 
 bunnies = []
 LOD = args.lod
-h_start = 0.1
+h_start = 0.05
 total_bunnies = 0
 
 max_num_particles = args.max_num_particles * 1000000
 
 for l in range(LOD):
     print(f"Generating LOD {l}")
-    scale = 1 / 2**l * 0.5
+    scale = 1 / 2**l * 0.625
     bunnies.append(
         load_mesh('bunny_low.ply', scale=scale * 0.6, offset=(0.5, 0.5, 0.5)))
     bb_size = scale
@@ -130,11 +130,11 @@ for l in range(LOD):
     color = r * 65536 + g * 256 + b
 
     for k in range(layers):
-        print(f"  Generating layer {k}")
+        print(f"  Generating layer {k}, h_start {h_start}")
         for i in range(bb_count):
             for j in range(bb_count):
-                x, y, z = -1 + (
-                    i + 0.5) * bb_size, h_start + bb_size * 1.1 * k, -1 + (
+                x, y, z = -1.1 + (
+                    i + 0.5) * bb_size, h_start + bb_size * k * 1.1, -1.1 + (
                         j + 0.5) * bb_size
                 if mpm.n_particles[None] < max_num_particles:
                     mpm.add_mesh(triangles=bunnies[l],
@@ -142,9 +142,12 @@ for l in range(LOD):
                                  color=color,
                                  velocity=(0, -5, 0),
                                  translation=(x, y, z))
-                print(f'Total particles: {mpm.n_particles[None] / 1e6:.4f} M')
-                total_bunnies += 1
+                    print(
+                        f'Total particles: {mpm.n_particles[None] / 1e6:.4f} M'
+                    )
+                    total_bunnies += 1
     h_start += bb_size * layers
+    h_start -= 0.05 * max(0, 2 - l)  # adjustments
 
 mpm.set_gravity((0, -25, 0))
 

@@ -631,6 +631,8 @@ class MPMSolver:
 
         substeps = int(frame_dt / self.default_dt) + 1
 
+        if print_stat:
+            print(f'needed substeps: {substeps}')
         for i in range(substeps):
             print('.', end='', flush=True)
             self.total_substeps += 1
