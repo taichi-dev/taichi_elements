@@ -660,8 +660,8 @@ class MPMSolver:
                     p(self.t, dt, self.grid_v)
                 self.t += dt
                 self.g2p(dt)
-            self.all_time_max_velocity = max(self.all_time_max_velocity,
-                                             self.compute_max_velocity())
+        self.all_time_max_velocity = max(self.all_time_max_velocity,
+                                         self.compute_max_velocity())
         print()
 
         if print_stat:
