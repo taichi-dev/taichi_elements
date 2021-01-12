@@ -57,7 +57,7 @@ class MPMSolver:
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
-        self.allowed_cfl = 0.999  # G2P2G only
+        self.allowed_cfl = 0.9  # G2P2G only
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -315,9 +315,9 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
+            v_allowed = self.dx * self.allowed_cfl / dt
             for d in ti.static(range(self.dim)):
-                v_allowed = -self.dx * self.allowed_cfl / dt
-                new_v[d] = min(max(new_v[d], v_allowed), -v_allowed)
+                new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
 
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
