@@ -82,15 +82,13 @@ class ParticleIO:
         x = (x_and_v >> ParticleIO.v_bits).astype(np.float32) / (
             (2**ParticleIO.x_bits - 1))
         for c in range(3):
-            x[:,
-              c] = x[:, c] * (ranges[0, c, 1] - ranges[0, c, 0]) + ranges[0, c,
-                                                                          0]
+            x[:, c] = x[:, c] * (ranges[0, c, 1] -
+                                 ranges[0, c, 0]) + ranges[0, c, 0]
         v = (x_and_v & (2**ParticleIO.v_bits - 1)).astype(
             np.float32) / (2**ParticleIO.v_bits - 1)
         for c in range(3):
-            v[:,
-              c] = v[:, c] * (ranges[1, c, 1] - ranges[1, c, 0]) + ranges[1, c,
-                                                                          0]
+            v[:, c] = v[:, c] * (ranges[1, c, 1] -
+                                 ranges[1, c, 0]) + ranges[1, c, 0]
         return x, v, color
 
     @staticmethod

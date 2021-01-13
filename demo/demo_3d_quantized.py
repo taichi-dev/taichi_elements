@@ -40,9 +40,9 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.95)
+        device_memory_GB=22)
 
-max_num_particles = 400000000
+max_num_particles = 250000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",

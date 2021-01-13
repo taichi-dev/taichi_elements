@@ -101,7 +101,8 @@ class MPMSolver:
 
             ci16 = ti.type_factory.custom_int(16, True)
             cft = ti.type_factory.custom_float(significand_type=ci16,
-                                               scale=(self.F_bound + 0.1) / (2**15))
+                                               scale=(self.F_bound + 0.1) /
+                                               (2**15))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
         else:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -332,8 +333,7 @@ class MPMSolver:
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w2 = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
             # deformation gradient update
-            new_F = (ti.Matrix.identity(ti.f32, self.dim) +
-                     dt * C) @ self.F[p]
+            new_F = (ti.Matrix.identity(ti.f32, self.dim) + dt * C) @ self.F[p]
             if ti.static(self.quant):
                 new_F = max(-self.F_bound, min(self.F_bound, new_F))
             self.F[p] = new_F
@@ -385,9 +385,8 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 /
-                                                                    sig[i, i])
+                        center[i, i] += self.lambda_0 * log_sig_sum * (
+                            1 / sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
@@ -472,9 +471,8 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 /
-                                                                    sig[i, i])
+                        center[i, i] += self.lambda_0 * log_sig_sum * (
+                            1 / sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
@@ -875,10 +873,7 @@ class MPMSolver:
 
         self.n_particles[None] += num_particles
 
-    def add_particles(self,
-                      particles,
-                      material,
-                      color=0xFFFFFF,
+    def add_particles(self, particles, material, color=0xFFFFFF,
                       velocity=None):
         self.set_source_velocity(velocity=velocity)
         self.seed_from_external_array(len(particles), particles, material,
