@@ -181,7 +181,7 @@ def seed_bars(subframe):
                      material=MPMSolver.material_elastic,
                      color=color,
                      velocity=(0, -10, 0),
-                     translation=((i - 0.5) * 0.6, 0.5, 0.1))
+                     translation=((i - 0.5) * 0.6 - 0.5, 1.1, 0.1))
 
 
 for frame in range(args.frames):
