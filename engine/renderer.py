@@ -483,12 +483,12 @@ class Renderer:
 
     @ti.kernel
     def initialize_particle(self, x: ti.ext_arr(), v: ti.ext_arr(),
-                            color: ti.ext_arr()):
-        for i in range(self.num_particles[None]):
+                            color: ti.ext_arr(), begin: ti.i32, end: ti.i32):
+        for i in range(begin, end):
             for c in ti.static(range(3)):
-                self.particle_x[i][c] = x[i, c]
-                self.particle_v[i][c] = v[i, c]
-                self.particle_color[i][c] = color[i, c]
+                self.particle_x[i][c] = x[i - begin, c]
+                self.particle_v[i][c] = v[i - begin, c]
+                self.particle_color[i][c] = color[i - begin, c]
 
     @ti.kernel
     def total_non_empty_voxels(self) -> ti.i32:
@@ -536,11 +536,19 @@ class Renderer:
                                3.0) * self.dx
             self.bbox[1][i] = (math.floor(np_x[:, i].max() * self.inv_dx) +
                                3.0) * self.dx
+            print(f'Bounding box dim {i}: {self.bbox[0][i]} {self.bbox[1][i]}')
 
         self.num_particles[None] = num_part
         print('num_input_particles =', num_part)
 
-        self.initialize_particle(np_x, np_v, np_color)
+        slice_size = 1000000
+        num_slices = (num_part + slice_size - 1) // slice_size
+        for i in range(num_slices):
+            begin = slice_size * i
+            end = min(num_part, begin + slice_size)
+            print(begin, end)
+            self.initialize_particle(np_x[begin:end], np_v[begin:end],
+                                     np_color[begin:end], begin, end)
         self.initialize_particle_grid()
 
     def render_frame(self, spp):
