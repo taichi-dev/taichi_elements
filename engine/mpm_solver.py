@@ -79,6 +79,7 @@ class MPMSolver:
         self.input_grid = 0
         self.all_time_max_velocity = 0.0
         self.support_plasticity = support_plasticity
+        self.F_bound = 4.0
 
         # affine velocity field
         if not self.use_g2p2g:
@@ -100,7 +101,7 @@ class MPMSolver:
 
             ci16 = ti.type_factory.custom_int(16, True)
             cft = ti.type_factory.custom_float(significand_type=ci16,
-                                               scale=4 / (2**15))
+                                               scale=(self.F_bound + 0.1) / (2**15))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
         else:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -331,8 +332,11 @@ class MPMSolver:
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w2 = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
             # deformation gradient update
-            self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
-                         dt * C) @ self.F[p]
+            new_F = (ti.Matrix.identity(ti.f32, self.dim) +
+                     dt * C) @ self.F[p]
+            if ti.static(self.quant):
+                new_F = max(-self.F_bound, min(self.F_bound, new_F))
+            self.F[p] = new_F
             # Hardening coefficient: snow gets harder when compressed
             h = 1.0
             if ti.static(self.support_plasticity):
