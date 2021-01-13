@@ -33,7 +33,7 @@ def parse_args():
 
 args = parse_args()
 
-with_gui = True
+with_gui = args.show
 write_to_disk = args.out_dir is not None
 
 # Try to run on GPU
@@ -181,7 +181,7 @@ def seed_bars(subframe):
                      material=MPMSolver.material_elastic,
                      color=color,
                      velocity=(0, -10, 0),
-                     translation=((i - 0.5) * 0.6, 0, 0.1))
+                     translation=((i - 0.5) * 0.6, 0.5, 0.1))
 
 
 for frame in range(args.frames):
