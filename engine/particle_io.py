@@ -1,4 +1,4 @@
-from . import mesh_io
+from mesh_io import write_point_cloud
 import numpy as np
 import taichi as ti
 import time
@@ -100,7 +100,7 @@ class ParticleIO:
         color = color[:, None]
         pos_color = np.hstack([x, color.view(np.float32)])
         del x, color
-        mesh_io.write_point_cloud(fn + ".ply", pos_color)
+        write_point_cloud(fn + ".ply", pos_color)
 
 
 if __name__ == '__main__':
