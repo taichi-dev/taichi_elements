@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 import argparse
 
-ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_fraction=0.8)
+ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_GB=18)
 
 
 def parse_args():

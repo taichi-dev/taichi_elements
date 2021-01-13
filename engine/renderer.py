@@ -66,7 +66,7 @@ class Renderer:
         self.voxel_grid_res = self.particle_grid_res
         voxel_grid_offset = [-self.voxel_grid_res // 2 for _ in range(3)]
         self.max_num_particles_per_cell = 8192 * 1024
-        self.max_num_particles = 1024 * 1024 * 128
+        self.max_num_particles = 1024 * 1024 * 256
 
         self.voxel_dx = self.dx
         self.voxel_inv_dx = 1 / self.voxel_dx
