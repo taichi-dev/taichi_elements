@@ -55,7 +55,8 @@ class Renderer:
         self.dx = dx
         self.inv_dx = 1 / self.dx
 
-        self.camera_pos = ti.Vector([0.0, 0.4, 4])
+        self.camera_pos = ti.Vector([float(0.0), float(1.0), float(5.0)])
+
         self.supporter = 2
         self.shutter_time = shutter_time  # usually half the frame time
         self.sphere_radius = sphere_radius
@@ -430,7 +431,8 @@ class Renderer:
     @ti.kernel
     def initialize_particle_grid(self):
         for p in range(self.num_particles[None]):
-            v = self.particle_v[p]
+            # v = self.particle_v[p]
+            v = ti.Vector([0.0, 0.0, 0.0])
             x = self.particle_x[p]
             ipos = ti.floor(x * self.inv_dx).cast(ti.i32)
 
