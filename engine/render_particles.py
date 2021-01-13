@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument('-g', '--gui', action='store_true', help='Show GUI')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
     parser.add_argument('-i', '--in-dir', type=str, help='Input folder')
+    parser.add_argument('-t', '--shutter-time', type=float, default=2e-3, help='Shutter time')
     args = parser.parse_args()
     print(args)
     return args
@@ -44,7 +45,7 @@ from renderer import Renderer
 res = args.res
 renderer = Renderer(dx=1 / res,
                     sphere_radius=0.3 / res,
-                    shutter_time=2e-3,
+                    shutter_time=args.shutter_time,
                     taichi_logo=False)
 
 with_gui = args.gui
