@@ -463,11 +463,11 @@ class Renderer:
                             if sphere_aabb_intersect_motion(
                                     box_min, box_max, x + offset_begin,
                                     x + offset_end, self.sphere_radius):
+                                self.voxel_has_particle[box_ipos] = 1
+                                self.voxel_grid_density[box_ipos] = 1
                                 ti.append(
                                     self.pid.parent(), box_ipos -
                                     ti.Vector(self.particle_grid_offset), p)
-                                self.voxel_has_particle[box_ipos] = 1
-                                self.voxel_grid_density[box_ipos] = 1
 
     @ti.kernel
     def copy(self, img: ti.ext_arr(), samples: ti.i32):
@@ -529,6 +529,9 @@ class Renderer:
         np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
         num_part = len(np_x)
 
+        # TODO: remove this hack
+        # np_x = np_x * 0.5
+
         assert num_part <= self.max_num_particles
 
         for i in range(3):
@@ -539,6 +542,8 @@ class Renderer:
             self.bbox[1][i] = (math.floor(np_x[:, i].max() * self.inv_dx) +
                                3.0) * self.dx
             print(f'Bounding box dim {i}: {self.bbox[0][i]} {self.bbox[1][i]}')
+
+        # TODO: assert bounds
 
         self.num_particles[None] = num_part
         print('num_input_particles =', num_part)

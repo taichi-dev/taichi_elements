@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 import argparse
 
-ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_GB=18)
+ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_GB=18, debug=True)
 
 
 def parse_args():
@@ -34,6 +34,10 @@ def parse_args():
                         type=float,
                         default=2e-3,
                         help='Shutter time')
+    parser.add_argument('-f',
+                        '--force',
+                        action='store_true',
+                        help='Overwrite existing outputs')
     args = parser.parse_args()
     print(args)
     return args
@@ -63,7 +67,7 @@ def main():
     for f in range(args.begin, args.end, args.step):
         print('frame', f, end=' ')
         output_fn = f'{output_folder}/{f:05d}.png'
-        if os.path.exists(output_fn):
+        if os.path.exists(output_fn) and not args.force:
             print('skip.')
             continue
         else:
