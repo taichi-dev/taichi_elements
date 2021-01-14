@@ -55,7 +55,7 @@ class Renderer:
         self.dx = dx
         self.inv_dx = 1 / self.dx
 
-        self.camera_pos = ti.Vector([float(0.0), float(1.0), float(5.0)])
+        self.camera_pos = ti.Vector([float(0.0), float(0.8), float(5.5)])
 
         self.supporter = 2
         self.shutter_time = shutter_time  # usually half the frame time
