@@ -1,4 +1,4 @@
-from mesh_io import write_point_cloud
+from .mesh_io import write_point_cloud
 import numpy as np
 import taichi as ti
 import time
