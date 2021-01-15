@@ -34,6 +34,8 @@ class Renderer:
         self.vignette_radius = 0.0
         self.vignette_center = [0.5, 0.5]
         self.taichi_logo = taichi_logo
+        self.shutter_time = shutter_time  # usually half the frame time
+        self.enable_motion_blur = self.shutter_time != 0.0
 
         self.color_buffer = ti.Vector.field(3, dtype=ti.f32)
         self.bbox = ti.Vector.field(3, dtype=ti.f32, shape=2)
@@ -41,7 +43,8 @@ class Renderer:
         self.voxel_has_particle = ti.field(dtype=ti.i32)
 
         self.particle_x = ti.Vector.field(3, dtype=ti.f32)
-        self.particle_v = ti.Vector.field(3, dtype=ti.f32)
+        if self.enable_motion_blur:
+            self.particle_v = ti.Vector.field(3, dtype=ti.f32)
         self.particle_color = ti.Vector.field(3, dtype=ti.u8)
         self.pid = ti.field(ti.i32)
         self.num_particles = ti.field(ti.i32, shape=())
@@ -58,7 +61,6 @@ class Renderer:
         self.camera_pos = ti.Vector([float(0.0), float(0.8), float(5.5)])
 
         self.supporter = 2
-        self.shutter_time = shutter_time  # usually half the frame time
         self.sphere_radius = sphere_radius
         self.particle_grid_offset = [
             -self.particle_grid_res // 2 for _ in range(3)
@@ -80,7 +82,7 @@ class Renderer:
                                                self.particle_grid_res // 8)
         self.particle_bucket.dense(ti.ijk, 8).dynamic(
             ti.l, self.max_num_particles_per_cell,
-            chunk_size=64).place(self.pid,
+            chunk_size=32).place(self.pid,
                                  offset=self.particle_grid_offset + [0])
 
         ti.root.pointer(ti.ijk, self.particle_grid_res // 8).dense(
@@ -90,10 +92,12 @@ class Renderer:
         voxel_block.dense(ti.ijk, 8).place(self.voxel_grid_density,
                                            offset=voxel_grid_offset)
 
-        ti.root.dense(ti.l,
-                      self.max_num_particles).place(self.particle_x,
-                                                    self.particle_v,
-                                                    self.particle_color)
+        particle = ti.root.dense(ti.l, self.max_num_particles)
+
+        particle.place(self.particle_x)
+        if self.enable_motion_blur:
+            particle.place(self.particle_v)
+        particle.place(self.particle_color)
 
     @ti.func
     def inside_grid(self, ipos):
@@ -302,7 +306,9 @@ class Renderer:
                             ipos - ti.Vector(self.particle_grid_offset))
                     for k in range(num_particles):
                         p = self.pid[ipos, k]
-                        v = self.particle_v[p]
+                        v = ti.Vector([0.0, 0.0, 0.0])
+                        if ti.static(self.enable_motion_blur):
+                            v = self.particle_v[p]
                         x = self.particle_x[p] + t * v
                         color = ti.cast(self.particle_color[p],
                                         ti.u32) * (1 / 255.0)
@@ -431,8 +437,9 @@ class Renderer:
     @ti.kernel
     def initialize_particle_grid(self):
         for p in range(self.num_particles[None]):
-            # v = self.particle_v[p]
             v = ti.Vector([0.0, 0.0, 0.0])
+            if ti.static(self.enable_motion_blur):
+                v = self.particle_v[p]
             x = self.particle_x[p]
             ipos = ti.floor(x * self.inv_dx).cast(ti.i32)
 
@@ -489,7 +496,8 @@ class Renderer:
         for i in range(begin, end):
             for c in ti.static(range(3)):
                 self.particle_x[i][c] = x[i - begin, c]
-                self.particle_v[i][c] = v[i - begin, c]
+                if ti.static(self.enable_motion_blur):
+                    self.particle_v[i][c] = v[i - begin, c]
                 self.particle_color[i][c] = color[i - begin, c]
 
     @ti.kernel
@@ -528,9 +536,6 @@ class Renderer:
 
         np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
         num_part = len(np_x)
-
-        # TODO: remove this hack
-        # np_x = np_x * 0.5
 
         assert num_part <= self.max_num_particles
 

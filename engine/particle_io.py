@@ -2,6 +2,7 @@ from mesh_io import write_point_cloud
 import numpy as np
 import taichi as ti
 import time
+import gc
 
 
 class ParticleIO:
@@ -79,6 +80,8 @@ class ParticleIO:
         ranges = data['ranges']
         color = data['color']
         x_and_v = data['x_and_v']
+        del data
+        gc.collect()
         x = (x_and_v >> ParticleIO.v_bits).astype(np.float32) / (
             (2**ParticleIO.x_bits - 1))
         for c in range(3):
@@ -100,6 +103,7 @@ class ParticleIO:
         color = color[:, None]
         pos_color = np.hstack([x, color.view(np.float32)])
         del x, color
+        gc.collect()
         write_point_cloud(fn + ".ply", pos_color)
 
 
