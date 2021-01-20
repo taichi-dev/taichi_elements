@@ -16,3 +16,5 @@ rendered
 particles_*
 sim_*
 *.bin
+frames
+*.txt
