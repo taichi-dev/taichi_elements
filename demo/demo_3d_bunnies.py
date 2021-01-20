@@ -3,8 +3,7 @@ import math
 import time
 import numpy as np
 import os
-import utils
-from utils import create_output_folder
+from .utils import create_output_folder
 from engine.mpm_solver import MPMSolver
 import argparse
 from engine.mesh_io import load_mesh
