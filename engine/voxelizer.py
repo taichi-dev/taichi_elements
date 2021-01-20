@@ -17,6 +17,13 @@ def inside_ccw(p, a, b, c):
 class Voxelizer:
     def __init__(self, res, dx, super_sample=2, precision=ti.f64, padding=3):
         assert len(res) == 3
+        res = list(res)
+        for i in range(len(res)):
+            r = 1
+            while r < res[i]:
+                r = r * 2
+            res[i] = r
+        print(f'Voxelizer resolution {res}')
         # Super sample by 2x
         self.res = (res[0] * super_sample, res[1] * super_sample,
                     res[2] * super_sample)

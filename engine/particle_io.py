@@ -97,18 +97,20 @@ class ParticleIO:
         return x, v, color
 
     @staticmethod
-    def convert_particle_to_ply(fn):
-        x, _, color = ParticleIO.read_particles_3d(fn)
-        x = x.astype(np.float32)
-        color = (color[:, 2].astype(np.uint32) << 16) + (
-            color[:, 1].astype(np.uint32) << 8) + color[:, 0]
-        color = color[:, None]
-        pos_color = np.hstack([x, color.view(np.float32)])
-        del x, color
-        gc.collect()
-        write_point_cloud(fn + ".ply", pos_color)
+    def convert_particle_to_ply(fns):
+        for fn in fns:
+            print(f'Converting {fn}...')
+            x, _, color = ParticleIO.read_particles_3d(fn)
+            x = x.astype(np.float32)
+            color = (color[:, 2].astype(np.uint32) << 16) + (
+                color[:, 1].astype(np.uint32) << 8) + color[:, 0]
+            color = color[:, None]
+            pos_color = np.hstack([x, color.view(np.float32)])
+            del x, color
+            gc.collect()
+            write_point_cloud(fn + ".ply", pos_color)
 
 
 if __name__ == '__main__':
     import sys
-    ParticleIO.convert_particle_to_ply(sys.argv[1])
+    ParticleIO.convert_particle_to_ply(sys.argv[1:])

@@ -3,7 +3,7 @@ import math
 import time
 import numpy as np
 import os
-from .utils import create_output_folder
+from .utils import Tee
 from engine.mpm_solver import MPMSolver
 import argparse
 from engine.mesh_io import load_mesh
@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('-f',
                         '--frames',
                         type=int,
-                        default=500,
+                        default=300,
                         help='Number of frames')
     parser.add_argument('-r', '--res', type=int, default=256, help='1 / dx')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
@@ -39,7 +39,8 @@ ti.init(arch=ti.cuda,
         device_memory_fraction=0.7)
 
 max_num_particles = 50000000
-stop_seeding_at = 350
+stop_seeding_at = 150
+frame_dt = 1e-2
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -48,22 +49,27 @@ if with_gui:
                  show_gui=args.show)
 
 if write_to_disk:
-    # output_dir = create_output_folder(args.out_dir)
-    output_dir = args.out_dir
+    for i in range(1000):
+        output_dir = f'{args.out_dir}_{i:03d}'
+        if not os.path.exists(output_dir):
+            break
     os.makedirs(f'{output_dir}/particles')
     os.makedirs(f'{output_dir}/previews')
     print("Writing 2D vis and binary particle data to folder", output_dir)
+    tee = Tee(fn=f'{output_dir}/log.txt', mode='w')
+    print(args)
 else:
     output_dir = None
 
 # Use 512 for final simulation/render
 R = args.res
+thickness = 2
 
 mpm = MPMSolver(res=(R, R, R),
                 size=1,
                 unbounded=True,
                 dt_scale=1,
-                quant=True,
+                quant=False,
                 use_g2p2g=False,
                 support_plasticity=False,
                 water_density=1.5)
@@ -85,7 +91,8 @@ for d in [0, 2]:
     normal = [0, 0, 0]
     b = bound
     if d == 2:
-        b /= 2
+        b /= 4
+        b *= thickness
     point[d] = b
     normal[d] = -1
     mpm.add_surface_collider(point=point,
@@ -109,8 +116,8 @@ mpm.set_gravity((0, -25, 0))
 
 print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
 
-mpm.add_cube(lower_corner=(-bound, 0, -bound / 2),
-             cube_size=(bound * 0.3, 0.3, bound),
+mpm.add_cube(lower_corner=(-bound, 0, -bound / 4 * thickness),
+             cube_size=(bound * 0.3, 0.35, bound / 2 * thickness),
              material=mpm.material_water,
              color=0x99aaff)
 print(f'Water particles: {mpm.n_particles[None] / 1e6:.4f} M')
@@ -149,7 +156,7 @@ def seed_letters(subframe):
                  material=MPMSolver.material_elastic,
                  color=color,
                  velocity=(0, -5, 0),
-                 translation=((i - 0.5) * 0.6, 0.2, (2 - j) * 0.1))
+                 translation=((i - 0.5) * 0.4, 0.2, (3 - j) * 0.1 - 0.8))
 
 
 for frame in range(args.frames):
@@ -161,12 +168,15 @@ for frame in range(args.frames):
             if mpm.n_particles[None] < max_num_particles:
                 seed_letters(subframe)
 
-        mpm.step(1e-2 / frame_split, print_stat=True)
+        mpm.step(frame_dt / frame_split, print_stat=True)
+    else:
+        mpm.step(frame_dt, print_stat=True)
     if with_gui:
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
 
     if write_to_disk:
         mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
+    print(f'Folder name {output_dir}')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')
