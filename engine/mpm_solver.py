@@ -54,13 +54,15 @@ class MPMSolver:
             voxelizer_super_sample=2,
             use_g2p2g=True,
             use_bls=True,
-            g2p2g_allowed_cfl=0.9, # 0.0 for no CFL limit
+            g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
+            water_density=1.0,
             support_plasticity=True):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
         self.use_bls = use_bls
         self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
+        self.water_density = water_density
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -390,8 +392,9 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i, i] += self.lambda_0 * log_sig_sum * (
-                            1 / sig[i, i])
+                        center[i,
+                               i] += self.lambda_0 * log_sig_sum * (1 /
+                                                                    sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
@@ -477,12 +480,17 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i, i] += self.lambda_0 * log_sig_sum * (
-                            1 / sig[i, i])
+                        center[i,
+                               i] += self.lambda_0 * log_sig_sum * (1 /
+                                                                    sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
-            affine = stress + self.p_mass * self.C[p]
+            # TODO: implement g2p2g pmass
+            mass = self.p_mass
+            if self.material[p] == self.material_water:
+                mass *= self.water_density
+            affine = stress + mass * self.C[p]
 
             # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
@@ -490,10 +498,9 @@ class MPMSolver:
                 weight = 1.0
                 for d in ti.static(range(self.dim)):
                     weight *= w[offset[d]][d]
-                self.grid_v[base +
-                            offset] += weight * (self.p_mass * self.v[p] +
-                                                 affine @ dpos)
-                self.grid_m[base + offset] += weight * self.p_mass
+                self.grid_v[base + offset] += weight * (mass * self.v[p] +
+                                                        affine @ dpos)
+                self.grid_m[base + offset] += weight * mass
 
     @ti.kernel
     def grid_normalization_and_gravity(self, dt: ti.f32, grid_v: ti.template(),
@@ -880,7 +887,10 @@ class MPMSolver:
 
         self.n_particles[None] += num_particles
 
-    def add_particles(self, particles, material, color=0xFFFFFF,
+    def add_particles(self,
+                      particles,
+                      material,
+                      color=0xFFFFFF,
                       velocity=None):
         self.set_source_velocity(velocity=velocity)
         self.seed_from_external_array(len(particles), particles, material,

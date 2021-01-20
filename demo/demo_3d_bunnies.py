@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('-f',
                         '--frames',
                         type=int,
-                        default=10000,
+                        default=500,
                         help='Number of frames')
     parser.add_argument('-r', '--res', type=int, default=256, help='1 / dx')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
@@ -36,9 +36,10 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_fraction=0.8)
+        device_memory_fraction=0.7)
 
-max_num_particles = 40000000
+max_num_particles = 50000000
+stop_seeding_at = 350
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -64,7 +65,8 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=False,
-                support_plasticity=False)
+                support_plasticity=False,
+                water_density=1.5)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
@@ -147,16 +149,17 @@ def seed_letters(subframe):
                  material=MPMSolver.material_elastic,
                  color=color,
                  velocity=(0, -5, 0),
-                 translation=((i - 0.5) * 0.6, 0, (2 - j) * 0.1))
+                 translation=((i - 0.5) * 0.6, 0.2, (2 - j) * 0.1))
 
 
 for frame in range(args.frames):
     print(f'frame {frame}')
     t = time.time()
     frame_split = 1
-    for subframe in range(frame * frame_split, (frame + 1) * frame_split):
-        if mpm.n_particles[None] < max_num_particles:
-            seed_letters(subframe)
+    if frame < stop_seeding_at:
+        for subframe in range(frame * frame_split, (frame + 1) * frame_split):
+            if mpm.n_particles[None] < max_num_particles:
+                seed_letters(subframe)
 
         mpm.step(1e-2 / frame_split, print_stat=True)
     if with_gui:
