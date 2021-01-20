@@ -53,11 +53,14 @@ class MPMSolver:
             E_scale=1,
             voxelizer_super_sample=2,
             use_g2p2g=True,
+            use_bls=True,
+            g2p2g_allowed_cfl=0.9, # 0.0 for no CFL limit
             support_plasticity=True):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
-        self.allowed_cfl = 0.9  # G2P2G only
+        self.use_bls = use_bls
+        self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -287,9 +290,10 @@ class MPMSolver:
               grid_v_out: ti.template(), grid_m_out: ti.template()):
         ti.block_dim(256)
         ti.no_activate(self.particle)
-        ti.block_local(*grid_v_in.entries)
-        ti.block_local(grid_m_out)
-        ti.block_local(*grid_v_out.entries)
+        if ti.static(self.use_bls):
+            ti.block_local(*grid_v_in.entries)
+            ti.block_local(grid_m_out)
+            ti.block_local(*grid_v_out.entries)
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -317,9 +321,10 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            v_allowed = self.dx * self.allowed_cfl / dt
-            for d in ti.static(range(self.dim)):
-                new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
+            if ti.static(self.g2p2g_allowed_cfl > 0):
+                v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
+                for d in ti.static(range(self.dim)):
+                    new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
 
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
@@ -409,8 +414,9 @@ class MPMSolver:
     def p2g(self, dt: ti.f32):
         ti.no_activate(self.particle)
         ti.block_dim(256)
-        ti.block_local(*self.grid_v.entries)
-        ti.block_local(self.grid_m)
+        if ti.static(self.use_bls):
+            ti.block_local(*self.grid_v.entries)
+            ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
@@ -591,7 +597,8 @@ class MPMSolver:
     @ti.kernel
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
-        ti.block_local(*self.grid_v.entries)
+        if ti.static(self.use_bls):
+            ti.block_local(*self.grid_v.entries)
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
