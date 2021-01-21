@@ -71,7 +71,7 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=False,
-                support_plasticity=False,
+                support_plasticity=True,
                 water_density=1.5)
 
 mpm.add_surface_collider(point=(0, 0, 0),

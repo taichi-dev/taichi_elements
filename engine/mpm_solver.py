@@ -9,6 +9,8 @@ USE_IN_BLENDER = False
 
 ti.require_version(0, 7, 10)
 
+# TODO: water needs Jp - fix this.
+
 
 @ti.data_oriented
 class MPMSolver:
@@ -430,19 +432,25 @@ class MPMSolver:
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
             # deformation gradient update
-            self.F[p] = (ti.Matrix.identity(ti.f32, self.dim) +
-                         dt * self.C[p]) @ self.F[p]
+            F = self.F[p]
+            if self.material[p] == self.material_water:  # liquid
+                F = ti.Matrix.identity(ti.f32, self.dim)
+                F[0, 0] = self.Jp[p]
+
+            F = (ti.Matrix.identity(ti.f32, self.dim) +
+                 dt * self.C[p]) @ self.F[p]
             # Hardening coefficient: snow gets harder when compressed
             h = 1.0
             if ti.static(self.support_plasticity):
-                h = ti.exp(10 * (1.0 - self.Jp[p]))
+                if self.material[p] != self.material_water:
+                    h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
                     p] == self.material_elastic:  # jelly, make it softer
                 h = 0.3
             mu, la = self.mu_0 * h, self.lambda_0 * h
             if self.material[p] == self.material_water:  # liquid
                 mu = 0.0
-            U, sig, V = ti.svd(self.F[p])
+            U, sig, V = ti.svd(F)
             J = 1.0
             if self.material[p] != self.material_sand:
                 for d in ti.static(range(self.dim)):
@@ -456,23 +464,23 @@ class MPMSolver:
                     J *= new_sig
             if self.material[p] == self.material_water:
                 # Reset deformation gradient to avoid numerical instability
-                new_F = ti.Matrix.identity(ti.f32, self.dim)
-                new_F[0, 0] = J
-                self.F[p] = new_F
+                F = ti.Matrix.identity(ti.f32, self.dim)
+                F[0, 0] = J
+                if ti.static(self.support_plasticity):
+                    self.Jp[p] = J
             elif self.material[p] == self.material_snow:
                 # Reconstruct elastic deformation gradient after plasticity
-                self.F[p] = U @ sig @ V.transpose()
+                F = U @ sig @ V.transpose()
 
             stress = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
             if self.material[p] != self.material_sand:
-                stress = 2 * mu * (
-                    self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
-                    ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
+                stress = 2 * mu * (F - U @ V.transpose()) @ F.transpose(
+                ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
             else:
                 if ti.static(self.support_plasticity):
                     sig = self.sand_projection(sig, p)
-                    self.F[p] = U @ sig @ V.transpose()
+                    F = U @ sig @ V.transpose()
                     log_sig_sum = 0.0
                     center = ti.Matrix.zero(ti.f32, self.dim, self.dim)
                     for i in ti.static(range(self.dim)):
@@ -483,7 +491,8 @@ class MPMSolver:
                         center[i,
                                i] += self.lambda_0 * log_sig_sum * (1 /
                                                                     sig[i, i])
-                    stress = U @ center @ V.transpose() @ self.F[p].transpose()
+                    stress = U @ center @ V.transpose() @ F.transpose()
+            self.F[p] = F
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             # TODO: implement g2p2g pmass
