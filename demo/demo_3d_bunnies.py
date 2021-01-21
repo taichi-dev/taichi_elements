@@ -69,7 +69,7 @@ mpm = MPMSolver(res=(R, R, R),
                 size=1,
                 unbounded=True,
                 dt_scale=1,
-                quant=False,
+                quant=True,
                 use_g2p2g=False,
                 support_plasticity=False,
                 water_density=1.5)

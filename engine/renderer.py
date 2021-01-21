@@ -2,8 +2,10 @@ import taichi as ti
 import numpy as np
 import math
 import time
-from renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
+from engine.renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
   intersect_sphere, sphere_aabb_intersect_motion, inside_taichi
+
+from engine.particle_io import ParticleIO
 
 res = 1280, 720
 aspect_ratio = res[0] / res[1]
@@ -11,7 +13,6 @@ aspect_ratio = res[0] / res[1]
 max_ray_depth = 4
 use_directional_light = True
 
-fov = 0.23
 dist_limit = 100
 # TODO: why doesn't it render normally when shutter_begin = -1?
 shutter_begin = -0.5
@@ -29,7 +30,8 @@ class Renderer:
                  sphere_radius=0.3 / 1024,
                  render_voxel=False,
                  shutter_time=1e-3,
-                 taichi_logo=True):
+                 taichi_logo=True,
+                 max_num_particles_million=128):
         self.vignette_strength = 0.9
         self.vignette_radius = 0.0
         self.vignette_center = [0.5, 0.5]
@@ -41,6 +43,7 @@ class Renderer:
         self.bbox = ti.Vector.field(3, dtype=ti.f32, shape=2)
         self.voxel_grid_density = ti.field(dtype=ti.f32)
         self.voxel_has_particle = ti.field(dtype=ti.i32)
+        self.fov = ti.field(dtype=ti.f32, shape=())
 
         self.particle_x = ti.Vector.field(3, dtype=ti.f32)
         if self.enable_motion_blur:
@@ -58,7 +61,9 @@ class Renderer:
         self.dx = dx
         self.inv_dx = 1 / self.dx
 
-        self.camera_pos = ti.Vector([float(0.0), float(0.8), float(5.5)])
+        self.camera_pos = ti.Vector.field(3, dtype=ti.f32, shape=())
+        self.look_at = ti.Vector.field(3, dtype=ti.f32, shape=())
+        self.up = ti.Vector.field(3, dtype=ti.f32, shape=())
 
         self.supporter = 2
         self.sphere_radius = sphere_radius
@@ -69,7 +74,7 @@ class Renderer:
         self.voxel_grid_res = self.particle_grid_res
         voxel_grid_offset = [-self.voxel_grid_res // 2 for _ in range(3)]
         self.max_num_particles_per_cell = 8192 * 1024
-        self.max_num_particles = 1024 * 1024 * 256
+        self.max_num_particles = 1024 * 1024 * max_num_particles_million
 
         self.voxel_dx = self.dx
         self.voxel_inv_dx = 1 / self.voxel_dx
@@ -98,6 +103,9 @@ class Renderer:
         if self.enable_motion_blur:
             particle.place(self.particle_v)
         particle.place(self.particle_color)
+
+        self.set_up(0, 1, 0)
+        self.set_fov(0.23)
 
     @ti.func
     def inside_grid(self, ipos):
@@ -367,16 +375,34 @@ class Renderer:
         return closest, normal, c
 
     @ti.kernel
+    def set_camera_pos(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.camera_pos[None] = ti.Vector([x, y, z])
+
+    @ti.kernel
+    def set_up(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.up[None] = ti.Vector([x, y, z]).normalized()
+
+    @ti.kernel
+    def look_at(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.look_at[None] = ti.Vector([x, y, z])
+
+    @ti.kernel
+    def set_fov(self, fov: ti.f32):
+        self.fov[None] = fov
+
+    @ti.kernel
     def render(self):
         ti.block_dim(256)
         for u, v in self.color_buffer:
+            fov = self.fov[None]
             pos = self.camera_pos
-            d = ti.Vector([
-                (2 * fov * (u + ti.random(ti.f32)) / res[1] -
-                 fov * aspect_ratio - 1e-5),
-                2 * fov * (v + ti.random(ti.f32)) / res[1] - fov - 1e-5, -1.0
-            ])
-            d = d.normalized()
+            d = (self.look_at[None] - self.camera_pos[None]).normalized()
+            fu = (2 * fov * (u + ti.random(ti.f32)) / res[1] -
+                  fov * aspect_ratio - 1e-5)
+            fv = 2 * fov * (v + ti.random(ti.f32)) / res[1] - fov - 1e-5
+            du = d.cross(self.up[None]).normalized()
+            dv = du.cross(d).normalized()
+            d = (d + fu * du + fv * dv).normalized()
             t = (ti.random() + shutter_begin) * self.shutter_time
 
             contrib = ti.Vector([0.0, 0.0, 0.0])
@@ -531,8 +557,6 @@ class Renderer:
 
     def initialize_particles_from_taichi_elements(self, particle_fn):
         self.reset()
-
-        from particle_io import ParticleIO
 
         np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
         num_part = len(np_x)

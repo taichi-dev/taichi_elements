@@ -1,11 +1,8 @@
 import taichi as ti
 import os
-import sys
 import time
 from pathlib import Path
 import argparse
-
-ti.init(arch=ti.cuda, use_unified_memory=False, device_memory_GB=21)
 
 
 def parse_args():
@@ -38,6 +35,15 @@ def parse_args():
                         '--force',
                         action='store_true',
                         help='Overwrite existing outputs')
+    parser.add_argument('--gpu-memory',
+                        type=float,
+                        default=9,
+                        help='GPU memory')
+    parser.add_argument('-M',
+                        '--max-particles',
+                        type=int,
+                        default=128,
+                        help='Max num particles (million)')
     args = parser.parse_args()
     print(args)
     return args
@@ -45,15 +51,20 @@ def parse_args():
 
 args = parse_args()
 
+ti.init(arch=ti.cuda,
+        use_unified_memory=False,
+        device_memory_GB=args.gpu_memory)
+
 output_folder = args.out_dir
 os.makedirs(output_folder, exist_ok=True)
 
-from renderer import Renderer
+from engine.renderer import Renderer
 
 res = args.res
 renderer = Renderer(dx=1 / res,
                     sphere_radius=0.3 / res,
                     shutter_time=args.shutter_time,
+                    max_num_particles_million=args.max_particles,
                     taichi_logo=False)
 
 with_gui = args.gui
@@ -61,6 +72,8 @@ if with_gui:
     gui = ti.GUI('Particle Renderer', (1280, 720))
 
 spp = 200
+
+# 0.23, (0.0, 0.8, 5.5)
 
 
 def main():
@@ -74,6 +87,8 @@ def main():
             print('rendering...')
         Path(output_fn).touch()
         t = time.time()
+
+        renderer.set_camera_pos(3.24, 1.86, -4.57)
 
         renderer.initialize_particles_from_taichi_elements(
             f'{args.in_dir}/{f:05d}.npz')
@@ -95,5 +110,5 @@ def main():
         print(f'Frame rendered. {spp} take {time.time() - t} s.')
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+main()
