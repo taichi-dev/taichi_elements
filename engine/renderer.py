@@ -65,6 +65,8 @@ class Renderer:
         self.look_at = ti.Vector.field(3, dtype=ti.f32, shape=())
         self.up = ti.Vector.field(3, dtype=ti.f32, shape=())
 
+        self.floor_height = ti.field(dtype=ti.f32, shape=())
+
         self.supporter = 2
         self.sphere_radius = sphere_radius
         self.particle_grid_offset = [
@@ -161,7 +163,7 @@ class Renderer:
             o -= ti.Vector([0.5, 0.002, 0.5])
             dist = (o.abs() - ti.Vector([0.5, 0.02, 0.5])).max()
         else:
-            dist = o[1] + 0.002
+            dist = o[1] - self.floor_height[None]
 
         return dist
 

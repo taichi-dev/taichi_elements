@@ -89,6 +89,7 @@ def main():
         t = time.time()
 
         renderer.set_camera_pos(3.24, 1.86, -4.57)
+        renderer.floor_height[None] = -5e-3
 
         renderer.initialize_particles_from_taichi_elements(
             f'{args.in_dir}/{f:05d}.npz')
