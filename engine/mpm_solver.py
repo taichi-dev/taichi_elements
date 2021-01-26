@@ -126,7 +126,10 @@ class MPMSolver:
             self.color = ti.field(dtype=ti.i32)
         # plastic deformation volume ratio
         if self.support_plasticity:
-            self.Jp = ti.field(dtype=ti.f32)
+            if self.quant:
+                self.Jp = ti.field(dtype=ti.quant.fixed(frac=23, range=2))
+            else:
+                self.Jp = ti.field(dtype=ti.f32)
 
         if self.dim == 2:
             indices = ti.ij
@@ -197,7 +200,7 @@ class MPMSolver:
             if not self.use_g2p2g:
                 self.particle.place(self.C)
             if self.support_plasticity:
-                self.particle.place(self.Jp)
+                self.particle.bit_struct(num_bits=32).place(self.Jp)
             self.particle.bit_struct(num_bits=64).place(self.x)
             self.particle.bit_struct(num_bits=64).place(self.v,
                                                         shared_exponent=True)
@@ -394,9 +397,8 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 /
-                                                                    sig[i, i])
+                        center[i, i] += self.lambda_0 * log_sig_sum * (
+                            1 / sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
             stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
@@ -437,8 +439,7 @@ class MPMSolver:
                 F = ti.Matrix.identity(ti.f32, self.dim)
                 F[0, 0] = self.Jp[p]
 
-            F = (ti.Matrix.identity(ti.f32, self.dim) +
-                 dt * self.C[p]) @ F
+            F = (ti.Matrix.identity(ti.f32, self.dim) + dt * self.C[p]) @ F
             # Hardening coefficient: snow gets harder when compressed
             h = 1.0
             if ti.static(self.support_plasticity):
@@ -488,9 +489,8 @@ class MPMSolver:
                         center[i, i] = 2.0 * self.mu_0 * ti.log(
                             sig[i, i]) * (1 / sig[i, i])
                     for i in ti.static(range(self.dim)):
-                        center[i,
-                               i] += self.lambda_0 * log_sig_sum * (1 /
-                                                                    sig[i, i])
+                        center[i, i] += self.lambda_0 * log_sig_sum * (
+                            1 / sig[i, i])
                     stress = U @ center @ V.transpose() @ F.transpose()
             self.F[p] = F
 
@@ -896,10 +896,7 @@ class MPMSolver:
 
         self.n_particles[None] += num_particles
 
-    def add_particles(self,
-                      particles,
-                      material,
-                      color=0xFFFFFF,
+    def add_particles(self, particles, material, color=0xFFFFFF,
                       velocity=None):
         self.set_source_velocity(velocity=velocity)
         self.seed_from_external_array(len(particles), particles, material,
