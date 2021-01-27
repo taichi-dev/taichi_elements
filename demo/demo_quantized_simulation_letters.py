@@ -5,7 +5,7 @@ import numpy as np
 from plyfile import PlyData, PlyElement
 import os
 import utils
-from utils import create_output_folder
+from .utils import create_output_folder
 from engine.mpm_solver import MPMSolver
 import argparse
 
@@ -42,7 +42,7 @@ ti.init(arch=ti.cuda,
         use_unified_memory=False,
         device_memory_GB=22)
 
-max_num_particles = 250000000
+max_num_particles = 235000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
