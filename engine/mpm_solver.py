@@ -116,10 +116,11 @@ class MPMSolver:
         for v in self.grid_v.entries:
             block_component(v)
 
+        block_offset = tuple(o // self.leaf_block_size for o in self.offset)
         block.dynamic(ti.indices(self.dim),
                       1024 * 1024,
                       chunk_size=self.leaf_block_size**self.dim * 8).place(
-                          self.pid, offset=offset + (0, ))
+                          self.pid, offset=block_offset + (0, ))
 
         self.padding = padding
 
@@ -199,9 +200,10 @@ class MPMSolver:
     def build_pid(self):
         ti.block_dim(64)
         for p in self.x:
-            base = int(ti.floor(self.x[p] * self.inv_dx - 0.5))
-            ti.append(self.pid.parent(), base - ti.Vector(list(self.offset)),
-                      p)
+            base = int(ti.floor(self.x[p] * self.inv_dx - 0.5)) \
+                 - ti.Vector(list(self.offset))
+            base_pid = ti.rescale_index(self.grid_m, self.pid, base)
+            ti.append(self.pid.parent(), base_pid, p)
 
     @ti.kernel
     def p2g(self, dt: ti.f32):
@@ -212,8 +214,9 @@ class MPMSolver:
         for I in ti.grouped(self.pid):
             p = self.pid[I]
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
+            Im = ti.rescale_index(self.pid, self.grid_m, I)
             for D in ti.static(range(self.dim)):
-                base[D] = ti.assume_in_range(base[D], I[D], 0, 1)
+                base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
 
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
@@ -390,8 +393,9 @@ class MPMSolver:
         for I in ti.grouped(self.pid):
             p = self.pid[I]
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
+            Im = ti.rescale_index(self.pid, self.grid_m, I)
             for D in ti.static(range(self.dim)):
-                base[D] = ti.assume_in_range(base[D], I[D], 0, 1)
+                base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
             fx = self.x[p] * self.inv_dx - base.cast(float)
             w = [
                 0.5 * (1.5 - fx)**2, 0.75 - (fx - 1.0)**2, 0.5 * (fx - 0.5)**2
