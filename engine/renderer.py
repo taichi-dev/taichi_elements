@@ -2,8 +2,10 @@ import taichi as ti
 import numpy as np
 import math
 import time
-from renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
+from engine.renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
   intersect_sphere, sphere_aabb_intersect_motion, inside_taichi
+
+from engine.particle_io import ParticleIO
 
 res = 1280, 720
 aspect_ratio = res[0] / res[1]
@@ -11,7 +13,6 @@ aspect_ratio = res[0] / res[1]
 max_ray_depth = 4
 use_directional_light = True
 
-fov = 0.23
 dist_limit = 100
 # TODO: why doesn't it render normally when shutter_begin = -1?
 shutter_begin = -0.5
@@ -29,19 +30,24 @@ class Renderer:
                  sphere_radius=0.3 / 1024,
                  render_voxel=False,
                  shutter_time=1e-3,
-                 taichi_logo=True):
+                 taichi_logo=True,
+                 max_num_particles_million=128):
         self.vignette_strength = 0.9
         self.vignette_radius = 0.0
         self.vignette_center = [0.5, 0.5]
         self.taichi_logo = taichi_logo
+        self.shutter_time = shutter_time  # usually half the frame time
+        self.enable_motion_blur = self.shutter_time != 0.0
 
         self.color_buffer = ti.Vector.field(3, dtype=ti.f32)
         self.bbox = ti.Vector.field(3, dtype=ti.f32, shape=2)
         self.voxel_grid_density = ti.field(dtype=ti.f32)
         self.voxel_has_particle = ti.field(dtype=ti.i32)
+        self.fov = ti.field(dtype=ti.f32, shape=())
 
         self.particle_x = ti.Vector.field(3, dtype=ti.f32)
-        self.particle_v = ti.Vector.field(3, dtype=ti.f32)
+        if self.enable_motion_blur:
+            self.particle_v = ti.Vector.field(3, dtype=ti.f32)
         self.particle_color = ti.Vector.field(3, dtype=ti.u8)
         self.pid = ti.field(ti.i32)
         self.num_particles = ti.field(ti.i32, shape=())
@@ -55,9 +61,13 @@ class Renderer:
         self.dx = dx
         self.inv_dx = 1 / self.dx
 
-        self.camera_pos = ti.Vector([0.5, 0.27, 2.7])
+        self.camera_pos = ti.Vector.field(3, dtype=ti.f32, shape=())
+        self.look_at = ti.Vector.field(3, dtype=ti.f32, shape=())
+        self.up = ti.Vector.field(3, dtype=ti.f32, shape=())
+
+        self.floor_height = ti.field(dtype=ti.f32, shape=())
+
         self.supporter = 2
-        self.shutter_time = shutter_time  # usually half the frame time
         self.sphere_radius = sphere_radius
         self.particle_grid_offset = [
             -self.particle_grid_res // 2 for _ in range(3)
@@ -66,7 +76,7 @@ class Renderer:
         self.voxel_grid_res = self.particle_grid_res
         voxel_grid_offset = [-self.voxel_grid_res // 2 for _ in range(3)]
         self.max_num_particles_per_cell = 8192 * 1024
-        self.max_num_particles = 1024 * 1024 * 128
+        self.max_num_particles = 1024 * 1024 * max_num_particles_million
 
         self.voxel_dx = self.dx
         self.voxel_inv_dx = 1 / self.voxel_dx
@@ -79,7 +89,7 @@ class Renderer:
                                                self.particle_grid_res // 8)
         self.particle_bucket.dense(ti.ijk, 8).dynamic(
             ti.l, self.max_num_particles_per_cell,
-            chunk_size=64).place(self.pid,
+            chunk_size=32).place(self.pid,
                                  offset=self.particle_grid_offset + [0])
 
         ti.root.pointer(ti.ijk, self.particle_grid_res // 8).dense(
@@ -89,10 +99,15 @@ class Renderer:
         voxel_block.dense(ti.ijk, 8).place(self.voxel_grid_density,
                                            offset=voxel_grid_offset)
 
-        ti.root.dense(ti.l,
-                      self.max_num_particles).place(self.particle_x,
-                                                    self.particle_v,
-                                                    self.particle_color)
+        particle = ti.root.dense(ti.l, self.max_num_particles)
+
+        particle.place(self.particle_x)
+        if self.enable_motion_blur:
+            particle.place(self.particle_v)
+        particle.place(self.particle_color)
+
+        self.set_up(0, 1, 0)
+        self.set_fov(0.23)
 
     @ti.func
     def inside_grid(self, ipos):
@@ -148,7 +163,7 @@ class Renderer:
             o -= ti.Vector([0.5, 0.002, 0.5])
             dist = (o.abs() - ti.Vector([0.5, 0.02, 0.5])).max()
         else:
-            dist = o[1] + 0.002
+            dist = o[1] - self.floor_height[None]
 
         return dist
 
@@ -301,9 +316,12 @@ class Renderer:
                             ipos - ti.Vector(self.particle_grid_offset))
                     for k in range(num_particles):
                         p = self.pid[ipos, k]
-                        v = self.particle_v[p]
+                        v = ti.Vector([0.0, 0.0, 0.0])
+                        if ti.static(self.enable_motion_blur):
+                            v = self.particle_v[p]
                         x = self.particle_x[p] + t * v
-                        color = ti.cast(self.particle_color[p], ti.u32) * (1 / 255.0)
+                        color = ti.cast(self.particle_color[p],
+                                        ti.u32) * (1 / 255.0)
                         # ray-sphere intersection
                         dist, poss = intersect_sphere(eye_pos, d, x,
                                                       self.sphere_radius)
@@ -359,16 +377,34 @@ class Renderer:
         return closest, normal, c
 
     @ti.kernel
+    def set_camera_pos(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.camera_pos[None] = ti.Vector([x, y, z])
+
+    @ti.kernel
+    def set_up(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.up[None] = ti.Vector([x, y, z]).normalized()
+
+    @ti.kernel
+    def look_at(self, x: ti.f32, y: ti.f32, z: ti.f32):
+        self.look_at[None] = ti.Vector([x, y, z])
+
+    @ti.kernel
+    def set_fov(self, fov: ti.f32):
+        self.fov[None] = fov
+
+    @ti.kernel
     def render(self):
         ti.block_dim(256)
         for u, v in self.color_buffer:
+            fov = self.fov[None]
             pos = self.camera_pos
-            d = ti.Vector([
-                (2 * fov * (u + ti.random(ti.f32)) / res[1] -
-                 fov * aspect_ratio - 1e-5),
-                2 * fov * (v + ti.random(ti.f32)) / res[1] - fov - 1e-5, -1.0
-            ])
-            d = d.normalized()
+            d = (self.look_at[None] - self.camera_pos[None]).normalized()
+            fu = (2 * fov * (u + ti.random(ti.f32)) / res[1] -
+                  fov * aspect_ratio - 1e-5)
+            fv = 2 * fov * (v + ti.random(ti.f32)) / res[1] - fov - 1e-5
+            du = d.cross(self.up[None]).normalized()
+            dv = du.cross(d).normalized()
+            d = (d + fu * du + fv * dv).normalized()
             t = (ti.random() + shutter_begin) * self.shutter_time
 
             contrib = ti.Vector([0.0, 0.0, 0.0])
@@ -429,7 +465,9 @@ class Renderer:
     @ti.kernel
     def initialize_particle_grid(self):
         for p in range(self.num_particles[None]):
-            v = self.particle_v[p]
+            v = ti.Vector([0.0, 0.0, 0.0])
+            if ti.static(self.enable_motion_blur):
+                v = self.particle_v[p]
             x = self.particle_x[p]
             ipos = ti.floor(x * self.inv_dx).cast(ti.i32)
 
@@ -460,11 +498,11 @@ class Renderer:
                             if sphere_aabb_intersect_motion(
                                     box_min, box_max, x + offset_begin,
                                     x + offset_end, self.sphere_radius):
+                                self.voxel_has_particle[box_ipos] = 1
+                                self.voxel_grid_density[box_ipos] = 1
                                 ti.append(
                                     self.pid.parent(), box_ipos -
                                     ti.Vector(self.particle_grid_offset), p)
-                                self.voxel_has_particle[box_ipos] = 1
-                                self.voxel_grid_density[box_ipos] = 1
 
     @ti.kernel
     def copy(self, img: ti.ext_arr(), samples: ti.i32):
@@ -482,12 +520,13 @@ class Renderer:
 
     @ti.kernel
     def initialize_particle(self, x: ti.ext_arr(), v: ti.ext_arr(),
-                            color: ti.ext_arr()):
-        for i in range(self.num_particles[None]):
+                            color: ti.ext_arr(), begin: ti.i32, end: ti.i32):
+        for i in range(begin, end):
             for c in ti.static(range(3)):
-                self.particle_x[i][c] = x[i, c]
-                self.particle_v[i][c] = v[i, c]
-                self.particle_color[i][c] = color[i, c]
+                self.particle_x[i][c] = x[i - begin, c]
+                if ti.static(self.enable_motion_blur):
+                    self.particle_v[i][c] = v[i - begin, c]
+                self.particle_color[i][c] = color[i - begin, c]
 
     @ti.kernel
     def total_non_empty_voxels(self) -> ti.i32:
@@ -521,8 +560,6 @@ class Renderer:
     def initialize_particles_from_taichi_elements(self, particle_fn):
         self.reset()
 
-        from particle_io import ParticleIO
-
         np_x, np_v, np_color = ParticleIO.read_particles_3d(particle_fn)
         num_part = len(np_x)
 
@@ -535,11 +572,21 @@ class Renderer:
                                3.0) * self.dx
             self.bbox[1][i] = (math.floor(np_x[:, i].max() * self.inv_dx) +
                                3.0) * self.dx
+            print(f'Bounding box dim {i}: {self.bbox[0][i]} {self.bbox[1][i]}')
+
+        # TODO: assert bounds
 
         self.num_particles[None] = num_part
         print('num_input_particles =', num_part)
 
-        self.initialize_particle(np_x, np_v, np_color)
+        slice_size = 1000000
+        num_slices = (num_part + slice_size - 1) // slice_size
+        for i in range(num_slices):
+            begin = slice_size * i
+            end = min(num_part, begin + slice_size)
+            print(begin, end)
+            self.initialize_particle(np_x[begin:end], np_v[begin:end],
+                                     np_color[begin:end], begin, end)
         self.initialize_particle_grid()
 
     def render_frame(self, spp):
