@@ -250,8 +250,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.emitters = cls.emitters
         for collider in cls.colliders:
             solv.add_surface_collider(
-                (*collider.position),
-                (*collider.direction),
+                (*collider.position[0]),
+                (*collider.direction[0]),
                 surface=int(collider.surface)
             )
         self.size = size
