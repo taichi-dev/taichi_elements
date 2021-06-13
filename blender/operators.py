@@ -168,15 +168,18 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                     x = np_x[i]
                     print(f'v {x[0]} {x[1]} {x[2]}', file=f)
 
+    def stop_sim(self):
+        print('STOP SIMULATION')
+        self.thread = None
+        self.is_finishing = True
+        self.cancel(bpy.context)
+        return {'FINISHED'}
+
     def run_sim(self):
         # self.frame_end + 1 - this means include the last frame in the range
         for frame in range(self.frame_start, self.frame_end + 1, 1):
             if self.event_type == 'ESC':
-                print('STOP SIMULATION')
-                self.thread = None
-                self.is_finishing = True
-                self.cancel(bpy.context)
-                return
+                self.stop_sim()
             print('Frame: {}'.format(frame))
 
             self.create_emitters(frame)
@@ -193,6 +196,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             print(np_x)
 
             self.save_particles(frame, np_x, np_v, np_color, np_material)
+
+            if frame == self.frame_end:
+                self.stop_sim()
 
     def init_sim(self):
         # simulation nodes
