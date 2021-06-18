@@ -352,10 +352,10 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            if ti.static(self.g2p2g_allowed_cfl > 0):
-                v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
-                for d in ti.static(range(self.dim)):
-                    new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
+            # if ti.static(self.g2p2g_allowed_cfl > 0):
+            #     v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
+            #     for d in ti.static(range(self.dim)):
+            #         new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
 
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
@@ -439,6 +439,12 @@ class MPMSolver:
                            offset] += weight * (self.p_mass * self.v[p] +
                                                 affine @ dpos)
                 grid_m_out[base + offset] += weight * self.p_mass
+
+        # clamp the velocity on grid
+        if ti.static(self.g2p2g_allowed_cfl > 0):
+            v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
+            for I in ti.grouped(grid_v_out):
+                grid_v_out[I] = min(max(grid_v_out[I], -v_allowed), v_allowed)
 
         self.last_time_final_particles[None] = self.n_particles[None]
 

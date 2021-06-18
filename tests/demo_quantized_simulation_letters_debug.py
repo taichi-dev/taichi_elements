@@ -44,7 +44,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=9)
+        device_memory_GB=12)
 
 # max_num_particles = 235000000
 max_num_particles = 2e8
