@@ -91,8 +91,12 @@ def main():
         renderer.set_camera_pos(3.24, 1.86, -4.57)
         renderer.floor_height[None] = -5e-3
 
+        cur_render_input = f'{args.in_dir}/{f:05d}.npz'
+        if not os.path.exists(cur_render_input):
+            print(f'warning, {cur_render_input} not existed, skip!')
+            continue
         renderer.initialize_particles_from_taichi_elements(
-            f'{args.in_dir}/{f:05d}.npz')
+            cur_render_input)
 
         total_voxels = renderer.total_non_empty_voxels()
         total_inserted_particles = renderer.total_inserted_particles()
