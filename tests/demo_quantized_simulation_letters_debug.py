@@ -47,7 +47,7 @@ ti.init(arch=ti.cuda,
         device_memory_GB=12)
 
 # max_num_particles = 235000000
-max_num_particles = 2e8
+max_num_particles = 10e8
 if with_gui:
     gui = ti.GUI("MLS-MPM",
                  res=1024,
@@ -371,7 +371,7 @@ for frame in range(start_frame, args.frames):
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
 
-    if write_to_disk and frame % 4 == 0:
+    if write_to_disk and frame % args.state_fre == 0:
         mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')
