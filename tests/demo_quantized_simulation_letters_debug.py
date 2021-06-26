@@ -303,6 +303,13 @@ def copyback_matrix(np_matrix: ti.ext_arr(), mt: ti.template(), solver: ti.templ
             for k in ti.static(range(solver.dim)):
                 mt[p][j, k] = np_matrix[p, j, k]
 
+@ti.kernel
+def copyback_matrix_idx(np_matrix: ti.ext_arr(), mt: ti.template(), solver: ti.template(),
+                        s: ti.float32, t: ti.float32):
+    for p in range(s, t):
+        for j in ti.static(range(solver.dim)):
+            for k in ti.static(range(solver.dim)):
+                mt[p][j, k] = np_matrix[p, j, k]
 
 def load_mpm_state(solver: MPMSolver, save_dir: str):
     if not solver.use_g2p2g:
@@ -322,7 +329,15 @@ def load_mpm_state(solver: MPMSolver, save_dir: str):
     copyback_dynamic_nd(solver, state['velocity'], solver.v)
     copyback_dynamic(solver, state['material'], solver.material)
     copyback_dynamic(solver, state['color'], solver.color)
-    copyback_matrix(state['F'], solver.F, solver)
+
+    sec_num = 8
+    start_idx = 0
+    state_F_split = np.array_split(state['F'])
+    for state_F in state_F_split:
+        print(f"copy F matrix with {state_F.shape[0]} cells!")
+        copyback_matrix_idx(state_F, solver.F, solver, start_idx, start_idx + state_F.shape[0])
+        start_idx += state_F.shape[0]
+    # copyback_matrix(state['F'], solver.F, solver)
     if solver.support_plasticity:
         copyback_dynamic(solver, state['p_Jp'], solver.Jp)
 
@@ -331,7 +346,7 @@ def load_mpm_state(solver: MPMSolver, save_dir: str):
     assert grid_v_idx.shape[0] == grid_v_val[0]
     print(f"we have {grid_v_idx.shape[0]} cell activated in grid_v !")
     # divide in several part to save memory bandwidth
-    sec_num = 8
+
     grid_v_idx_split = np.array_split(grid_v_idx, sec_num)
     grid_v_val_split = np.array_split(grid_v_val, sec_num)
     for grid_v_idx_sec, grid_v_val_sec in zip(grid_v_idx_split, grid_v_val_split):
