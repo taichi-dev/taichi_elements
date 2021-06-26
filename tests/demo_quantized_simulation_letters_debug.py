@@ -326,7 +326,17 @@ def load_mpm_state(solver: MPMSolver, save_dir: str):
     if solver.support_plasticity:
         copyback_dynamic(solver, state['p_Jp'], solver.Jp)
 
-    copyback_grid(state['grid_v_idx'], state['grid_v_val'], solver.grid_v[phase], solver)
+    grid_v_idx = state['grid_v_idx']
+    grid_v_val = state['grid_v_val']
+    assert grid_v_idx.shape[0] == grid_v_val[0]
+    print(f"we have {grid_v_idx.shape[0]} cell activated in grid_v !")
+    # divide in several part to save memory bandwidth
+    sec_num = 8
+    grid_v_idx_split = np.array_split(grid_v_idx, sec_num)
+    grid_v_val_split = np.array_split(grid_v_val, sec_num)
+    for grid_v_idx_sec, grid_v_val_sec in zip(grid_v_idx_split, grid_v_val_split):
+        print(f"copy {grid_v_idx_sec.shape[0]} cells!")
+        copyback_grid(grid_v_idx_sec, grid_v_val_sec, solver.grid_v[phase], solver)
 
     print(f'load {resume_frame}th frame from {save_dir}!')
     return resume_frame
