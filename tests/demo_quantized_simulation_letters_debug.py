@@ -41,10 +41,13 @@ with_gui = args.show
 write_to_disk = args.out_dir is not None
 
 # Try to run on GPU
+
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=12)
+        device_memory_GB=23,
+        debug=False)
+# numpy array would occupy out of the allocated device_memory_GB, so handle the memory with cautious
 
 # max_num_particles = 235000000
 max_num_particles = 10e8
@@ -275,10 +278,25 @@ def copyback_dynamic_nd(solver: ti.template(), np_x: ti.ext_arr(), input_x: ti.t
 
 
 @ti.kernel
+def copyback_dynamic_nd_ranged(solver: ti.template(), input_x: ti.template(), np_x: ti.ext_arr(), s: ti.int32,
+                               e: ti.int32):
+    for p in range(s, e):
+        for j in ti.static(range(solver.dim)):
+            input_x[p][j] = np_x[p - s, j]
+
+
+@ti.kernel
 def copyback_dynamic(solver: ti.template(), np_x: ti.ext_arr(), input_x: ti.template()):
     for i in range(solver.n_particles[None]):
         # print(i)
         input_x[i] = np_x[i]
+
+
+@ti.kernel
+def copyback_dynamic_ranged(solver: ti.template(), input_x: ti.template(), np_x: ti.ext_arr(), s: ti.int32,
+                            e: ti.int32):
+    for p in range(s, e):
+        input_x[p] = np_x[p - s]
 
 
 @ti.kernel
@@ -303,13 +321,34 @@ def copyback_matrix(np_matrix: ti.ext_arr(), mt: ti.template(), solver: ti.templ
             for k in ti.static(range(solver.dim)):
                 mt[p][j, k] = np_matrix[p, j, k]
 
+
 @ti.kernel
-def copyback_matrix_idx(np_matrix: ti.ext_arr(), mt: ti.template(), solver: ti.template(),
-                        s: ti.float32, t: ti.float32):
-    for p in range(s, t):
+def copyback_matrix_ranged(solver: ti.template(), mt: ti.template(), np_matrix: ti.ext_arr(), s: ti.int32, e: ti.int32):
+    for p in range(s, e):
         for j in ti.static(range(solver.dim)):
             for k in ti.static(range(solver.dim)):
-                mt[p][j, k] = np_matrix[p, j, k]
+                mt[p][j, k] = np_matrix[p - s, j, k]
+
+
+def copyback_range(solver: MPMSolver, np_saved_arr: np.array, target_field: ti.template(), copyback_func, slice_size):
+    """
+    a wrapper to copy slice by slice to save gpu memory bandwidth
+    :param slice_size:
+    :param solver:
+    :param np_saved_arr:
+    :param target_field:
+    :param copyback_func:
+    :return:
+    """
+    totol_size = np_saved_arr.shape[0]
+    num_slice = (totol_size + slice_size - 1) // slice_size
+    for s in range(num_slice):
+        begin = slice_size * s
+        end = min(slice_size * (s + 1), totol_size)
+        print(f"copy back from {begin} to {end}")
+        np_slice_arr = np_saved_arr[begin:end]
+        copyback_func(solver, target_field, np_slice_arr, begin, end)
+
 
 def load_mpm_state(solver: MPMSolver, save_dir: str):
     if not solver.use_g2p2g:
@@ -325,30 +364,37 @@ def load_mpm_state(solver: MPMSolver, save_dir: str):
     solver.n_particles[None] = num_particle
 
     solver.input_grid = phase
-    copyback_dynamic_nd(solver, state['position'], solver.x)
-    copyback_dynamic_nd(solver, state['velocity'], solver.v)
-    copyback_dynamic(solver, state['material'], solver.material)
-    copyback_dynamic(solver, state['color'], solver.color)
+    slice_num = 2 ** 14
+    print(f"copy slice size {slice_num}")
+    copyback_range(solver, state['material'], solver.material, copyback_dynamic_ranged, slice_num)
+    copyback_range(solver, state['position'], solver.x, copyback_dynamic_nd_ranged, slice_num)
+    copyback_range(solver, state['velocity'], solver.v, copyback_dynamic_nd_ranged, slice_num)
+    copyback_range(solver, state['color'], solver.color, copyback_dynamic_ranged, slice_num)
+    # copyback_dynamic_nd(solver, state['position'], solver.x)
+    # copyback_dynamic_nd(solver, state['velocity'], solver.v)
+    # copyback_dynamic(solver, state['material'], solver.material)
+    # copyback_dynamic(solver, state['color'], solver.color)
 
-    sec_num = 8
-    start_idx = 0
-    state_F_split = np.array_split(state['F'])
-    for state_F in state_F_split:
-        print(f"copy F matrix with {state_F.shape[0]} cells!")
-        copyback_matrix_idx(state_F, solver.F, solver, start_idx, start_idx + state_F.shape[0])
-        start_idx += state_F.shape[0]
+    # sec_num = 8
+    # start_idx = 0
+    # state_F_split = np.array_split(state['F'], sec_num)
+    # for state_F in state_F_split:
+    #     print(f"copy F matrix with {state_F.shape[0]} cells!")
+    #     copyback_matrix_ranged(solver, solver.F, state_F, start_idx, start_idx + state_F.shape[0])
+    #     start_idx += state_F.shape[0]
     # copyback_matrix(state['F'], solver.F, solver)
+    copyback_range(solver, state["F"], solver.F, copyback_matrix_ranged, slice_num)
     if solver.support_plasticity:
-        copyback_dynamic(solver, state['p_Jp'], solver.Jp)
+        copyback_range(solver, state["p_Jp"], solver.Jp, copyback_matrix_ranged, slice_num)
 
     grid_v_idx = state['grid_v_idx']
     grid_v_val = state['grid_v_val']
-    assert grid_v_idx.shape[0] == grid_v_val[0]
+    assert grid_v_idx.shape[0] == grid_v_val.shape[0]
     print(f"we have {grid_v_idx.shape[0]} cell activated in grid_v !")
     # divide in several part to save memory bandwidth
 
-    grid_v_idx_split = np.array_split(grid_v_idx, sec_num)
-    grid_v_val_split = np.array_split(grid_v_val, sec_num)
+    grid_v_idx_split = np.array_split(grid_v_idx, 16)
+    grid_v_val_split = np.array_split(grid_v_val, 16)
     for grid_v_idx_sec, grid_v_val_sec in zip(grid_v_idx_split, grid_v_val_split):
         print(f"copy {grid_v_idx_sec.shape[0]} cells!")
         copyback_grid(grid_v_idx_sec, grid_v_val_sec, solver.grid_v[phase], solver)
