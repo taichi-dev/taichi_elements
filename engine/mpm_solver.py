@@ -5,6 +5,8 @@ import numbers
 import math
 import multiprocessing as mp
 
+from tensorboardX import SummaryWriter
+
 USE_IN_BLENDER = False
 
 ti.require_version(0, 7, 10)
@@ -86,6 +88,7 @@ class MPMSolver:
                                                shape=())
         self.input_grid = 0
         self.all_time_max_velocity = 0.0
+        self.cur_frame_velocity = 0.0
         self.support_plasticity = support_plasticity
         self.F_bound = 4.0
 
@@ -352,7 +355,7 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            # if ti.static(self.g2p2g_allowed_cfl > 0):
+            #  if ti.static(self.g2p2g_allowed_cfl > 0):
             #     v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
             #     for d in ti.static(range(self.dim)):
             #         new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
@@ -686,7 +689,7 @@ class MPMSolver:
             ti.atomic_max(max_velocity, v_max)
         return max_velocity
 
-    def step(self, frame_dt, print_stat=False):
+    def step(self, frame_dt, print_stat=False, smry_writer: SummaryWriter=None):
         begin_t = time.time()
         begin_substep = self.total_substeps
 
@@ -723,8 +726,13 @@ class MPMSolver:
                     p(self.t, dt, self.grid_v)
                 self.t += dt
                 self.g2p(dt)
-        self.all_time_max_velocity = max(self.all_time_max_velocity,
-                                         self.compute_max_velocity())
+
+            self.cur_frame_velocity = self.compute_max_velocity()
+            if smry_writer is not None:
+                smry_writer.add_scalar("substep_max_CFL", self.cur_frame_velocity * dt / self.dx, self.total_substeps)
+            self.all_time_max_velocity = max(self.all_time_max_velocity,
+                                             self.cur_frame_velocity)
+
         print()
 
         if print_stat:
@@ -733,7 +741,7 @@ class MPMSolver:
                 ti.memory_profiler_print()
             except:
                 pass
-            print(f'CFL: {self.all_time_max_velocity * dt / self.dx}')
+            print(f'CFL: {self.cur_frame_velocity * dt / self.dx}')
             print(f'num particles={self.n_particles[None]}')
             print(f'  frame time {time.time() - begin_t:.3f} s')
             print(
