@@ -315,7 +315,6 @@ class MPMSolver:
             base_pid = ti.rescale_index(grid_m, pid.parent(2), base)
             ti.append(pid.parent(), base_pid, p)
 
-
     @ti.kernel
     def g2p2g(self, dt: ti.f32, pid: ti.template(), grid_v_in: ti.template(),
               grid_v_out: ti.template(), grid_m_out: ti.template()):
@@ -441,12 +440,6 @@ class MPMSolver:
                                                 affine @ dpos)
                 grid_m_out[base + offset] += weight * self.p_mass
 
-        # clamp the velocity on grid
-        if ti.static(self.g2p2g_allowed_cfl > 0):
-            v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
-            for I in ti.grouped(grid_v_out):
-                grid_v_out[I] = min(max(grid_v_out[I], -v_allowed), v_allowed)
-
         self.last_time_final_particles[None] = self.n_particles[None]
 
     @ti.kernel
@@ -550,10 +543,15 @@ class MPMSolver:
     @ti.kernel
     def grid_normalization_and_gravity(self, dt: ti.f32, grid_v: ti.template(),
                                        grid_m: ti.template()):
+        v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
         for I in ti.grouped(grid_m):
             if grid_m[I] > 0:  # No need for epsilon here
                 grid_v[I] = (1 / grid_m[I]) * grid_v[I]  # Momentum to velocity
                 grid_v[I] += dt * self.gravity[None]
+
+            # clamp the velocity on grid, notice the grid_v is actually momentum
+            if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g):
+                grid_v[I] = min(max(grid_v[I], -v_allowed), v_allowed)
 
     @ti.kernel
     def grid_bounding_box(self, t: ti.f32, dt: ti.f32,
@@ -727,7 +725,6 @@ class MPMSolver:
 
             self.cur_frame_velocity = self.compute_max_velocity()
             if smry_writer is not None:
-                from tensorboardX import SummaryWriter
                 smry_writer.add_scalar("substep_max_CFL", self.cur_frame_velocity * dt / self.dx, self.total_substeps)
             self.all_time_max_velocity = max(self.all_time_max_velocity,
                                              self.cur_frame_velocity)
