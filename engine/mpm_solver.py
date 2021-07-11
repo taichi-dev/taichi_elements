@@ -5,11 +5,9 @@ import numbers
 import math
 import multiprocessing as mp
 
-from tensorboardX import SummaryWriter
-
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 10)
+ti.require_version(0, 7, 21)
 
 
 # TODO: water needs Jp - fix this.
@@ -689,7 +687,7 @@ class MPMSolver:
             ti.atomic_max(max_velocity, v_max)
         return max_velocity
 
-    def step(self, frame_dt, print_stat=False, smry_writer: SummaryWriter=None):
+    def step(self, frame_dt, print_stat=False, smry_writer=None):
         begin_t = time.time()
         begin_substep = self.total_substeps
 
@@ -729,6 +727,7 @@ class MPMSolver:
 
             self.cur_frame_velocity = self.compute_max_velocity()
             if smry_writer is not None:
+                from tensorboardX import SummaryWriter
                 smry_writer.add_scalar("substep_max_CFL", self.cur_frame_velocity * dt / self.dx, self.total_substeps)
             self.all_time_max_velocity = max(self.all_time_max_velocity,
                                              self.cur_frame_velocity)
