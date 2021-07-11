@@ -53,6 +53,7 @@ args = parse_args()
 
 ti.init(arch=ti.cuda,
         use_unified_memory=False,
+        debug=False,
         device_memory_GB=args.gpu_memory)
 
 output_folder = args.out_dir
@@ -85,7 +86,7 @@ def main():
             continue
         else:
             print('rendering...')
-        Path(output_fn).touch()
+
         t = time.time()
 
         renderer.set_camera_pos(3.24, 1.86, -4.57)
@@ -95,15 +96,16 @@ def main():
         if not os.path.exists(cur_render_input):
             print(f'warning, {cur_render_input} not existed, skip!')
             continue
+        Path(output_fn).touch()
         renderer.initialize_particles_from_taichi_elements(
             cur_render_input)
 
-        total_voxels = renderer.total_non_empty_voxels()
-        total_inserted_particles = renderer.total_inserted_particles()
-        print('Total particles (with motion blur)', total_inserted_particles)
-        print('Total nonempty voxels', total_voxels)
-        print('Average particle_list_length',
-              total_inserted_particles / total_voxels)
+        # total_voxels = renderer.total_non_empty_voxels()
+        # total_inserted_particles = renderer.total_inserted_particles()
+        # print('Total particles (with motion blur)', total_inserted_particles)
+        # print('Total nonempty voxels', total_voxels)
+        # print('Average particle_list_length',
+        #       total_inserted_particles / total_voxels)
         img = renderer.render_frame(spp=spp)
 
         if with_gui:

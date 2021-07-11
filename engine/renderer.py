@@ -587,7 +587,9 @@ class Renderer:
             print(begin, end)
             self.initialize_particle(np_x[begin:end], np_v[begin:end],
                                      np_color[begin:end], begin, end)
+        print("before init", flush=True)
         self.initialize_particle_grid()
+        print("after init", flush=True)
 
     def render_frame(self, spp):
         last_t = 0
