@@ -56,6 +56,7 @@ class MPMSolver:
             E_scale=1,
             voxelizer_super_sample=2,
             use_g2p2g=False,  # ref: A massively parallel and scalable multi-GPU material point method
+            v_clamp_g2p2g=True,
             use_bls=True,
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
@@ -63,6 +64,7 @@ class MPMSolver:
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
+        self.v_clamp_g2p2g = v_clamp_g2p2g
         self.use_bls = use_bls
         self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
         self.water_density = water_density
@@ -550,7 +552,7 @@ class MPMSolver:
                 grid_v[I] += dt * self.gravity[None]
 
             # clamp the velocity on grid, notice the grid_v is actually momentum
-            if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g):
+            if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g and self.v_clamp_g2p2g):
                 grid_v[I] = min(max(grid_v[I], -v_allowed), v_allowed)
 
     @ti.kernel
