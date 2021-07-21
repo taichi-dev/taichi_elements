@@ -103,6 +103,7 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=True,
+                elastic_stable=True,
                 support_plasticity=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),

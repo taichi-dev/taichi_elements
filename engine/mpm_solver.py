@@ -60,7 +60,9 @@ class MPMSolver:
             use_bls=True,
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
-            support_plasticity=True):
+            support_plasticity=True, # support snow sand hardening
+            elastic_stable=False
+    ):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
@@ -90,6 +92,7 @@ class MPMSolver:
         self.all_time_max_velocity = 0.0
         self.cur_frame_velocity = 0.0
         self.support_plasticity = support_plasticity
+        self.elastic_stable = elastic_stable
         self.F_bound = 4.0
 
         # affine velocity field
@@ -687,18 +690,48 @@ class MPMSolver:
             ti.atomic_max(max_velocity, v_max)
         return max_velocity
 
+    @ti.kernel
+    def compute_max_pwave_velocity(self) -> ti.f32:
+        min_j = 1e-6
+        rho = self.rho / self.E
+        K = 2 / 3 * self.mu_0 + self.lambda_0  # bulk modulus
+        for p in self.v: # before build_pid could not iterate pid
+            # TODO
+            ti.atomic_min(min_j, self.Jp[p])
+        v_sqr = 4 * self.mu_0 / (3 * rho) + K / self.p_rho * (1 - ti.log(min_j))
+        return ti.sqrt(v_sqr)
+
+
     def step(self, frame_dt, print_stat=False, smry_writer=None):
         begin_t = time.time()
         begin_substep = self.total_substeps
 
         substeps = int(frame_dt / self.default_dt) + 1
 
+        dt = frame_dt / substeps
+        # stability from elastic wave propagation
+        if self.elastic_stable:
+            if self.support_plasticity:
+                c = self.compute_max_pwave_velocity()
+            else:
+                # linear elasticity
+                rho = self.p_rho / self.E
+                c = ti.sqrt(self.E * (1 - self.nu) / ((1 - self.nu - 2 * self.nu ** 2) * rho))
+
+            t_critical = self.dx / c
+            print(f"t_critical: {t_critical}, subdt: {dt}, c: {c}")
+            dt = min(dt, t_critical * 0.7)
+
+            substeps = int(frame_dt / dt) + 1
+            dt = frame_dt / substeps
+
         if print_stat:
             print(f'needed substeps: {substeps}')
+
         for i in range(substeps):
             print('.', end='', flush=True)
             self.total_substeps += 1
-            dt = frame_dt / substeps
+            # dt = frame_dt / substeps
 
             if self.use_g2p2g:
                 output_grid = 1 - self.input_grid

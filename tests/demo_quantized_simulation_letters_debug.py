@@ -495,8 +495,8 @@ for frame in range(start_frame, args.frames):
     dt = frame_dt / (int(frame_dt / mpm.default_dt) + 1)
     frame_CFL = mpm.all_time_max_velocity * dt / mpm.dx
 
-    if frame % args.state_fre == 0:
-        save_mpm_state(mpm, frame, f'{output_dir}/states/{frame:05d}.npz')
+    # if frame % args.state_fre == 0:
+    #     save_mpm_state(mpm, frame, f'{output_dir}/states/{frame:05d}.npz')
 
     if with_gui and frame % 4 == 0:
         particles = {}

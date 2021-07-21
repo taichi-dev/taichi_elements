@@ -100,12 +100,12 @@ def main():
         renderer.initialize_particles_from_taichi_elements(
             cur_render_input)
 
-        # total_voxels = renderer.total_non_empty_voxels()
-        # total_inserted_particles = renderer.total_inserted_particles()
-        # print('Total particles (with motion blur)', total_inserted_particles)
-        # print('Total nonempty voxels', total_voxels)
-        # print('Average particle_list_length',
-        #       total_inserted_particles / total_voxels)
+        total_voxels = renderer.total_non_empty_voxels()
+        total_inserted_particles = renderer.total_inserted_particles()
+        print('Total particles (with motion blur)', total_inserted_particles)
+        print('Total nonempty voxels', total_voxels)
+        print('Average particle_list_length',
+              total_inserted_particles / total_voxels)
         img = renderer.render_frame(spp=spp)
 
         if with_gui:
