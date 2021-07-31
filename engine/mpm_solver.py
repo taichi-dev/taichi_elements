@@ -61,7 +61,7 @@ class MPMSolver:
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
             support_plasticity=True, # support snow sand hardening
-            elastic_stable=False
+            adaptive_dt=False
     ):
         self.dim = len(res)
         self.quant = quant
@@ -92,7 +92,7 @@ class MPMSolver:
         self.all_time_max_velocity = 0.0
         self.cur_frame_velocity = 0.0
         self.support_plasticity = support_plasticity
-        self.elastic_stable = elastic_stable
+        self.adaptive_dt = adaptive_dt
         self.F_bound = 4.0
 
         # affine velocity field
@@ -691,6 +691,17 @@ class MPMSolver:
         return max_velocity
 
     @ti.kernel
+    def compute_max_grid_velocity(self, grid_v:ti.template()) -> ti.f32:
+        max_velocity = 0.0
+        for I in ti.grouped(grid_v):
+            v = grid_v[I]
+            v_max = 0.0
+            for i in ti.static(range(self.dim)):
+                v_max = max(v_max, abs(v[i]))
+            ti.atomic_max(max_velocity, v_max)
+        return max_velocity
+
+    @ti.kernel
     def compute_max_pwave_velocity(self) -> ti.f32:
         min_j = 1e-6
         rho = self.rho / self.E
@@ -710,28 +721,34 @@ class MPMSolver:
 
         dt = frame_dt / substeps
         # stability from elastic wave propagation
-        if self.elastic_stable:
-            if self.support_plasticity:
-                c = self.compute_max_pwave_velocity()
-            else:
-                # linear elasticity
-                rho = self.p_rho / self.E
-                c = ti.sqrt(self.E * (1 - self.nu) / ((1 - self.nu - 2 * self.nu ** 2) * rho))
+        # if self.elastic_stable:
+        #     if self.support_plasticity:
+        #         c = self.compute_max_pwave_velocity()
+        #     else:
+        #         # linear elasticity
+        #         rho = self.p_rho / self.E
+        #         c = ti.sqrt(self.E * (1 - self.nu) / ((1 - self.nu - 2 * self.nu ** 2) * rho))
+        #
+        #     t_critical = self.dx / c
+        #     print(f"t_critical: {t_critical}, subdt: {dt}, c: {c}")
+        #     dt = min(dt, t_critical * 0.7)
+        #
+        #     substeps = int(frame_dt / dt) + 1
+        #     dt = frame_dt / substeps
 
-            t_critical = self.dx / c
-            print(f"t_critical: {t_critical}, subdt: {dt}, c: {c}")
-            dt = min(dt, t_critical * 0.7)
-
-            substeps = int(frame_dt / dt) + 1
-            dt = frame_dt / substeps
-
+        cur_frame_dt = frame_dt
         if print_stat:
             print(f'needed substeps: {substeps}')
 
-        for i in range(substeps):
+        while cur_frame_dt > 0:
             print('.', end='', flush=True)
             self.total_substeps += 1
-            # dt = frame_dt / substeps
+            if self.adaptive_dt:
+                max_grid_v = self.compute_max_grid_velocity(self.grid_v[self.input_grid])
+                cfl_dt = self.g2p2g_allowed_cfl * self.dx / (max_grid_v + 1e-6)
+                dt = min(dt, cfl_dt, cur_frame_dt)
+                print(dt)
+            cur_frame_dt -= dt
 
             if self.use_g2p2g:
                 output_grid = 1 - self.input_grid
