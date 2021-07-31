@@ -85,6 +85,7 @@ class Renderer:
 
         ti.root.dense(ti.ij, res).place(self.color_buffer)
 
+        self.block_size = 8
         self.particle_bucket = ti.root.pointer(ti.ijk,
                                                self.particle_grid_res // 8)
         self.particle_bucket.dense(ti.ijk, 8).dynamic(
@@ -485,6 +486,7 @@ class Renderer:
             offset_begin_grid = int(ti.floor(
                 offset_begin_grid * self.inv_dx)) - 1
             offset_end_grid = int(ti.ceil(offset_end_grid * self.inv_dx)) + 2
+            # print(f"offset: {offset_begin_grid}, {offset_end_grid}")
 
             for i in range(offset_begin_grid[0], offset_end_grid[0]):
                 for j in range(offset_begin_grid[1], offset_end_grid[1]):
@@ -584,12 +586,13 @@ class Renderer:
         for i in range(num_slices):
             begin = slice_size * i
             end = min(num_part, begin + slice_size)
-            print(begin, end)
             self.initialize_particle(np_x[begin:end], np_v[begin:end],
                                      np_color[begin:end], begin, end)
+        ti.sync()
         print("before init", flush=True)
         self.initialize_particle_grid()
         print("after init", flush=True)
+        ti.sync()
 
     def render_frame(self, spp):
         last_t = 0
