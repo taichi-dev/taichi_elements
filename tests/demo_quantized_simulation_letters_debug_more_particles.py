@@ -46,7 +46,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=22.5,
+        device_memory_GB=22,
         debug=False)
 # numpy array would occupy out of the allocated device_memory_GB, so handle the memory with cautious
 
@@ -103,7 +103,8 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=True,
-                elastic_stable=True,
+                adaptive_dt=False,
+                v_clamp_g2p2g=True,
                 support_plasticity=False)
 
 mpm.add_surface_collider(point=(0, 0, 0),
@@ -196,7 +197,7 @@ def seed_bars(subframe):
                          material=MPMSolver.material_elastic,
                          color=color,
                          velocity=(0, -10, 0),
-                         translation=((i - 0.5) * 0.6 - 0.5, 1.1 + 0.01 * y, 0.1))
+                         translation=((i - 0.5) * 0.6 - 0.5, 1.1 + 0.01 * y, 0.1 + 1 * y))
 
 
 @ti.kernel

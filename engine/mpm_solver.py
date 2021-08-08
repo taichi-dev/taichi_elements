@@ -167,18 +167,18 @@ class MPMSolver:
             grid = ti.root.pointer(indices, self.grid_size // grid_block_size)
             block = grid.pointer(indices,
                                  grid_block_size // self.leaf_block_size)
+            self.block = block
             self.grid.append(grid)
 
             def block_component(c):
                 block.dense(indices, self.leaf_block_size).place(c,
                                                                  offset=offset)
-
             block_component(grid_m)
             for v in grid_v.entries:
                 block_component(v)
 
             self.pid.append(pid)
-            # TODO ? why
+
             block_offset = tuple(o // self.leaf_block_size for o in self.offset)
             block.dynamic(ti.indices(self.dim),
                           1024 * 1024,
@@ -720,22 +720,6 @@ class MPMSolver:
         substeps = int(frame_dt / self.default_dt) + 1
 
         dt = frame_dt / substeps
-        # stability from elastic wave propagation
-        # if self.elastic_stable:
-        #     if self.support_plasticity:
-        #         c = self.compute_max_pwave_velocity()
-        #     else:
-        #         # linear elasticity
-        #         rho = self.p_rho / self.E
-        #         c = ti.sqrt(self.E * (1 - self.nu) / ((1 - self.nu - 2 * self.nu ** 2) * rho))
-        #
-        #     t_critical = self.dx / c
-        #     print(f"t_critical: {t_critical}, subdt: {dt}, c: {c}")
-        #     dt = min(dt, t_critical * 0.7)
-        #
-        #     substeps = int(frame_dt / dt) + 1
-        #     dt = frame_dt / substeps
-
         cur_frame_dt = frame_dt
         if print_stat:
             print(f'needed substeps: {substeps}')

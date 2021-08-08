@@ -8,7 +8,7 @@ The plan is
  - To integrate the simulator into Blender
 
 # Using `taichi_elements` in Python
- - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
+ - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`, then run with `python3 download_ply.py` to download model flies for demo.
  - `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
  
