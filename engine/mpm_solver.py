@@ -180,6 +180,7 @@ class MPMSolver:
             self.pid.append(pid)
 
             block_offset = tuple(o // self.leaf_block_size for o in self.offset)
+            self.block_offset = block_offset
             block.dynamic(ti.indices(self.dim),
                           1024 * 1024,
                           chunk_size=self.leaf_block_size ** self.dim * 8).place(
