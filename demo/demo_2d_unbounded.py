@@ -9,8 +9,8 @@ write_to_disk = False
 ti.init(arch=ti.cuda)  # Try to run on GPU
 
 gui = ti.GUI("Taichi MLS-MPM", res=512, background_color=0x112F41)
-
-mpm = MPMSolver(res=(128, 128), unbounded=True)
+# set padding bigger to avoid particles go out of bound
+mpm = MPMSolver(res=(128, 128), unbounded=True, padding=16)
 mpm.add_surface_collider(point=(0, 0.0),
                          normal=(0.3, 1),
                          surface=mpm.surface_slip)
