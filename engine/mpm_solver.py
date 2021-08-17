@@ -358,11 +358,6 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            #  if ti.static(self.g2p2g_allowed_cfl > 0):
-            #     v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
-            #     for d in ti.static(range(self.dim)):
-            #         new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
-
             self.v[p] = new_v
             self.x[p] += dt * self.v[p]  # advection
 
@@ -555,7 +550,7 @@ class MPMSolver:
                 grid_v[I] = (1 / grid_m[I]) * grid_v[I]  # Momentum to velocity
                 grid_v[I] += dt * self.gravity[None]
 
-            # clamp the velocity on grid, notice the grid_v is actually momentum
+            # clamp the velocity on grid
             if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g and self.v_clamp_g2p2g):
                 grid_v[I] = min(max(grid_v[I], -v_allowed), v_allowed)
 
@@ -701,18 +696,6 @@ class MPMSolver:
                 v_max = max(v_max, abs(v[i]))
             ti.atomic_max(max_velocity, v_max)
         return max_velocity
-
-    @ti.kernel
-    def compute_max_pwave_velocity(self) -> ti.f32:
-        min_j = 1e-6
-        rho = self.rho / self.E
-        K = 2 / 3 * self.mu_0 + self.lambda_0  # bulk modulus
-        for p in self.v: # before build_pid could not iterate pid
-            # TODO
-            ti.atomic_min(min_j, self.Jp[p])
-        v_sqr = 4 * self.mu_0 / (3 * rho) + K / self.p_rho * (1 - ti.log(min_j))
-        return ti.sqrt(v_sqr)
-
 
     def step(self, frame_dt, print_stat=False, smry_writer=None):
         begin_t = time.time()

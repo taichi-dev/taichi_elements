@@ -44,7 +44,7 @@ write_to_disk = args.out_dir is not None
 # Try to run on GPU
 
 ti.init(arch=ti.cuda,
-        kernel_profiler=True,
+        kernel_profiler=False,
         use_unified_memory=False,
         device_memory_GB=22,
         debug=False)
@@ -197,7 +197,7 @@ def seed_bars(subframe):
                          material=MPMSolver.material_elastic,
                          color=color,
                          velocity=(0, -10, 0),
-                         translation=((i - 0.5) * 0.6 - 0.5, 1.1 + 0.01 * y, 0.1 + 1 * y))
+                         translation=((i - 0.5) * 3.0 - 0.5, 1.1 + 0.4 * y, 0.1 + 1 * y))
 
 
 @ti.kernel
