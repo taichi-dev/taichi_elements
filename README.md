@@ -11,19 +11,43 @@ The plan is
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`, then run with `python3 download_ply.py` to download model flies for demo.
  - `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
- 
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
+
+## Learn how to use sparse SNode in a simple sparse MPM example
+
+tutorial [here](https://taichi.readthedocs.io/en/stable/sparse.html)
+
+
 
 ## To simulate and render an example 3D scene with Python
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
  - Download [`taichi.ply`](https://github.com/taichi-dev/taichi_elements_blender_examples/releases/download/ply/taichi.ply) and run `python3 demo_3d_letters.py` (wait for at least 10 frames)
    - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
- - `python3 engine/render_particles [particle_input_folder] [begin] [end] [step] [render_output_folder]`
-   - E.g., `python3 engine/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
+ - here is an example
+
+   - ```python
+     python engine/render_particles
+     -i ./path/to/particles #input directory
+     -b 0 -e 400 -s 1 # render 0~400 frame with step 1
+     -o ./path/output
+     --gpu-memory 20 # 20GB GPU memory
+     -M 460 # at maximum 460 million particles
+     --shutter-time 0.0 # How much Motion blur effect.
+     # Notice Memory usage increase when shutter_time increases
+     -r 128 # rendering spatial grid dimension
+     ```
+
+     
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
+
+- Here is an example running 450 million particles.
+
+  TODO
+
+- 
 
 # Using `taichi_elements` in Blender
 
