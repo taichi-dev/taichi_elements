@@ -39,9 +39,10 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=20)
+        device_memory_GB=20
+        )
 
-max_num_particles = 235000000
+max_num_particles = 450000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -92,7 +93,10 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=True,
-                support_plasticity=False)
+                support_plasticity=False,
+                # adaptive_dt=True,
+                v_clamp_g2p2g=True
+                )
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
