@@ -8,22 +8,18 @@ The plan is
  - To integrate the simulator into Blender
 
 # Using `taichi_elements` in Python
- - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`, then run with `python3 download_ply.py` to download model flies for demo.
+ - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
+ - Execute `python3 download_ply.py` to download model files used by the demos
  - `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
+
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
-
-## Learn how to use sparse SNode in a simple sparse MPM example
-
-tutorial [here](https://taichi.readthedocs.io/en/stable/sparse.html)
-
-
 
 ## To simulate and render an example 3D scene with Python
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
  - Download [`taichi.ply`](https://github.com/taichi-dev/taichi_elements_blender_examples/releases/download/ply/taichi.ply) and run `python3 demo_3d_letters.py` (wait for at least 10 frames)
    - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
- - here is an example
+ - Example:
 
    - ```python
      python engine/render_particles
@@ -48,7 +44,7 @@ tutorial [here](https://taichi.readthedocs.io/en/stable/sparse.html)
   TODO
 
 - 
-
+## [Learn about sparse computation in Taichi](https://docs.taichi.graphics/docs/lang/articles/advanced/sparse)
 # Using `taichi_elements` in Blender
 
 ## Installing Taichi for Blender
