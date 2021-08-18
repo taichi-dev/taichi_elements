@@ -217,7 +217,7 @@ def taichi_logo(pos, scale=1 / 1.11):
 
 def seed_bars(subframe):
 
-    n = 64
+    n = 96
     for x, z in ti.ndrange(n, n):
         ret = taichi_logo(ti.Vector([x, z]) / (n))
         # color = 0xFFFFFF if ret == 1 else 0x000000
@@ -530,14 +530,15 @@ for frame in range(start_frame, args.frames):
         frame_split = 1
 
     frame_dt = 1e-2 / frame_split
-    for subframe in range(frame * frame_split, (frame + 1) * frame_split):
-        if mpm.n_particles[None] < max_num_particles:
-            if args.thin:
-                seed_letters(subframe)
-            else:
-                seed_bars(subframe)
+    if frame < 4:
+        for subframe in range(frame * frame_split, (frame + 1) * frame_split):
+            if mpm.n_particles[None] < max_num_particles:
+                if args.thin:
+                    seed_letters(subframe)
+                else:
+                    seed_bars(subframe)
 
-        mpm.step(frame_dt, print_stat=True, smry_writer=smry_writter)
+    mpm.step(frame_dt, print_stat=True, smry_writer=smry_writter)
 
     dt = frame_dt / (int(frame_dt / mpm.default_dt) + 1)
     frame_CFL = mpm.all_time_max_velocity * dt / mpm.dx

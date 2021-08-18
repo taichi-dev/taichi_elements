@@ -43,7 +43,7 @@ ti.init(arch=ti.cuda,
         use_unified_memory=False,
         device_memory_GB=20)
 
-max_num_particles = 235000000
+max_num_particles = 450000000
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",
@@ -94,7 +94,8 @@ mpm = MPMSolver(res=(R, R, R),
                 dt_scale=1,
                 quant=True,
                 use_g2p2g=True,
-                support_plasticity=False)
+                support_plasticity=False,
+                v_clamp_g2p2g=True)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),
@@ -205,7 +206,7 @@ for frame in range(args.frames):
         particles = mpm.particle_info()
         visualize(particles, frame, output_dir)
 
-    if write_to_disk and frame % 16:
+    if write_to_disk and frame % 128:
         mpm.write_particles(f'{output_dir}/particles/{frame:05d}.npz')
     print(f'Frame total time {time.time() - t:.3f}')
     print(f'Total running time {time.time() - start_t:.3f}')

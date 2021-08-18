@@ -89,7 +89,7 @@ def main():
 
         t = time.time()
 
-        renderer.set_camera_pos(3.24, 1.86, -4.57)
+        renderer.set_camera_pos(3.24, 2.86, -4.57)
         renderer.floor_height[None] = -5e-3
 
         cur_render_input = f'{args.in_dir}/{f:05d}.npz'

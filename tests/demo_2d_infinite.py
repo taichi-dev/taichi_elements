@@ -23,7 +23,7 @@ ti.init(arch=ti.cuda)  # Try to run on GPU
 
 gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
 
-mpm = MPMSolver(res=(128, 128))
+mpm = MPMSolver(res=(128, 128),)
 
 for i in range(3):
     mpm.add_cube(lower_corner=[0.2 + i * 0.1, 0.3 + i * 0.1],
@@ -33,7 +33,7 @@ for i in range(3):
 for frame in range(500):
     mpm.step(8e-3)
     if frame < 500:
-        mpm.add_cube(lower_corner=[0.1, 0.8],
+        mpm.add_cube(lower_corner=[0.1, 5.8],
                      cube_size=[0.01, 0.05],
                      velocity=[1, 0],
                      material=MPMSolver.material_sand)
@@ -51,6 +51,7 @@ for frame in range(500):
     colors = np.array([0x068587, 0xED553B, 0xEEEEF0, 0xFFFF00],
                       dtype=np.uint32)
     particles = mpm.particle_info()
+    print(particles['position'])
     gui.circles(particles['position'],
                 radius=1.5,
                 color=colors[particles['material']])
