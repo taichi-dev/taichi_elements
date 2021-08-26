@@ -41,9 +41,9 @@ def block_active(vs_field: ti.template(), solver: ti.template()):
         # print(blk_I, I)
         if ti.is_active(solver.block, blk_I):
 
-            vs_field[I] = 1.0
+            vs_field[I] = 0.1
         else:
-            vs_field[I] = 0.8
+            vs_field[I] = 0.0
 
 
 for frame in range(500):
@@ -74,6 +74,6 @@ for frame in range(500):
     block_active(activate_vis, mpm)
     gui.set_image(activate_vis)
     gui.circles(particles['position'],
-                radius=1.5,
+                radius=0.8,
                 color=colors[particles['material']])
     gui.show(f'{args.out_dir}/{frame:06d}.png' if write_to_disk else None)
