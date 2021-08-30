@@ -174,8 +174,10 @@ class MPMSolver:
                 block.dense(indices, self.leaf_block_size).place(c,
                                                                  offset=offset)
             block_component(grid_m)
-            for v in grid_v.entries:
-                block_component(v)
+            for d in range(self.dim):
+                block_component(grid_v.get_scalar_field(d))
+            # for v in grid_v.with_entries:
+            #     block_component(v)
 
             self.pid.append(pid)
 
@@ -215,21 +217,21 @@ class MPMSolver:
 
             if self.dim == 3:
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 0), self.F(0, 1))
+                    self.F.get_scalar_field(0, 0), self.F.get_scalar_field(0, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 2), self.F(1, 0))
+                    self.F.get_scalar_field(0, 2), self.F.get_scalar_field(1, 0))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(1, 1), self.F(1, 2))
+                    self.F.get_scalar_field(1, 1), self.F.get_scalar_field(1, 2))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(2, 0), self.F(2, 1))
+                    self.F.get_scalar_field(2, 0), self.F.get_scalar_field(2, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(2, 2), self.material)
+                    self.F.get_scalar_field(2, 2), self.material)
             else:
                 assert self.dim == 2
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 0), self.F(0, 1))
+                    self.F.get_scalar_field(0, 0), self.F.get_scalar_field(0, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(1, 0), self.F(1, 1))
+                    self.F.get_scalar_field(1, 0), self.F.get_scalar_field(1, 1))
                 # no quantization on particle material in 2D
                 self.particle.place(self.material)
             self.particle.place(self.color)
@@ -327,9 +329,9 @@ class MPMSolver:
         ti.block_dim(256)
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
-            ti.block_local(*grid_v_in.entries)
+            ti.block_local(*[grid_v_in.get_scalar_field(d) for d in range(self.dim)])
             ti.block_local(grid_m_out)
-            ti.block_local(*grid_v_out.entries)
+            ti.block_local(*[grid_v_out.get_scalar_field(d) for d in range(self.dim)])
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -448,7 +450,8 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*self.grid_v.entries)
+            ti.block_local(*[self.grid_v.get_scalar_field(d) for d in range(self.dim)])
+            # ti.block_local(*self.grid_v.entries)
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -649,7 +652,8 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*self.grid_v.entries)
+            ti.block_local(*[self.grid_v.get_scalar_field(d) for d in range(self.dim)])
+            # ti.block_local(*self.grid_v.entries)
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -752,7 +756,7 @@ class MPMSolver:
         print()
 
         if print_stat:
-            ti.kernel_profiler_print()
+            ti.print_kernel_profile_info()
             try:
                 ti.memory_profiler_print()
             except:
