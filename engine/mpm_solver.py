@@ -168,8 +168,7 @@ class MPMSolver:
                                                                  offset=offset)
 
             block_component(grid_m)
-            for v in grid_v.entries:
-                block_component(v)
+            block_component(grid_v)
 
             self.pid.append(pid)
             # TODO ? why
@@ -321,9 +320,9 @@ class MPMSolver:
         ti.block_dim(256)
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
-            ti.block_local(*grid_v_in.entries)
+            ti.block_local(grid_v_in)
             ti.block_local(grid_m_out)
-            ti.block_local(*grid_v_out.entries)
+            ti.block_local(grid_v_out)
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -447,7 +446,7 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*self.grid_v.entries)
+            ti.block_local(self.grid_v)
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -643,7 +642,7 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*self.grid_v.entries)
+            ti.block_local(self.grid_v)
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
