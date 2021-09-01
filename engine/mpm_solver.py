@@ -793,6 +793,67 @@ class MPMSolver:
         self.seed(num_new_particles, material, color)
         self.n_particles[None] += num_new_particles
 
+    def add_ngon(
+        self,
+        sides,
+        center,
+        radius,
+        angle,
+        material,
+        color=0xFFFFFF,
+        sample_density=None,
+        velocity=None,
+        ):
+        if self.dim != 2:
+            raise ValueError("Add Ngon only works for 2D simulations")
+
+        if sample_density is None:
+            sample_density = 2 ** self.dim
+
+        num_particles = 0.5 * (radius * self.inv_dx) ** 2 * math.sin(2 * math.pi / sides) * sides
+
+        num_particles = int(math.ceil(num_particles * sample_density))
+
+        self.source_bound[0] = center
+        self.source_bound[1] = [radius, radius]
+
+        self.set_source_velocity(velocity=velocity)
+
+        assert self.n_particles[None] + num_particles <= self.max_num_particles
+
+        self.seed_polygon(num_particles, sides, angle, material, color)
+        self.n_particles[None] += num_particles
+
+    @ti.func
+    def random_point_in_unit_polygon(self, sides, angle):
+        point = ti.Vector.zero(ti.f32, 2)
+        central_angle = 2 * math.pi / sides
+        while True:
+            point = ti.Vector([ti.random(), ti.random()]) * 2 - 1
+            point_angle = ti.atan2(point.y, point.x)
+            theta = (point_angle - angle) % central_angle # polygon angle is from +X axis
+            phi = central_angle / 2
+            dist = ti.sqrt((point ** 2).sum())
+            if dist < ti.cos(phi) / ti.cos(phi - theta):
+                break
+        return point
+
+    @ti.kernel
+    def seed_polygon(
+        self,
+        new_particles: ti.i32,
+        sides: ti.i32,
+        angle: ti.f32,
+        new_material: ti.i32,
+        color: ti.i32
+    ):
+        for i in range(self.n_particles[None],
+                       self.n_particles[None] + new_particles):
+            x = self.random_point_in_unit_polygon(sides, angle)
+            x = self.source_bound[0] + x * self.source_bound[1]
+            self.seed_particle(i, x, new_material, color,
+                            self.source_velocity[None])
+
     @ti.kernel
     def add_texture_2d(self, offset_x: ti.f32, offset_y: ti.f32,
                        texture: ti.ext_arr()):
