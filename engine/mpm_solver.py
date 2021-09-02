@@ -19,11 +19,13 @@ class MPMSolver:
     material_elastic = 1
     material_snow = 2
     material_sand = 3
+    material_stationary = 4
     materials = {
         'WATER': material_water,
         'ELASTIC': material_elastic,
         'SNOW': material_snow,
-        'SAND': material_sand
+        'SAND': material_sand,
+        'STATIONARY': material_stationary,
     }
 
     # Surface boundary conditions
@@ -133,7 +135,7 @@ class MPMSolver:
         else:
             indices = ti.ijk
 
-        offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
+        offset = tuple((res[i] - self.grid_size) // 2 for i in range(self.dim))
         self.offset = offset
 
         self.num_grids = 2 if self.use_g2p2g else 1
@@ -355,9 +357,9 @@ class MPMSolver:
                 v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
                 for d in ti.static(range(self.dim)):
                     new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
-
-            self.v[p] = new_v
-            self.x[p] += dt * self.v[p]  # advection
+            if self.material[p] != self.material_stationary:
+                self.v[p] = new_v
+                self.x[p] += dt * self.v[p]  # advection
 
             # P2G
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
@@ -665,8 +667,9 @@ class MPMSolver:
                     weight *= w[offset[d]][d]
                 new_v += weight * g_v
                 new_C += 4 * self.inv_dx * weight * g_v.outer_product(dpos)
-            self.v[p], self.C[p] = new_v, new_C
-            self.x[p] += dt * self.v[p]  # advection
+            if self.material[p] != self.material_stationary:
+                self.v[p], self.C[p] = new_v, new_C
+                self.x[p] += dt * self.v[p]  # advection
 
     @ti.kernel
     def compute_max_velocity(self) -> ti.f32:
