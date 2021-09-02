@@ -10,7 +10,7 @@ class ParticleIO:
     x_bits = 32 - v_bits
 
     @staticmethod
-    def write_particles(solver, fn):
+    def write_particles(solver, fn, slice_size=1000000):
         t = time.time()
         output_fn = fn
 
@@ -21,7 +21,6 @@ class ParticleIO:
         ranges = np.ndarray((2, solver.dim, 2), dtype=np.float32)
 
         # Fetch data slice after slice since we don't have the GPU memory to fetch them channel after channel...
-        slice_size = 1000000
         num_slices = (n_particles + slice_size - 1) // slice_size
 
         for d in range(solver.dim):
