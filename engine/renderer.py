@@ -402,7 +402,7 @@ class Renderer:
         ti.block_dim(256)
         for u, v in self.color_buffer:
             fov = self.fov[None]
-            pos = self.camera_pos
+            pos = self.camera_pos[None]
             d = (self.look_at[None] - self.camera_pos[None]).normalized()
             fu = (2 * fov * (u + ti.random(ti.f32)) / res[1] -
                   fov * aspect_ratio - 1e-5)

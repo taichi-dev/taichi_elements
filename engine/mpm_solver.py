@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 21)
+ti.require_version(0, 7, 31)
 
 
 # TODO: water needs Jp - fix this.
@@ -758,7 +758,7 @@ class MPMSolver:
         if print_stat:
             ti.print_kernel_profile_info()
             try:
-                ti.memory_profiler_print()
+                ti.print_memory_profile_info()
             except:
                 pass
             print(f'CFL: {self.cur_frame_velocity * dt / self.dx}')
