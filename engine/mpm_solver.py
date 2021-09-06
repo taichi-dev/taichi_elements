@@ -43,7 +43,7 @@ class MPMSolver:
         'SEPARATE': surface_separate
     }
 
-    grid_size = 6144
+    grid_size = 4096
 
     def __init__(
             self,
@@ -135,6 +135,12 @@ class MPMSolver:
         else:
             indices = ti.ijk
 
+        if unbounded:
+            # The maximum grid size must be larger than twice of 
+            # simulation resolution in an unbounded simulation,
+            # Otherwise the top and right sides will be bounded by grid size
+            while self.grid_size <= 2 * self.res:
+                self.grid_size *= 2 # keep it power of two
         offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
         self.offset = offset
 
@@ -324,7 +330,7 @@ class MPMSolver:
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
             ti.block_local(grid_m_out)
-            for i in range(self.dim):
+            for i in ti.static(range(self.dim)):
                 ti.block_local(grid_v_in.get_scalar_field(i))
                 ti.block_local(grid_v_out.get_scalar_field(i))
         for I in ti.grouped(pid):
@@ -450,7 +456,7 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            for i in range(self.dim):
+            for i in ti.static(range(self.dim)):
                 ti.block_local(self.grid_v.get_scalar_field(i))
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
@@ -647,7 +653,7 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            for i in range(self.dim):
+            for i in ti.static(range(self.dim)):
                 ti.block_local(self.grid_v.get_scalar_field(i))
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
