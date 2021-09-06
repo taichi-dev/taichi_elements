@@ -170,8 +170,8 @@ class MPMSolver:
                                                                  offset=offset)
 
             block_component(grid_m)
-            for e in grid_v.get_field_members():
-                block_component(e)
+            for i in range(self.dim):
+                block_component(grid_v.get_scalar_field(i))
 
             self.pid.append(pid)
             # TODO ? why
