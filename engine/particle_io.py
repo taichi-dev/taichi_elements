@@ -34,7 +34,7 @@ class ParticleIO:
                 begin = slice_size * s
                 end = min(slice_size * (s + 1), n_particles)
                 solver.copy_ranged(np_x_slice, solver.x.get_scalar_field(d), begin, end)
-                solver.copy_ranged(np_v_slice, solver.x.get_scalar_field(d), begin, end)
+                solver.copy_ranged(np_v_slice, solver.v.get_scalar_field(d), begin, end)
 
                 np_x[begin:end] = np_x_slice[:end - begin]
                 np_v[begin:end] = np_v_slice[:end - begin]
