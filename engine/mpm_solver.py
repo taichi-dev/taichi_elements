@@ -43,7 +43,7 @@ class MPMSolver:
         'SEPARATE': surface_separate
     }
 
-    grid_size = 4096
+    grid_size = 6144
 
     def __init__(
             self,
@@ -135,7 +135,7 @@ class MPMSolver:
         else:
             indices = ti.ijk
 
-        offset = tuple((res[i] - self.grid_size) // 2 for i in range(self.dim))
+        offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
         self.offset = offset
 
         self.num_grids = 2 if self.use_g2p2g else 1
@@ -170,7 +170,8 @@ class MPMSolver:
                                                                  offset=offset)
 
             block_component(grid_m)
-            block_component(grid_v)
+            for e in grid_v.get_field_members():
+                block_component(e)
 
             self.pid.append(pid)
             # TODO ? why
