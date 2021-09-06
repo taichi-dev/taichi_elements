@@ -323,9 +323,10 @@ class MPMSolver:
         ti.block_dim(256)
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
-            ti.block_local(grid_v_in)
             ti.block_local(grid_m_out)
-            ti.block_local(grid_v_out)
+            for i in range(self.dim):
+                ti.block_local(grid_v_in.get_scalar_field(i))
+                ti.block_local(grid_v_out.get_scalar_field(i))
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -449,7 +450,8 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(self.grid_v)
+            for i in range(self.dim):
+                ti.block_local(self.grid_v.get_scalar_field(i))
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -645,7 +647,8 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(self.grid_v)
+            for i in range(self.dim):
+                ti.block_local(self.grid_v.get_scalar_field(i))
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
