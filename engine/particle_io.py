@@ -10,7 +10,7 @@ class ParticleIO:
     x_bits = 32 - v_bits
 
     @staticmethod
-    def write_particles(solver, fn):
+    def write_particles(solver, fn, slice_size=1000000):
         t = time.time()
         output_fn = fn
 
@@ -21,7 +21,6 @@ class ParticleIO:
         ranges = np.ndarray((2, solver.dim, 2), dtype=np.float32)
 
         # Fetch data slice after slice since we don't have the GPU memory to fetch them channel after channel...
-        slice_size = 1000000
         num_slices = (n_particles + slice_size - 1) // slice_size
 
         for d in range(solver.dim):
@@ -34,8 +33,8 @@ class ParticleIO:
             for s in range(num_slices):
                 begin = slice_size * s
                 end = min(slice_size * (s + 1), n_particles)
-                solver.copy_ranged(np_x_slice, solver.x(d), begin, end)
-                solver.copy_ranged(np_v_slice, solver.v(d), begin, end)
+                solver.copy_ranged(np_x_slice, solver.x.get_scalar_field(d), begin, end)
+                solver.copy_ranged(np_v_slice, solver.v.get_scalar_field(d), begin, end)
 
                 np_x[begin:end] = np_x_slice[:end - begin]
                 np_v[begin:end] = np_v_slice[:end - begin]
@@ -76,6 +75,14 @@ class ParticleIO:
 
     @staticmethod
     def read_particles_3d(fn):
+        return ParticleIO.read_particles(fn, 3)
+
+    @staticmethod
+    def read_particles_2d(fn):
+        return ParticleIO.read_particles(fn, 2)
+
+    @staticmethod
+    def read_particles(fn, dim):
         data = np.load(fn)
         ranges = data['ranges']
         color = data['color']
@@ -84,13 +91,13 @@ class ParticleIO:
         gc.collect()
         x = (x_and_v >> ParticleIO.v_bits).astype(np.float32) / (
             (2**ParticleIO.x_bits - 1))
-        for c in range(3):
+        for c in range(dim):
             x[:,
               c] = x[:, c] * (ranges[0, c, 1] - ranges[0, c, 0]) + ranges[0, c,
                                                                           0]
         v = (x_and_v & (2**ParticleIO.v_bits - 1)).astype(
             np.float32) / (2**ParticleIO.v_bits - 1)
-        for c in range(3):
+        for c in range(dim):
             v[:,
               c] = v[:, c] * (ranges[1, c, 1] - ranges[1, c, 0]) + ranges[1, c,
                                                                           0]

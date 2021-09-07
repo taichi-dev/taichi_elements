@@ -8,4 +8,4 @@ urls = ["bunny_low.ply", "quantized.ply", "simulation.ply", "taichi.ply", "suzan
 for url in urls:
     print(f"Downloading {url}...")
     urllib.request.urlretrieve(root_url + url, url)
-print("Download finished !")
+print("Download finished!")
