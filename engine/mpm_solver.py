@@ -43,8 +43,6 @@ class MPMSolver:
         'SEPARATE': surface_separate
     }
 
-    grid_size = 4096
-
     def __init__(
             self,
             res,
@@ -68,6 +66,8 @@ class MPMSolver:
         self.use_bls = use_bls
         self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
         self.water_density = water_density
+        self.grid_size = 4096
+
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -139,7 +139,7 @@ class MPMSolver:
             # The maximum grid size must be larger than twice of 
             # simulation resolution in an unbounded simulation,
             # Otherwise the top and right sides will be bounded by grid size
-            while self.grid_size <= 2 * self.res:
+            while self.grid_size <= 2 * max(self.res):
                 self.grid_size *= 2 # keep it power of two
         offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
         self.offset = offset
