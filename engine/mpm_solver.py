@@ -176,8 +176,6 @@ class MPMSolver:
             block_component(grid_m)
             for d in range(self.dim):
                 block_component(grid_v.get_scalar_field(d))
-            # for v in grid_v.with_entries:
-            #     block_component(v)
 
             self.pid.append(pid)
 

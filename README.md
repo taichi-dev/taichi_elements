@@ -9,11 +9,19 @@ The plan is
 
 # Using `taichi_elements` in Python
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
+
  - Execute `python3 download_ply.py` to download model files used by the demos
+
  - `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
 
  - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
+
+ - `python3 demo/demo_2d_show_active_bound.py` to get a visual understanding on how Taichi sparse `SNodes` work
+
+    <img src="https://github.com/Jack12xl/public_files/raw/master/taichi_elements/active_bound_grid.gif" height="600px">
+
+    
 
 ## To simulate and render an example 3D scene with Python
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
@@ -22,7 +30,7 @@ The plan is
  - Example:
 
    - ```python
-     python engine/render_particles
+     python engine/render_particles \
      -i ./path/to/particles #input directory
      -b 0 -e 400 -s 1 # render 0~400 frame with step 1
      -o ./path/output
@@ -33,17 +41,15 @@ The plan is
      -r 128 # rendering spatial grid dimension
      ```
 
-     
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
 
-- Here is an example running 450 million particles.
+- Here is an example running 460 million particles with **Quantization** in only `24` GB GPU memory.(40 bytes per particle)
 
-  TODO
+  <img src="https://github.com/Jack12xl/public_files/raw/master/taichi_elements/460M.png" height="600px">
 
-- 
 ## [Learn about sparse computation in Taichi](https://docs.taichi.graphics/docs/lang/articles/advanced/sparse)
 # Using `taichi_elements` in Blender
 
