@@ -249,12 +249,13 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         solv.set_gravity(tuple(cls.gravity[0]))
 
         self.emitters = cls.emitters
-        for collider in cls.colliders:
-            solv.add_surface_collider(
-                tuple(collider.position[0]),
-                tuple(collider.direction[0]),
-                surface=collider.surface
-            )
+        if cls.colliders:
+            for collider in cls.colliders:
+                solv.add_surface_collider(
+                    tuple(collider.position[0]),
+                    tuple(collider.direction[0]),
+                    surface=collider.surface
+                )
         self.size = size
         self.solv = solv
         self.run_sim()
