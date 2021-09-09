@@ -242,6 +242,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         res = cls.solver.resolution[0]
         size = cls.solver.size[0]
         ti.reset()
+        ti.init(arch=ti.cuda)  # Try to run on GPU
         print(f"Creating simulation of res {res}, size {size}")
         solv = mpm_solver.MPMSolver((res, res, res), size=size, unbounded=True)
 
@@ -250,9 +251,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         self.emitters = cls.emitters
         for collider in cls.colliders:
             solv.add_surface_collider(
-                (*collider.position),
-                (*collider.direction),
-                surface=int(collider.surface)
+                tuple(collider.position[0]),
+                tuple(collider.direction[0]),
+                surface=collider.surface
             )
         self.size = size
         self.solv = solv
