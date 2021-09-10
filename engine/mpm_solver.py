@@ -19,11 +19,13 @@ class MPMSolver:
     material_elastic = 1
     material_snow = 2
     material_sand = 3
+    material_stationary = 4
     materials = {
         'WATER': material_water,
         'ELASTIC': material_elastic,
         'SNOW': material_snow,
-        'SAND': material_sand
+        'SAND': material_sand,
+        'STATIONARY': material_stationary,
     }
 
     # Surface boundary conditions
@@ -40,8 +42,6 @@ class MPMSolver:
         'SLIP': surface_slip,
         'SEPARATE': surface_separate
     }
-
-    grid_size = 4096
 
     def __init__(
             self,
@@ -70,6 +70,8 @@ class MPMSolver:
         self.use_bls = use_bls
         self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
         self.water_density = water_density
+        self.grid_size = 4096
+
         assert self.dim in (
             2, 3), "MPM solver supports only 2D and 3D simulations."
 
@@ -139,6 +141,12 @@ class MPMSolver:
         else:
             indices = ti.ijk
 
+        if unbounded:
+            # The maximum grid size must be larger than twice of 
+            # simulation resolution in an unbounded simulation,
+            # Otherwise the top and right sides will be bounded by grid size
+            while self.grid_size <= 2 * max(self.res):
+                self.grid_size *= 2 # keep it power of two
         offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
         self.offset = offset
 
@@ -327,9 +335,10 @@ class MPMSolver:
         ti.block_dim(256)
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
-            ti.block_local(*[grid_v_in.get_scalar_field(d) for d in range(self.dim)])
             ti.block_local(grid_m_out)
-            ti.block_local(*[grid_v_out.get_scalar_field(d) for d in range(self.dim)])
+            for d in ti.static(range(self.dim)):
+                ti.block_local(grid_v_in.get_scalar_field(d))
+                ti.block_local(grid_v_out.get_scalar_field(d))
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -358,8 +367,9 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            self.v[p] = new_v
-            self.x[p] += dt * self.v[p]  # advection
+            if self.material[p] != self.material_stationary:
+                self.v[p] = new_v
+                self.x[p] += dt * self.v[p]  # advection
 
             # P2G
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
@@ -448,8 +458,8 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*[self.grid_v.get_scalar_field(d) for d in range(self.dim)])
-            # ti.block_local(*self.grid_v.entries)
+            for d in ti.static(range(self.dim)):
+                ti.block_local(self.grid_v.get_scalar_field(d))
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -650,8 +660,8 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            ti.block_local(*[self.grid_v.get_scalar_field(d) for d in range(self.dim)])
-            # ti.block_local(*self.grid_v.entries)
+            for d in ti.static(range(self.dim)):
+                ti.block_local(self.grid_v.get_scalar_field(d))
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -674,8 +684,9 @@ class MPMSolver:
                     weight *= w[offset[d]][d]
                 new_v += weight * g_v
                 new_C += 4 * self.inv_dx * weight * g_v.outer_product(dpos)
-            self.v[p], self.C[p] = new_v, new_C
-            self.x[p] += dt * self.v[p]  # advection
+            if self.material[p] != self.material_stationary:
+                self.v[p], self.C[p] = new_v, new_C
+                self.x[p] += dt * self.v[p]  # advection
 
     @ti.kernel
     def compute_max_velocity(self) -> ti.f32:
@@ -826,16 +837,83 @@ class MPMSolver:
         self.seed(num_new_particles, material, color)
         self.n_particles[None] += num_new_particles
 
+    def add_ngon(
+        self,
+        sides,
+        center,
+        radius,
+        angle,
+        material,
+        color=0xFFFFFF,
+        sample_density=None,
+        velocity=None,
+        ):
+        if self.dim != 2:
+            raise ValueError("Add Ngon only works for 2D simulations")
+
+        if sample_density is None:
+            sample_density = 2 ** self.dim
+
+        num_particles = 0.5 * (radius * self.inv_dx) ** 2 * math.sin(2 * math.pi / sides) * sides
+
+        num_particles = int(math.ceil(num_particles * sample_density))
+
+        self.source_bound[0] = center
+        self.source_bound[1] = [radius, radius]
+
+        self.set_source_velocity(velocity=velocity)
+
+        assert self.n_particles[None] + num_particles <= self.max_num_particles
+
+        self.seed_polygon(num_particles, sides, angle, material, color)
+        self.n_particles[None] += num_particles
+
+    @ti.func
+    def random_point_in_unit_polygon(self, sides, angle):
+        point = ti.Vector.zero(ti.f32, 2)
+        central_angle = 2 * math.pi / sides
+        while True:
+            point = ti.Vector([ti.random(), ti.random()]) * 2 - 1
+            point_angle = ti.atan2(point.y, point.x)
+            theta = (point_angle - angle) % central_angle # polygon angle is from +X axis
+            phi = central_angle / 2
+            dist = ti.sqrt((point ** 2).sum())
+            if dist < ti.cos(phi) / ti.cos(phi - theta):
+                break
+        return point
+
     @ti.kernel
-    def add_texture_2d(self, offset_x: ti.f32, offset_y: ti.f32,
-                       texture: ti.ext_arr()):
+    def seed_polygon(
+        self,
+        new_particles: ti.i32,
+        sides: ti.i32,
+        angle: ti.f32,
+        new_material: ti.i32,
+        color: ti.i32
+    ):
+        for i in range(self.n_particles[None],
+                       self.n_particles[None] + new_particles):
+            x = self.random_point_in_unit_polygon(sides, angle)
+            x = self.source_bound[0] + x * self.source_bound[1]
+            self.seed_particle(i, x, new_material, color,
+                            self.source_velocity[None])
+
+    @ti.kernel
+    def add_texture_2d(
+            self,
+            offset_x: ti.f32, 
+            offset_y: ti.f32,
+            texture: ti.ext_arr(),
+            new_material: ti.i32,
+            color: ti.i32,
+        ):
         for i, j in ti.ndrange(texture.shape[0], texture.shape[1]):
             if texture[i, j] > 0.1:
                 pid = ti.atomic_add(self.n_particles[None], 1)
                 x = ti.Vector([
-                    offset_x + i * self.dx * 0.5, offset_y + j * self.dx * 0.5
+                    offset_x + i * self.dx, offset_y + j * self.dx
                 ])
-                self.seed_particle(pid, x, self.material_elastic, 0xFFFFFF,
+                self.seed_particle(pid, x, new_material, color,
                                    self.source_velocity[None])
 
     @ti.func
@@ -968,6 +1046,46 @@ class MPMSolver:
                                       color)
 
     @ti.kernel
+    def recover_from_external_array(
+        self,
+        num_particles: ti.i32,
+        pos: ti.ext_arr(),
+        vel: ti.ext_arr(),
+        material: ti.ext_arr(),
+        color: ti.ext_arr(),
+    ):
+        for i in range(num_particles):
+            x = ti.Vector.zero(ti.f32, n=self.dim)
+            v = ti.Vector.zero(ti.f32, n=self.dim)
+            if ti.static(self.dim == 3):
+                x = ti.Vector([pos[i, 0], pos[i, 1], pos[i, 2]])
+                v = ti.Vector([vel[i, 0], vel[i, 1], vel[i, 2]])
+            else:
+                x = ti.Vector([pos[i, 0], pos[i, 1]])
+                v = ti.Vector([vel[i, 0], vel[i, 1]])
+            self.seed_particle(self.n_particles[None] + i, x, material[i],
+                               color[i], v)
+        self.n_particles[None] += num_particles
+
+    def read_restart(
+        self,
+        num_particles,
+        pos,
+        vel,
+        material,
+        color,
+    ):
+        slice_size = 50000
+        num_slices = (num_particles + slice_size - 1) // slice_size
+        for s in range(num_slices):
+            begin = slice_size * s
+            end = min(slice_size * (s + 1), num_particles)
+            self.recover_from_external_array(
+                end - begin,
+                pos[begin:end], vel[begin:end], material[begin:end], color[begin:end]
+            )
+
+    @ti.kernel
     def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
         for i in self.x:
             for j in ti.static(range(self.dim)):
@@ -1014,9 +1132,9 @@ class MPMSolver:
         self.n_particles[None] = 0
         ti.deactivate(self.x.loop_range().parent().snode(), [])
 
-    def write_particles(self, fn):
+    def write_particles(self, fn, slice_size=1000000):
         from .particle_io import ParticleIO
-        ParticleIO.write_particles(self, fn)
+        ParticleIO.write_particles(self, fn, slice_size)
 
     def write_particles_ply(self, fn):
         np_x = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
