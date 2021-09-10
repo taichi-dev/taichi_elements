@@ -30,7 +30,8 @@ def parse_args():
                         '--shutter-time',
                         type=float,
                         default=2e-3,
-                        help='Shutter time')
+                        help='Shutter time, which affects the motion blur. Notice memory usage would increase when '
+                             'shutter time increases')
     parser.add_argument('-f',
                         '--force',
                         action='store_true',

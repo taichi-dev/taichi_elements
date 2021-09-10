@@ -19,7 +19,7 @@ The plan is
 
  - `python3 demo/demo_2d_show_active_bound.py` to get a visual understanding on how Taichi sparse `SNodes` work
 
-    <img src="https://github.com/Jack12xl/public_files/raw/master/taichi_elements/active_bound_grid.gif" height="600px">
+    <img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/sparse_mpm_active_blocks.gif" height="600px">
 
     
 
@@ -48,7 +48,7 @@ The plan is
 
 - Here is an example running 460 million particles with **Quantization** in only `24` GB GPU memory.(40 bytes per particle)
 
-  <img src="https://github.com/Jack12xl/public_files/raw/master/taichi_elements/460M.png" height="600px">
+  <img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/460M.jpg" height="600px">
 
 ## [Learn about sparse computation in Taichi](https://docs.taichi.graphics/docs/lang/articles/advanced/sparse)
 # Using `taichi_elements` in Blender

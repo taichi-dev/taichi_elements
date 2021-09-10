@@ -3,7 +3,7 @@ import numpy as np
 import math
 import time
 from engine.renderer_utils import out_dir, ray_aabb_intersection, inf, eps, \
-    intersect_sphere, sphere_aabb_intersect_motion, inside_taichi
+  intersect_sphere, sphere_aabb_intersect_motion, inside_taichi
 
 from engine.particle_io import ParticleIO
 
