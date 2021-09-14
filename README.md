@@ -29,18 +29,17 @@ The plan is
    - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
  - Example:
 
-   - ```python
+   - ```bash
      python engine/render_particles \
-     -i ./path/to/particles #input directory
-     -b 0 -e 400 -s 1 # render 0~400 frame with step 1
-     -o ./path/output
-     --gpu-memory 20 # 20GB GPU memory
-     -M 460 # at maximum 460 million particles
-     --shutter-time 0.0 # How much Motion blur effect.
-     # Notice Memory usage increase when shutter_time increases
-     -r 128 # rendering spatial grid dimension
+     -i ./path/to/particles \
+     -b 0 -e 400 -s 1 \
+     -o ./path/output \
+     --gpu-memory 20 \
+     -M 460 \
+     --shutter-time 0.0 \
+     -r 128
      ```
-
+   
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
