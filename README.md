@@ -49,7 +49,6 @@ The plan is
 
   <img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/460M.jpg" height="600px">
 ## [Learn about sparse computation in Taichi](https://docs.taichi.graphics/docs/lang/articles/advanced/sparse)
-## [Learn about sparse computation in Taichi](https://docs.taichi.graphics/docs/lang/articles/advanced/sparse)
 # Using `taichi_elements` in Blender
 
 ## Installing Taichi for Blender
