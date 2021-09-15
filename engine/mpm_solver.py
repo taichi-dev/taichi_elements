@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 31)
+ti.require_version(0, 7, 30)
 
 
 # TODO: water needs Jp - fix this.
@@ -61,7 +61,7 @@ class MPMSolver:
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
             support_plasticity=True, # support snow and sand materials
-            adaptive_dt=False
+            use_adaptive_dt=False
     ):
         self.dim = len(res)
         self.quant = quant
@@ -91,16 +91,15 @@ class MPMSolver:
                                                dtype=ti.f32,
                                                shape=())
         self.input_grid = 0
-        self.all_time_max_velocity = 0.0
-        self.cur_frame_velocity = 0.0
+        self.all_time_max_velocity = 0
         self.support_plasticity = support_plasticity
-        self.adaptive_dt = adaptive_dt
+        self.use_adaptive_dt = use_adaptive_dt
         self.F_bound = 4.0
 
-        # affine velocity field
+        # Affine velocity field
         if not self.use_g2p2g:
             self.C = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
-        # deformation gradient
+        # Deformation gradient
 
         if quant:
             ci21 = ti.type_factory.custom_int(21, True)
@@ -130,7 +129,7 @@ class MPMSolver:
             self.material = ti.field(dtype=ti.quant.int(16, False))
         else:
             self.material = ti.field(dtype=ti.i32)
-        #  particle color
+        # particle color
         self.color = ti.field(dtype=ti.i32)
         # plastic deformation volume ratio
         if self.support_plasticity:
@@ -717,18 +716,18 @@ class MPMSolver:
         substeps = int(frame_dt / self.default_dt) + 1
 
         dt = frame_dt / substeps
-        cur_frame_dt = frame_dt
+        frame_time_left = frame_dt
         if print_stat:
             print(f'needed substeps: {substeps}')
 
-        while cur_frame_dt > 0:
+        while frame_time_left > 0:
             print('.', end='', flush=True)
             self.total_substeps += 1
-            if self.adaptive_dt:
+            if self.use_adaptive_dt:
                 max_grid_v = self.compute_max_grid_velocity(self.grid_v[self.input_grid])
                 cfl_dt = self.g2p2g_allowed_cfl * self.dx / (max_grid_v + 1e-6)
-                dt = min(dt, cfl_dt, cur_frame_dt)
-            cur_frame_dt -= dt
+                dt = min(dt, cfl_dt, frame_time_left)
+            frame_time_left -= dt
 
             if self.use_g2p2g:
                 output_grid = 1 - self.input_grid
@@ -755,11 +754,11 @@ class MPMSolver:
                 self.t += dt
                 self.g2p(dt)
 
-            self.cur_frame_velocity = self.compute_max_velocity()
+            cur_frame_velocity = self.compute_max_velocity()
             if smry_writer is not None:
-                smry_writer.add_scalar("substep_max_CFL", self.cur_frame_velocity * dt / self.dx, self.total_substeps)
+                smry_writer.add_scalar("substep_max_CFL", cur_frame_velocity * dt / self.dx, self.total_substeps)
             self.all_time_max_velocity = max(self.all_time_max_velocity,
-                                             self.cur_frame_velocity)
+                                             cur_frame_velocity)
 
         print()
 
