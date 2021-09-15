@@ -60,7 +60,7 @@ class MPMSolver:
             use_bls=True,
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
-            support_plasticity=True, # support snow sand hardening
+            support_plasticity=True, # support snow and sand materials
             adaptive_dt=False
     ):
         self.dim = len(res)
@@ -561,7 +561,7 @@ class MPMSolver:
                 grid_v[I] = (1 / grid_m[I]) * grid_v[I]  # Momentum to velocity
                 grid_v[I] += dt * self.gravity[None]
 
-            # clamp the velocity on grid
+            # Grid velocity clamping
             if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g and self.v_clamp_g2p2g):
                 grid_v[I] = min(max(grid_v[I], -v_allowed), v_allowed)
 
@@ -728,7 +728,6 @@ class MPMSolver:
                 max_grid_v = self.compute_max_grid_velocity(self.grid_v[self.input_grid])
                 cfl_dt = self.g2p2g_allowed_cfl * self.dx / (max_grid_v + 1e-6)
                 dt = min(dt, cfl_dt, cur_frame_dt)
-                print(dt)
             cur_frame_dt -= dt
 
             if self.use_g2p2g:

@@ -30,7 +30,7 @@ def parse_args():
                         '--shutter-time',
                         type=float,
                         default=2e-3,
-                        help='Shutter time, which affects the motion blur. Notice memory usage would increase when '
+                        help='Shutter time, which affects motion blur. Note that memory usage will increase when '
                              'shutter time increases')
     parser.add_argument('-f',
                         '--force',
@@ -54,7 +54,6 @@ args = parse_args()
 
 ti.init(arch=ti.cuda,
         use_unified_memory=False,
-        debug=False,
         device_memory_GB=args.gpu_memory)
 
 output_folder = args.out_dir
