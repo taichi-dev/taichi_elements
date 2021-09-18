@@ -47,8 +47,9 @@ class MPMSolver:
             self,
             res,
             quant=False,
+            use_voxelizer=True,
             size=1,
-            max_num_particles=2 ** 30,
+            max_num_particles=2**30,
             # Max 1 G particles
             padding=3,
             unbounded=False,
@@ -136,7 +137,7 @@ class MPMSolver:
             indices = ti.ijk
 
         if unbounded:
-            # The maximum grid size must be larger than twice of 
+            # The maximum grid size must be larger than twice of
             # simulation resolution in an unbounded simulation,
             # Otherwise the top and right sides will be bounded by grid size
             while self.grid_size <= 2 * max(self.res):
@@ -249,14 +250,17 @@ class MPMSolver:
             self.voxelizer = None
             self.set_gravity((0, -9.8))
         else:
-            if USE_IN_BLENDER:
-                from .voxelizer import Voxelizer
+            if use_voxelizer:
+                if USE_IN_BLENDER:
+                    from .voxelizer import Voxelizer
+                else:
+                    from engine.voxelizer import Voxelizer
+                self.voxelizer = Voxelizer(res=self.res,
+                                           dx=self.dx,
+                                           padding=self.padding,
+                                           super_sample=voxelizer_super_sample)
             else:
-                from engine.voxelizer import Voxelizer
-            self.voxelizer = Voxelizer(res=self.res,
-                                       dx=self.dx,
-                                       padding=self.padding,
-                                       super_sample=voxelizer_super_sample)
+                self.voxelizer = None
             self.set_gravity((0, -9.8, 0))
 
         self.voxelizer_super_sample = voxelizer_super_sample
@@ -602,6 +606,9 @@ class MPMSolver:
 
         self.grid_postprocess.append(collide)
 
+    def clear_grid_postprocess(self):
+        self.grid_postprocess.clear()
+
     def add_surface_collider(self,
                              point,
                              normal,
@@ -870,12 +877,12 @@ class MPMSolver:
     @ti.kernel
     def add_texture_2d(
             self,
-            offset_x: ti.f32, 
+            offset_x: ti.f32,
             offset_y: ti.f32,
             texture: ti.ext_arr(),
             new_material: ti.i32,
             color: ti.i32,
-        ):
+    ):
         for i, j in ti.ndrange(texture.shape[0], texture.shape[1]):
             if texture[i, j] > 0.1:
                 pid = ti.atomic_add(self.n_particles[None], 1)
