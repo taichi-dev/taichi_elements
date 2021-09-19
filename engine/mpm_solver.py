@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 30)
+ti.require_version(0, 7, 31)
 
 
 # TODO: water needs Jp - fix this.
