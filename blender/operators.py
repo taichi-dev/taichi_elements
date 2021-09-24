@@ -112,6 +112,25 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
     bl_idname = "elements.simulate_particles"
     bl_label = "Simulate"
 
+    device: bpy.props.EnumProperty(
+        name='Device',
+        default='cpu',
+        items=(
+            ('gpu', 'GPU', 'Run on GPU, automatically detect backend'),
+            ('cuda', 'CUDA', 'Run on GPU, with the NVIDIA CUDA backend'),
+            ('opengl', 'OpenGL', 'Run on GPU, with the OpenGL backend'),
+            ('metal', 'Metal', 'Run on GPU, with the Apple Metal backend, if you are on macOS'),
+            ('cpu', 'CPU', 'Run on CPU (default)')
+        )
+    )
+    device_memory_fraction: bpy.props.FloatProperty(
+        name='Device Memory',
+        default=50.0,
+        min=10.0,
+        max=100.0,
+        subtype='PERCENTAGE'
+    )
+
     def __init__(self):
         self.timer = None
         self.thread = None
@@ -242,7 +261,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         res = cls.solver.resolution[0]
         size = cls.solver.size[0]
         ti.reset()
-        ti.init(arch=ti.cuda)  # Try to run on GPU
+        arch = getattr(ti, self.device)
+        mem = self.device_memory_fraction / 100
+        ti.init(arch=arch, device_memory_fraction=mem)
         print(f"Creating simulation of res {res}, size {size}")
         solv = mpm_solver.MPMSolver((res, res, res), size=size, unbounded=True)
 
@@ -291,6 +312,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.timer = None
         self.thread = None
         self.is_finishing = True
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
 
 # operators draw function
