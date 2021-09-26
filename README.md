@@ -22,7 +22,7 @@ The plan is
    - E.g., `python3 engine/render_particles.py sim_2020-07-27_20-55-48/ 0 100 1 frames`
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
-[[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
+[[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
 
 # Using `taichi_elements` in Blender
