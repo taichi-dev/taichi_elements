@@ -11,10 +11,13 @@ import bmesh
 import taichi as ti
 import numpy as np
 from .engine import mpm_solver
-from . import types, particles_io
+from . import types
+from . import particles_io
+from . import nodes
 
 
-WARN_SIM_NODE = 'The node tree must not contain more than 1 "Simulation" node.'
+WARN_SIM_NODE = 'Node tree must not contain more than 1 "Simulation" node.'
+WARN_NOT_SIM_NODE = 'Node tree does not have "Simulation" node.'
 mpm_solver.USE_IN_BLENDER = True
 IMPORT_NODES = (
     'elements_particles_mesh_node',
@@ -23,16 +26,37 @@ IMPORT_NODES = (
 
 
 # sim_node - simulation node
-def get_cache_folder(sim_node):
+def get_cache_folder(operator, sim_node):
     # particles socket
     par_s = sim_node.outputs['Simulation Data']
+    cache_nodes = []
+    has_cache_node = False
     if par_s.is_linked:
         for link in par_s.links:
             # disk cache node
             disk = link.to_node
-            folder_raw = disk.inputs['Folder'].get_value()[0]
-            folder = bpy.path.abspath(folder_raw)
-            return folder
+            if disk.bl_idname == nodes.ElementsCacheNode.bl_idname:
+                cache_nodes.append(disk)
+    if not len(cache_nodes):
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Node tree does not have "Cache" node.'
+        )
+        return None, has_cache_node
+    elif len(cache_nodes) > 1:
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Node tree must not contain more than 1 "Cache" node.'
+        )
+        return None, has_cache_node
+    else:
+        cache_node = cache_nodes[0]
+        has_cache_node = True
+        folder_raw = cache_node.inputs['Folder'].get_value()[0]
+        folder = bpy.path.abspath(folder_raw)
+        return folder, has_cache_node
 
 
 # get simulation nodes tree object
@@ -56,21 +80,54 @@ def get_tree_obj(node_tree):
     return tree
 
 
-def create_emitter(solv, emitter, vel):
+def create_emitter(operator, solv, emitter, vel):
     # source object
     src_obj = emitter.source_object
 
     if not src_obj:
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Emmiter not have source object.'
+        )
         return
 
     obj_name = src_obj.obj_name
     obj = bpy.data.objects.get(obj_name)
 
     if not obj:
+        operator.is_finishing = True
+        if not obj_name:
+            operator.report(
+                {'WARNING'},
+                'Emmiter source object not specified.'
+            )
+        else:
+            operator.report(
+                {'WARNING'},
+                'Cannot find emmiter source object: "{}".'.format(obj_name)
+            )
         return
     if obj.type != 'MESH':
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Emmiter source object is not mesh: "{}".'.format(obj.name)
+        )
         return
     if not emitter.material:
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Emmiter not have material.'
+        )
+        return
+    if not len(obj.data.polygons):
+        operator.is_finishing = True
+        operator.report(
+            {'WARNING'},
+            'Emmiter source object not have polygons: "{}"'.format(obj.name)
+        )
         return
 
     b_mesh = bmesh.new()
@@ -106,6 +163,7 @@ def create_emitter(solv, emitter, vel):
     color = red | green | blue
     # add emitter
     solv.add_mesh(triangles=tris, material=ti_mat, color=color, velocity=vel)
+    return True
 
 
 class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
@@ -146,7 +204,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 vel = emitter.velocity[frame]
             if emitter.typ == 'EMITTER':
                 if emitter.emit_frame[0] == frame:
-                    create_emitter(self.solv, emitter, vel)
+                    correct_emmiter = create_emitter(self, self.solv, emitter, vel)
+                    if not correct_emmiter:
+                        return self.cancel(bpy.context)
             elif emitter.typ == 'INFLOW':
                 if type(emitter.enable) == float:
                     enable = emitter.enable
@@ -157,7 +217,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                         index = frame
                     enable = bool(int(round(emitter.enable[index], 0)))
                 if enable:
-                    create_emitter(self.solv, emitter, vel)
+                    correct_emmiter = create_emitter(self, self.solv, emitter, vel)
+                    if not correct_emmiter:
+                        return self.cancel(bpy.context)
+        return True
 
     def save_particles(self, frame, np_x, np_v, np_color, np_material):
         if not os.path.exists(self.cache_folder):
@@ -198,7 +261,9 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                 return
             print('Frame: {}'.format(frame))
 
-            self.create_emitters(frame)
+            is_correct = self.create_emitters(frame)
+            if not is_correct is True:
+                return self.cancel(bpy.context)
 
             # generate simulation state at t = 0
             # particles
@@ -220,8 +285,14 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             if node.bl_idname == 'elements_simulation_node':
                 sim.append(node)
 
-        if len(sim) != 1:
+        if not len(sim):
+            self.report({'WARNING'}, WARN_NOT_SIM_NODE)
+            self.is_finishing = True
+            return self.cancel(bpy.context)
+        elif len(sim) > 1:
             self.report({'WARNING'}, WARN_SIM_NODE)
+            self.is_finishing = True
+            return self.cancel(bpy.context)
         else:
             inputs = sim[0].inputs
             self.scene.elements_frame_start = inputs['Frame Start'].get_value()[0]
@@ -236,27 +307,39 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         if sim_nodes_cnt != 1:
             if sim_nodes_cnt > 1:
                 self.report({'WARNING'}, WARN_SIM_NODE)
+                self.is_finishing = True
                 return
 
         sim = list(tree.sim_nds.values())[0]
 
         if not sim:
-            return {'FINISHED'}
+            return self.cancel(bpy.context)
 
         sim.get_class()
         # simulation class
         cls, _ = self.scene.elements_nodes[sim.name]
-        self.cache_folder = get_cache_folder(sim)
+        self.cache_folder, has_cache_node = get_cache_folder(self, sim)
+        if not has_cache_node:
+            return self.cancel(bpy.context)
 
-        if not self.cache_folder:
+        if not self.cache_folder and has_cache_node:
             self.report({'WARNING'}, 'Cache folder not specified')
-            return {'FINISHED'}
+            self.is_finishing = True
+            return self.cancel(bpy.context)
 
         self.frame_start = cls.frame_start[0]
         self.frame_end = cls.frame_end[0]
         self.fps = cls.fps[0]
 
         # TODO: list is not implemented
+
+        if not cls.solver:
+            self.report(
+                {'WARNING'},
+                'Node tree does not have "MPM Solver" node.'
+            )
+            self.is_finishing = True
+            return {'FINISHED'}
 
         res = cls.solver.resolution[0]
         size = cls.solver.size[0]
@@ -270,6 +353,11 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         solv.set_gravity(tuple(cls.gravity[0]))
 
         self.emitters = cls.emitters
+        if not self.emitters:
+            self.report({'WARNING'}, 'Node tree not have emitters.')
+            self.is_finishing = True
+            return self.cancel(bpy.context)
+
         if cls.colliders:
             for collider in cls.colliders:
                 solv.add_surface_collider(
@@ -277,6 +365,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                     tuple(collider.direction[0]),
                     surface=collider.surface
                 )
+
         self.size = size
         self.solv = solv
         self.run_sim()
