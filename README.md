@@ -9,15 +9,13 @@ The plan is
 
 # Using `taichi_elements` in Python
  - Install [taichi](https://github.com/taichi-dev/taichi) with `pip`: `python3 -m pip install taichi`
-
  - Execute `python3 download_ply.py` to download model files used by the demos
-
- - `python3 demo/demo_2d.py` and you will see
+ - Execute `python3 demo/demo_2d.py` and you will see
  <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
- - `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D.
- - `python3 demo/demo_2d_sparse_active_blocks.py` to get a visual understanding of Taichi sparse computation
-
-    <img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/sparse_mpm_active_blocks.gif" height="600px">
+ 
+ - Execute `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D
+ - Execute `python3 demo/demo_2d_sparse_active_blocks.py` to get a visual understanding of Taichi sparse computation
+ <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/sparse_mpm_active_blocks.gif" height="600px">
 
 ## To simulate and render an example 3D scene with Python
  - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080 Ti)
