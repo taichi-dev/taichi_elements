@@ -465,13 +465,13 @@ class MPMSolver:
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
             Im = ti.rescale_index(self.pid, self.grid_m, I)
             for D in ti.static(range(self.dim)):
-                # for block shared memory: hint compiler that there is a connection between `base` and loop index `I`
+                # For block shared memory: hint compiler that there is a connection between `base` and loop index `I`
                 base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
 
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-            # deformation gradient update
+            # Deformation gradient update
             F = self.F[p]
             if self.material[p] == self.material_water:  # liquid
                 F = ti.Matrix.identity(ti.f32, self.dim)
@@ -614,7 +614,7 @@ class MPMSolver:
                              surface=surface_sticky,
                              friction=0.0):
         point = list(point)
-        # normalize normal
+        # Normalize normal
         normal_scale = 1.0 / math.sqrt(sum(x ** 2 for x in normal))
         normal = list(normal_scale * x for x in normal)
 
@@ -641,7 +641,7 @@ class MPMSolver:
                             v = v - n * min(normal_component, 0)
 
                         if normal_component < 0 and v.norm() > 1e-30:
-                            # apply friction here
+                            # Apply friction here
                             v = v.normalized() * max(
                                 0,
                                 v.norm() + normal_component * friction)
@@ -674,7 +674,7 @@ class MPMSolver:
             ]
             new_v = ti.Vector.zero(ti.f32, self.dim)
             new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-            # loop over 3x3 grid node neighborhood
+            # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
                 dpos = offset.cast(float) - fx
                 g_v = self.grid_v[base + offset]
