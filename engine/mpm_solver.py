@@ -55,12 +55,12 @@ class MPMSolver:
             dt_scale=1,
             E_scale=1,
             voxelizer_super_sample=2,
-            use_g2p2g=False,  # ref: A massively parallel and scalable multi-GPU material point method
+            use_g2p2g=False,  # Ref: A massively parallel and scalable multi-GPU material point method
             v_clamp_g2p2g=True,
             use_bls=True,
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
-            support_plasticity=True, # support snow and sand materials
+            support_plasticity=True, # Support snow and sand materials
             use_adaptive_dt=False
     ):
         self.dim = len(res)
@@ -124,14 +124,14 @@ class MPMSolver:
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
 
         self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
-        # material id
+        # Material id
         if quant and self.dim == 3:
             self.material = ti.field(dtype=ti.quant.int(16, False))
         else:
             self.material = ti.field(dtype=ti.i32)
-        # particle color
+        # Particle color
         self.color = ti.field(dtype=ti.i32)
-        # plastic deformation volume ratio
+        # Plastic deformation volume ratio
         if self.support_plasticity:
             self.Jp = ti.field(dtype=ti.f32)
 
@@ -164,12 +164,12 @@ class MPMSolver:
         self.pid = []
 
         for g in range(self.num_grids):
-            # grid node momentum/velocity
+            # Grid node momentum/velocity
             grid_v = ti.Vector.field(self.dim, dtype=ti.f32)
             grid_m = ti.field(dtype=ti.f32)
             pid = ti.field(ti.i32)
             self.grid_v.append(grid_v)
-            # grid node mass
+            # Grid node mass
             self.grid_m.append(grid_m)
             grid = ti.root.pointer(indices, self.grid_size // grid_block_size)
             block = grid.pointer(indices,
@@ -237,7 +237,7 @@ class MPMSolver:
                     self.F.get_scalar_field(0, 0), self.F.get_scalar_field(0, 1))
                 self.particle.bit_struct(num_bits=32).place(
                     self.F.get_scalar_field(1, 0), self.F.get_scalar_field(1, 1))
-                # no quantization on particle material in 2D
+                # No quantization on particle material in 2D
                 self.particle.place(self.material)
             self.particle.place(self.color)
         else:
@@ -324,7 +324,7 @@ class MPMSolver:
         for p in self.x:
             base = int(ti.floor(self.x[p] * self.inv_dx - 0.5)) \
                    - ti.Vector(list(self.offset))
-            # pid grandparent is `block`
+            # Pid grandparent is `block`
             base_pid = ti.rescale_index(grid_m, pid.parent(2), base)
             ti.append(pid.parent(), base_pid, p)
 
@@ -351,7 +351,7 @@ class MPMSolver:
             ]
             new_v = ti.Vector.zero(ti.f32, self.dim)
             C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-            # loop over 3x3 grid node neighborhood
+            # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
                 dpos = offset.cast(float) - fx
                 g_v = grid_v_in[base + offset]
@@ -378,7 +378,7 @@ class MPMSolver:
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w2 = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-            # deformation gradient update
+            # Deformation gradient update
             new_F = (ti.Matrix.identity(ti.f32, self.dim) + dt * C) @ self.F[p]
             if ti.static(self.quant):
                 new_F = max(-self.F_bound, min(self.F_bound, new_F))
@@ -388,10 +388,10 @@ class MPMSolver:
             if ti.static(self.support_plasticity):
                 h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
-                p] == self.material_elastic:  # jelly, make it softer
+                p] == self.material_elastic:  # Jelly, make it softer
                 h = 0.3
             mu, la = self.mu_0 * h, self.lambda_0 * h
-            if self.material[p] == self.material_water:  # liquid
+            if self.material[p] == self.material_water:  # Liquid
                 mu = 0.0
             U, sig, V = ti.svd(self.F[p])
             J = 1.0
