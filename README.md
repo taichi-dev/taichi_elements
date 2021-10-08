@@ -23,7 +23,7 @@
 ## To simulate and render an example 3D scene with Python
 - Make sure you have a modern NVIDIA GPU (e.g. GTX 1080)
 - Execute `python3 download_ply.py` to download model files
-- Run `python3 demo_3d_letters.py` (wait for at least 10 frames)
+- Run `python3 demo/demo_3d_letters.py` (wait for at least 10 frames)
    - A binary particle folder with a timestamp in its time (e.g., `sim_2020-07-27_20-55-48`) will be created under the current folder.
 - Example:
 

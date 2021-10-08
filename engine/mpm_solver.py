@@ -768,7 +768,8 @@ class MPMSolver:
                 ti.print_memory_profile_info()
             except:
                 pass
-            print(f'CFL: {self.cur_frame_velocity * dt / self.dx}')
+            cur_frame_velocity = self.compute_max_velocity()
+            print(f'CFL: {cur_frame_velocity * dt / self.dx}')
             print(f'num particles={self.n_particles[None]}')
             print(f'  frame time {time.time() - begin_t:.3f} s')
             print(
