@@ -3,7 +3,7 @@
 
 - Cross-platform: Windows, Linux, and OS X
 - Supports multi-threaded CPUs and massively parallel GPUs
-- Supports multiple materials, including water, elastic objects, snow and sand
+- Supports multiple materials, including water, elastic objects, snow, and sand
 - Supports (virtually) infinitely large simulation domains
 - Supports [sparse grids](https://docs.taichi.graphics/lang/articles/advanced/sparse)
 - Highly efficient and scalable, especially on GPUs
@@ -64,5 +64,5 @@ python3 engine/render_particles.py \
  - Set the environment variable `BLENDER_USER_ADDON_PATH`, e.g. `/home/XXX/.config/blender/2.81/scripts/addons`
  - Go to `utils` folder
  - Execute `python3 install_blender_addon.py` to install the addon
-   - If you are doing development and wish to **k**eep refreshing the installed addon, add argument `-k`.
+   - If you are doing development and wish to **k**eep refreshing the installed addon, add an argument `-k`.
  - Restart Blender to reload the addon
