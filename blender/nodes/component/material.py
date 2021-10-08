@@ -11,7 +11,8 @@ class ElementsMaterialNode(base.BaseNode):
         ('WATER', 'Water', ''),
         ('SNOW', 'Snow', ''),
         ('ELASTIC', 'Elastic', ''),
-        ('SAND', 'Sand', '')
+        ('SAND', 'Sand', ''),
+        ('STATIONARY', 'Stationary', '')
     ]
     typ: bpy.props.EnumProperty(items=items, default='WATER')
     category = base.COMPONENT

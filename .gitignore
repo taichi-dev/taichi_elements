@@ -16,3 +16,4 @@ rendered
 particles_*
 sim_*
 *.bin
+.vscode/

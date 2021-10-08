@@ -40,7 +40,7 @@ python3 engine/render_particles.py \
    
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
-[[Watch on YouTube]](https://www.youtube.com/watch?v=oiuSax_iPto)
+[[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
 
 - Here is a 460-million-particle simulation on a GPU with `24` GB memory. Each particle takes 40 bytes, thanks to [quantization](https://github.com/taichi-dev/quantaichi).
