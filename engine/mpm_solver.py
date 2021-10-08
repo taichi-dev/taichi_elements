@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 31)
+ti.require_version(0, 8, 1)
 
 
 # TODO: water needs Jp - fix this.
@@ -188,7 +188,7 @@ class MPMSolver:
 
             block_offset = tuple(o // self.leaf_block_size for o in self.offset)
             self.block_offset = block_offset
-            block.dynamic(ti.indices(self.dim),
+            block.dynamic(ti.axes(self.dim),
                           1024 * 1024,
                           chunk_size=self.leaf_block_size ** self.dim * 8).place(
                 pid, offset=block_offset + (0,))
