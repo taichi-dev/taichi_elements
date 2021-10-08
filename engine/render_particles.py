@@ -26,11 +26,14 @@ def parse_args():
     parser.add_argument('-g', '--gui', action='store_true', help='Show GUI')
     parser.add_argument('-o', '--out-dir', type=str, help='Output folder')
     parser.add_argument('-i', '--in-dir', type=str, help='Input folder')
-    parser.add_argument('-t',
-                        '--shutter-time',
-                        type=float,
-                        default=2e-3,
-                        help='Shutter time')
+    parser.add_argument(
+        '-t',
+        '--shutter-time',
+        type=float,
+        default=2e-3,
+        help=
+        'Shutter time, which affects motion blur. Note that memory usage will increase when '
+        'shutter time increases')
     parser.add_argument('-f',
                         '--force',
                         action='store_true',
@@ -85,14 +88,18 @@ def main():
             continue
         else:
             print('rendering...')
-        Path(output_fn).touch()
+
         t = time.time()
 
         renderer.set_camera_pos(3.24, 1.86, -4.57)
         renderer.floor_height[None] = -5e-3
 
-        renderer.initialize_particles_from_taichi_elements(
-            f'{args.in_dir}/{f:05d}.npz')
+        cur_render_input = f'{args.in_dir}/{f:05d}.npz'
+        if not os.path.exists(cur_render_input):
+            print(f'warning, {cur_render_input} not existed, skip!')
+            continue
+        Path(output_fn).touch()
+        renderer.initialize_particles_from_taichi_elements(cur_render_input)
 
         total_voxels = renderer.total_non_empty_voxels()
         total_inserted_particles = renderer.total_inserted_particles()
@@ -107,7 +114,7 @@ def main():
             gui.show(output_fn)
         else:
             ti.imwrite(img, output_fn)
-
+        ti.memory_profiler_print()
         print(f'Frame rendered. {spp} take {time.time() - t} s.')
 
 

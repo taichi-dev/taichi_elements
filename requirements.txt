@@ -1,2 +1,2 @@
-taichi==0.7.31
+taichi==0.8.1
 plyfile

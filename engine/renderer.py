@@ -85,19 +85,32 @@ class Renderer:
 
         ti.root.dense(ti.ij, res).place(self.color_buffer)
 
-        self.particle_bucket = ti.root.pointer(ti.ijk,
-                                               self.particle_grid_res // 8)
-        self.particle_bucket.dense(ti.ijk, 8).dynamic(
+        self.block_size = 8
+        self.block_offset = [
+            o // self.block_size for o in self.particle_grid_offset
+        ]
+        self.particle_bucket = ti.root.pointer(
+            ti.ijk, self.particle_grid_res // self.block_size)
+
+        self.particle_bucket.dense(ti.ijk, self.block_size).dynamic(
             ti.l, self.max_num_particles_per_cell,
             chunk_size=32).place(self.pid,
                                  offset=self.particle_grid_offset + [0])
 
-        ti.root.pointer(ti.ijk, self.particle_grid_res // 8).dense(
-            ti.ijk, 8).place(self.voxel_has_particle,
-                             offset=self.particle_grid_offset)
-        voxel_block = ti.root.pointer(ti.ijk, self.voxel_grid_res // 8)
-        voxel_block.dense(ti.ijk, 8).place(self.voxel_grid_density,
-                                           offset=voxel_grid_offset)
+        self.voxel_block_offset = [
+            o // self.block_size for o in voxel_grid_offset
+        ]
+        ti.root.pointer(ti.ijk,
+                        self.particle_grid_res // self.block_size).dense(
+                            ti.ijk,
+                            self.block_size).place(self.voxel_has_particle,
+                                                   offset=voxel_grid_offset)
+        voxel_block = ti.root.pointer(ti.ijk,
+                                      self.voxel_grid_res // self.block_size)
+
+        voxel_block.dense(ti.ijk,
+                          self.block_size).place(self.voxel_grid_density,
+                                                 offset=voxel_grid_offset)
 
         particle = ti.root.dense(ti.l, self.max_num_particles)
 
@@ -397,7 +410,7 @@ class Renderer:
         ti.block_dim(256)
         for u, v in self.color_buffer:
             fov = self.fov[None]
-            pos = self.camera_pos
+            pos = self.camera_pos[None]
             d = (self.look_at[None] - self.camera_pos[None]).normalized()
             fu = (2 * fov * (u + ti.random(ti.f32)) / res[1] -
                   fov * aspect_ratio - 1e-5)
@@ -584,7 +597,6 @@ class Renderer:
         for i in range(num_slices):
             begin = slice_size * i
             end = min(num_part, begin + slice_size)
-            print(begin, end)
             self.initialize_particle(np_x[begin:end], np_v[begin:end],
                                      np_color[begin:end], begin, end)
         self.initialize_particle_grid()

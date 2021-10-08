@@ -7,8 +7,7 @@ import multiprocessing as mp
 
 USE_IN_BLENDER = False
 
-ti.require_version(0, 7, 10)
-
+ti.require_version(0, 8, 1)
 
 # TODO: water needs Jp - fix this.
 
@@ -56,14 +55,17 @@ class MPMSolver:
             dt_scale=1,
             E_scale=1,
             voxelizer_super_sample=2,
-            use_g2p2g=False,  # ref: A massively parallel and scalable multi-GPU material point method
+            use_g2p2g=False,  # Ref: A massively parallel and scalable multi-GPU material point method
+            v_clamp_g2p2g=True,
             use_bls=True,
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
-            support_plasticity=True):
+            support_plasticity=True,  # Support snow and sand materials
+            use_adaptive_dt=False):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
+        self.v_clamp_g2p2g = v_clamp_g2p2g
         self.use_bls = use_bls
         self.g2p2g_allowed_cfl = g2p2g_allowed_cfl
         self.water_density = water_density
@@ -78,7 +80,7 @@ class MPMSolver:
         self.dx = size / res[0]
         self.inv_dx = 1.0 / self.dx
         self.default_dt = 2e-2 * self.dx / size * dt_scale
-        self.p_vol = self.dx ** self.dim
+        self.p_vol = self.dx**self.dim
         self.p_rho = 1000
         self.p_mass = self.p_vol * self.p_rho
         self.max_num_particles = max_num_particles
@@ -88,19 +90,20 @@ class MPMSolver:
                                                dtype=ti.f32,
                                                shape=())
         self.input_grid = 0
-        self.all_time_max_velocity = 0.0
+        self.all_time_max_velocity = 0
         self.support_plasticity = support_plasticity
+        self.use_adaptive_dt = use_adaptive_dt
         self.F_bound = 4.0
 
-        # affine velocity field
+        # Affine velocity field
         if not self.use_g2p2g:
             self.C = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
-        # deformation gradient
+        # Deformation gradient
 
         if quant:
             ci21 = ti.type_factory.custom_int(21, True)
             cft = ti.type_factory.custom_float(significand_type=ci21,
-                                               scale=1 / (2 ** 19))
+                                               scale=1 / (2**19))
             self.x = ti.Vector.field(self.dim, dtype=cft)
 
             cu6 = ti.type_factory.custom_int(7, False)
@@ -112,7 +115,7 @@ class MPMSolver:
             ci16 = ti.type_factory.custom_int(16, True)
             cft = ti.type_factory.custom_float(significand_type=ci16,
                                                scale=(self.F_bound + 0.1) /
-                                                     (2 ** 15))
+                                               (2**15))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
         else:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -120,14 +123,14 @@ class MPMSolver:
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
 
         self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
-        # material id
+        # Material id
         if quant and self.dim == 3:
             self.material = ti.field(dtype=ti.quant.int(16, False))
         else:
             self.material = ti.field(dtype=ti.i32)
-        #  particle color
+        # Particle color
         self.color = ti.field(dtype=ti.i32)
-        # plastic deformation volume ratio
+        # Plastic deformation volume ratio
         if self.support_plasticity:
             self.Jp = ti.field(dtype=ti.f32)
 
@@ -141,7 +144,7 @@ class MPMSolver:
             # simulation resolution in an unbounded simulation,
             # Otherwise the top and right sides will be bounded by grid size
             while self.grid_size <= 2 * max(self.res):
-                self.grid_size *= 2 # keep it power of two
+                self.grid_size *= 2  # keep it power of two
         offset = tuple(-self.grid_size // 2 for _ in range(self.dim))
         self.offset = offset
 
@@ -160,16 +163,17 @@ class MPMSolver:
         self.pid = []
 
         for g in range(self.num_grids):
-            # grid node momentum/velocity
+            # Grid node momentum/velocity
             grid_v = ti.Vector.field(self.dim, dtype=ti.f32)
             grid_m = ti.field(dtype=ti.f32)
             pid = ti.field(ti.i32)
             self.grid_v.append(grid_v)
-            # grid node mass
+            # Grid node mass
             self.grid_m.append(grid_m)
             grid = ti.root.pointer(indices, self.grid_size // grid_block_size)
             block = grid.pointer(indices,
                                  grid_block_size // self.leaf_block_size)
+            self.block = block
             self.grid.append(grid)
 
             def block_component(c):
@@ -177,16 +181,18 @@ class MPMSolver:
                                                                  offset=offset)
 
             block_component(grid_m)
-            for i in range(self.dim):
-                block_component(grid_v.get_scalar_field(i))
+            for d in range(self.dim):
+                block_component(grid_v.get_scalar_field(d))
 
             self.pid.append(pid)
-            # TODO ? why
-            block_offset = tuple(o // self.leaf_block_size for o in self.offset)
-            block.dynamic(ti.indices(self.dim),
+
+            block_offset = tuple(o // self.leaf_block_size
+                                 for o in self.offset)
+            self.block_offset = block_offset
+            block.dynamic(ti.axes(self.dim),
                           1024 * 1024,
-                          chunk_size=self.leaf_block_size ** self.dim * 8).place(
-                pid, offset=block_offset + (0,))
+                          chunk_size=self.leaf_block_size**self.dim * 8).place(
+                              pid, offset=block_offset + (0, ))
 
         self.padding = padding
 
@@ -194,8 +200,8 @@ class MPMSolver:
         self.E, self.nu = 1e6 * size * E_scale, 0.2
         # Lame parameters
         self.mu_0, self.lambda_0 = self.E / (
-                2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) *
-                                                        (1 - 2 * self.nu))
+            2 * (1 + self.nu)), self.E * self.nu / ((1 + self.nu) *
+                                                    (1 - 2 * self.nu))
 
         # Sand parameters
         friction_angle = math.radians(45)
@@ -203,7 +209,7 @@ class MPMSolver:
         self.alpha = math.sqrt(2 / 3) * 2 * sin_phi / (3 - sin_phi)
 
         # An empirically optimal chunk size is 1/10 of the expected particle number
-        chunk_size = 2 ** 20 if self.dim == 2 else 2 ** 23
+        chunk_size = 2**20 if self.dim == 2 else 2**23
         self.particle = ti.root.dynamic(ti.i, max_num_particles, chunk_size)
 
         if self.quant:
@@ -217,22 +223,28 @@ class MPMSolver:
 
             if self.dim == 3:
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 0), self.F(0, 1))
+                    self.F.get_scalar_field(0, 0),
+                    self.F.get_scalar_field(0, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 2), self.F(1, 0))
+                    self.F.get_scalar_field(0, 2),
+                    self.F.get_scalar_field(1, 0))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(1, 1), self.F(1, 2))
+                    self.F.get_scalar_field(1, 1),
+                    self.F.get_scalar_field(1, 2))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(2, 0), self.F(2, 1))
+                    self.F.get_scalar_field(2, 0),
+                    self.F.get_scalar_field(2, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(2, 2), self.material)
+                    self.F.get_scalar_field(2, 2), self.material)
             else:
                 assert self.dim == 2
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(0, 0), self.F(0, 1))
+                    self.F.get_scalar_field(0, 0),
+                    self.F.get_scalar_field(0, 1))
                 self.particle.bit_struct(num_bits=32).place(
-                    self.F(1, 0), self.F(1, 1))
-                # no quantization on particle material in 2D
+                    self.F.get_scalar_field(1, 0),
+                    self.F.get_scalar_field(1, 1))
+                # No quantization on particle material in 2D
                 self.particle.place(self.material)
             self.particle.place(self.color)
         else:
@@ -278,7 +290,7 @@ class MPMSolver:
             self.pid = self.pid[0]
 
     def stencil_range(self):
-        return ti.ndrange(*((3,) * self.dim))
+        return ti.ndrange(*((3, ) * self.dim))
 
     def set_gravity(self, g):
         assert isinstance(g, (tuple, list))
@@ -300,8 +312,8 @@ class MPMSolver:
         else:
             self.Jp[p] = 0.0
             delta_gamma = epsilon_hat_norm + (
-                    self.dim * self.lambda_0 +
-                    2 * self.mu_0) / (2 * self.mu_0) * tr * self.alpha
+                self.dim * self.lambda_0 +
+                2 * self.mu_0) / (2 * self.mu_0) * tr * self.alpha
             for i in ti.static(range(self.dim)):
                 sigma_out[i, i] = ti.exp(epsilon[i] - max(0, delta_gamma) /
                                          epsilon_hat_norm * epsilon_hat[i])
@@ -309,7 +321,8 @@ class MPMSolver:
         return sigma_out
 
     @ti.kernel
-    def build_pid(self, pid: ti.template(), grid_m: ti.template(), offset: ti.template()):
+    def build_pid(self, pid: ti.template(), grid_m: ti.template(),
+                  offset: ti.template()):
         """
         grid has blocking (e.g. 4x4x4), we wish to put the particles from each block into a GPU block,
         then used shared memory (ti.block_local) to accelerate
@@ -322,10 +335,9 @@ class MPMSolver:
         for p in self.x:
             base = int(ti.floor(self.x[p] * self.inv_dx - 0.5)) \
                    - ti.Vector(list(self.offset))
-            # pid grandparent is `block`
+            # Pid grandparent is `block`
             base_pid = ti.rescale_index(grid_m, pid.parent(2), base)
             ti.append(pid.parent(), base_pid, p)
-
 
     @ti.kernel
     def g2p2g(self, dt: ti.f32, pid: ti.template(), grid_v_in: ti.template(),
@@ -334,9 +346,9 @@ class MPMSolver:
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
             ti.block_local(grid_m_out)
-            for i in ti.static(range(self.dim)):
-                ti.block_local(grid_v_in.get_scalar_field(i))
-                ti.block_local(grid_v_out.get_scalar_field(i))
+            for d in ti.static(range(self.dim)):
+                ti.block_local(grid_v_in.get_scalar_field(d))
+                ti.block_local(grid_v_out.get_scalar_field(d))
         for I in ti.grouped(pid):
             p = pid[I]
             # G2P
@@ -346,11 +358,11 @@ class MPMSolver:
                 base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
             fx = self.x[p] * self.inv_dx - base.cast(float)
             w = [
-                0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
+                0.5 * (1.5 - fx)**2, 0.75 - (fx - 1.0)**2, 0.5 * (fx - 0.5)**2
             ]
             new_v = ti.Vector.zero(ti.f32, self.dim)
             C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-            # loop over 3x3 grid node neighborhood
+            # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
                 dpos = offset.cast(float) - fx
                 g_v = grid_v_in[base + offset]
@@ -365,10 +377,6 @@ class MPMSolver:
                 new_v = self.v[p]
                 C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
 
-            if ti.static(self.g2p2g_allowed_cfl > 0):
-                v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
-                for d in ti.static(range(self.dim)):
-                    new_v[d] = min(max(new_v[d], -v_allowed), v_allowed)
             if self.material[p] != self.material_stationary:
                 self.v[p] = new_v
                 self.x[p] += dt * self.v[p]  # advection
@@ -380,8 +388,8 @@ class MPMSolver:
 
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
-            w2 = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-            # deformation gradient update
+            w2 = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
+            # Deformation gradient update
             new_F = (ti.Matrix.identity(ti.f32, self.dim) + dt * C) @ self.F[p]
             if ti.static(self.quant):
                 new_F = max(-self.F_bound, min(self.F_bound, new_F))
@@ -391,10 +399,10 @@ class MPMSolver:
             if ti.static(self.support_plasticity):
                 h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
-                p] == self.material_elastic:  # jelly, make it softer
+                    p] == self.material_elastic:  # Jelly, make it softer
                 h = 0.3
             mu, la = self.mu_0 * h, self.lambda_0 * h
-            if self.material[p] == self.material_water:  # liquid
+            if self.material[p] == self.material_water:  # Liquid
                 mu = 0.0
             U, sig, V = ti.svd(self.F[p])
             J = 1.0
@@ -421,8 +429,8 @@ class MPMSolver:
 
             if self.material[p] != self.material_sand:
                 stress = 2 * mu * (
-                        self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
-                ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
+                    self.F[p] - U @ V.transpose()) @ self.F[p].transpose(
+                    ) + ti.Matrix.identity(ti.f32, self.dim) * la * J * (J - 1)
             else:
                 if ti.static(self.support_plasticity):
                     sig = self.sand_projection(sig, p)
@@ -439,7 +447,7 @@ class MPMSolver:
                                                                     sig[i, i])
                     stress = U @ center @ V.transpose() @ self.F[p].transpose()
 
-            stress = (-dt * self.p_vol * 4 * self.inv_dx ** 2) * stress
+            stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             affine = stress + self.p_mass * C
 
             # Loop over 3x3 grid node neighborhood
@@ -460,21 +468,21 @@ class MPMSolver:
         ti.no_activate(self.particle)
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            for i in ti.static(range(self.dim)):
-                ti.block_local(self.grid_v.get_scalar_field(i))
+            for d in ti.static(range(self.dim)):
+                ti.block_local(self.grid_v.get_scalar_field(d))
             ti.block_local(self.grid_m)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
             base = ti.floor(self.x[p] * self.inv_dx - 0.5).cast(int)
             Im = ti.rescale_index(self.pid, self.grid_m, I)
             for D in ti.static(range(self.dim)):
-                # for block shared memory: hint compiler that there is a connection between `base` and loop index `I`
+                # For block shared memory: hint compiler that there is a connection between `base` and loop index `I`
                 base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
 
             fx = self.x[p] * self.inv_dx - base.cast(float)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
-            w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-            # deformation gradient update
+            w = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
+            # Deformation gradient update
             F = self.F[p]
             if self.material[p] == self.material_water:  # liquid
                 F = ti.Matrix.identity(ti.f32, self.dim)
@@ -488,7 +496,7 @@ class MPMSolver:
                 if self.material[p] != self.material_water:
                     h = ti.exp(10 * (1.0 - self.Jp[p]))
             if self.material[
-                p] == self.material_elastic:  # jelly, make it softer
+                    p] == self.material_elastic:  # jelly, make it softer
                 h = 0.3
             mu, la = self.mu_0 * h, self.lambda_0 * h
             if self.material[p] == self.material_water:  # liquid
@@ -537,7 +545,7 @@ class MPMSolver:
                     stress = U @ center @ V.transpose() @ F.transpose()
             self.F[p] = F
 
-            stress = (-dt * self.p_vol * 4 * self.inv_dx ** 2) * stress
+            stress = (-dt * self.p_vol * 4 * self.inv_dx**2) * stress
             # TODO: implement g2p2g pmass
             mass = self.p_mass
             if self.material[p] == self.material_water:
@@ -557,10 +565,16 @@ class MPMSolver:
     @ti.kernel
     def grid_normalization_and_gravity(self, dt: ti.f32, grid_v: ti.template(),
                                        grid_m: ti.template()):
+        v_allowed = self.dx * self.g2p2g_allowed_cfl / dt
         for I in ti.grouped(grid_m):
             if grid_m[I] > 0:  # No need for epsilon here
                 grid_v[I] = (1 / grid_m[I]) * grid_v[I]  # Momentum to velocity
                 grid_v[I] += dt * self.gravity[None]
+
+            # Grid velocity clamping
+            if ti.static(self.g2p2g_allowed_cfl > 0 and self.use_g2p2g
+                         and self.v_clamp_g2p2g):
+                grid_v[I] = min(max(grid_v[I], -v_allowed), v_allowed)
 
     @ti.kernel
     def grid_bounding_box(self, t: ti.f32, dt: ti.f32,
@@ -569,10 +583,10 @@ class MPMSolver:
             for d in ti.static(range(self.dim)):
                 if ti.static(unbounded):
                     if I[d] < -self.grid_size // 2 + self.padding and grid_v[
-                        I][d] < 0:
+                            I][d] < 0:
                         grid_v[I][d] = 0  # Boundary conditions
                     if I[d] >= self.grid_size // 2 - self.padding and grid_v[
-                        I][d] > 0:
+                            I][d] > 0:
                         grid_v[I][d] = 0
                 else:
                     if I[d] < self.padding and grid_v[I][d] < 0:
@@ -615,8 +629,8 @@ class MPMSolver:
                              surface=surface_sticky,
                              friction=0.0):
         point = list(point)
-        # normalize normal
-        normal_scale = 1.0 / math.sqrt(sum(x ** 2 for x in normal))
+        # Normalize normal
+        normal_scale = 1.0 / math.sqrt(sum(x**2 for x in normal))
         normal = list(normal_scale * x for x in normal)
 
         if surface == self.surface_sticky and friction != 0:
@@ -642,7 +656,7 @@ class MPMSolver:
                             v = v - n * min(normal_component, 0)
 
                         if normal_component < 0 and v.norm() > 1e-30:
-                            # apply friction here
+                            # Apply friction here
                             v = v.normalized() * max(
                                 0,
                                 v.norm() + normal_component * friction)
@@ -660,8 +674,8 @@ class MPMSolver:
     def g2p(self, dt: ti.f32):
         ti.block_dim(256)
         if ti.static(self.use_bls):
-            for i in ti.static(range(self.dim)):
-                ti.block_local(self.grid_v.get_scalar_field(i))
+            for d in ti.static(range(self.dim)):
+                ti.block_local(self.grid_v.get_scalar_field(d))
         ti.no_activate(self.particle)
         for I in ti.grouped(self.pid):
             p = self.pid[I]
@@ -671,11 +685,11 @@ class MPMSolver:
                 base[D] = ti.assume_in_range(base[D], Im[D], 0, 1)
             fx = self.x[p] * self.inv_dx - base.cast(float)
             w = [
-                0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
+                0.5 * (1.5 - fx)**2, 0.75 - (fx - 1.0)**2, 0.5 * (fx - 0.5)**2
             ]
             new_v = ti.Vector.zero(ti.f32, self.dim)
             new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
-            # loop over 3x3 grid node neighborhood
+            # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
                 dpos = offset.cast(float) - fx
                 g_v = self.grid_v[base + offset]
@@ -699,23 +713,43 @@ class MPMSolver:
             ti.atomic_max(max_velocity, v_max)
         return max_velocity
 
-    def step(self, frame_dt, print_stat=False):
+    @ti.kernel
+    def compute_max_grid_velocity(self, grid_v: ti.template()) -> ti.f32:
+        max_velocity = 0.0
+        for I in ti.grouped(grid_v):
+            v = grid_v[I]
+            v_max = 0.0
+            for i in ti.static(range(self.dim)):
+                v_max = max(v_max, abs(v[i]))
+            ti.atomic_max(max_velocity, v_max)
+        return max_velocity
+
+    def step(self, frame_dt, print_stat=False, smry_writer=None):
         begin_t = time.time()
         begin_substep = self.total_substeps
 
         substeps = int(frame_dt / self.default_dt) + 1
 
+        dt = frame_dt / substeps
+        frame_time_left = frame_dt
         if print_stat:
             print(f'needed substeps: {substeps}')
-        for i in range(substeps):
+
+        while frame_time_left > 0:
             print('.', end='', flush=True)
             self.total_substeps += 1
-            dt = frame_dt / substeps
+            if self.use_adaptive_dt:
+                max_grid_v = self.compute_max_grid_velocity(
+                    self.grid_v[self.input_grid])
+                cfl_dt = self.g2p2g_allowed_cfl * self.dx / (max_grid_v + 1e-6)
+                dt = min(dt, cfl_dt, frame_time_left)
+            frame_time_left -= dt
 
             if self.use_g2p2g:
                 output_grid = 1 - self.input_grid
                 self.grid[output_grid].deactivate_all()
-                self.build_pid(self.pid[self.input_grid], self.grid_m[self.input_grid], 0.5)
+                self.build_pid(self.pid[self.input_grid],
+                               self.grid_m[self.input_grid], 0.5)
                 self.g2p2g(dt, self.pid[self.input_grid],
                            self.grid_v[self.input_grid],
                            self.grid_v[output_grid], self.grid_m[output_grid])
@@ -736,17 +770,25 @@ class MPMSolver:
                     p(self.t, dt, self.grid_v)
                 self.t += dt
                 self.g2p(dt)
-        self.all_time_max_velocity = max(self.all_time_max_velocity,
-                                         self.compute_max_velocity())
+
+            cur_frame_velocity = self.compute_max_velocity()
+            if smry_writer is not None:
+                smry_writer.add_scalar("substep_max_CFL",
+                                       cur_frame_velocity * dt / self.dx,
+                                       self.total_substeps)
+            self.all_time_max_velocity = max(self.all_time_max_velocity,
+                                             cur_frame_velocity)
+
         print()
 
         if print_stat:
-            ti.kernel_profiler_print()
+            ti.print_kernel_profile_info()
             try:
-                ti.memory_profiler_print()
+                ti.print_memory_profile_info()
             except:
                 pass
-            print(f'CFL: {self.all_time_max_velocity * dt / self.dx}')
+            cur_frame_velocity = self.compute_max_velocity()
+            print(f'CFL: {cur_frame_velocity * dt / self.dx}')
             print(f'num particles={self.n_particles[None]}')
             print(f'  frame time {time.time() - begin_t:.3f} s')
             print(
@@ -796,13 +838,13 @@ class MPMSolver:
                  sample_density=None,
                  velocity=None):
         if sample_density is None:
-            sample_density = 2 ** self.dim
+            sample_density = 2**self.dim
         vol = 1
         for i in range(self.dim):
             vol = vol * cube_size[i]
-        num_new_particles = int(sample_density * vol / self.dx ** self.dim + 1)
+        num_new_particles = int(sample_density * vol / self.dx**self.dim + 1)
         assert self.n_particles[
-                   None] + num_new_particles <= self.max_num_particles
+            None] + num_new_particles <= self.max_num_particles
 
         for i in range(self.dim):
             self.source_bound[0][i] = lower_corner[i]
@@ -823,14 +865,15 @@ class MPMSolver:
         color=0xFFFFFF,
         sample_density=None,
         velocity=None,
-        ):
+    ):
         if self.dim != 2:
             raise ValueError("Add Ngon only works for 2D simulations")
 
         if sample_density is None:
-            sample_density = 2 ** self.dim
+            sample_density = 2**self.dim
 
-        num_particles = 0.5 * (radius * self.inv_dx) ** 2 * math.sin(2 * math.pi / sides) * sides
+        num_particles = 0.5 * (radius * self.inv_dx)**2 * math.sin(
+            2 * math.pi / sides) * sides
 
         num_particles = int(math.ceil(num_particles * sample_density))
 
@@ -851,28 +894,23 @@ class MPMSolver:
         while True:
             point = ti.Vector([ti.random(), ti.random()]) * 2 - 1
             point_angle = ti.atan2(point.y, point.x)
-            theta = (point_angle - angle) % central_angle # polygon angle is from +X axis
+            theta = (point_angle -
+                     angle) % central_angle  # polygon angle is from +X axis
             phi = central_angle / 2
-            dist = ti.sqrt((point ** 2).sum())
+            dist = ti.sqrt((point**2).sum())
             if dist < ti.cos(phi) / ti.cos(phi - theta):
                 break
         return point
 
     @ti.kernel
-    def seed_polygon(
-        self,
-        new_particles: ti.i32,
-        sides: ti.i32,
-        angle: ti.f32,
-        new_material: ti.i32,
-        color: ti.i32
-    ):
+    def seed_polygon(self, new_particles: ti.i32, sides: ti.i32, angle: ti.f32,
+                     new_material: ti.i32, color: ti.i32):
         for i in range(self.n_particles[None],
                        self.n_particles[None] + new_particles):
             x = self.random_point_in_unit_polygon(sides, angle)
             x = self.source_bound[0] + x * self.source_bound[1]
             self.seed_particle(i, x, new_material, color,
-                            self.source_velocity[None])
+                               self.source_velocity[None])
 
     @ti.kernel
     def add_texture_2d(
@@ -886,9 +924,7 @@ class MPMSolver:
         for i, j in ti.ndrange(texture.shape[0], texture.shape[1]):
             if texture[i, j] > 0.1:
                 pid = ti.atomic_add(self.n_particles[None], 1)
-                x = ti.Vector([
-                    offset_x + i * self.dx, offset_y + j * self.dx
-                ])
+                x = ti.Vector([offset_x + i * self.dx, offset_y + j * self.dx])
                 self.seed_particle(pid, x, new_material, color,
                                    self.source_velocity[None])
 
@@ -921,12 +957,12 @@ class MPMSolver:
                       sample_density=None,
                       velocity=None):
         if sample_density is None:
-            sample_density = 2 ** self.dim
+            sample_density = 2**self.dim
 
         if isinstance(radius, numbers.Number):
             radius = [
-                         radius,
-                     ] * self.dim
+                radius,
+            ] * self.dim
 
         radius = list(radius)
 
@@ -958,7 +994,7 @@ class MPMSolver:
             for d in ti.static(range(3)):
                 inside = inside and -self.grid_size // 2 + self.padding <= i and i < self.grid_size // 2 - self.padding
             if inside and self.voxelizer.voxels[i, j, k] > 0:
-                s = sample_density / self.voxelizer_super_sample ** self.dim
+                s = sample_density / self.voxelizer_super_sample**self.dim
                 for l in range(sample_density + 1):
                     if ti.random() + l < s:
                         x = ti.Vector([
@@ -980,7 +1016,7 @@ class MPMSolver:
                  translation=None):
         assert self.dim == 3
         if sample_density is None:
-            sample_density = 2 ** self.dim
+            sample_density = 2**self.dim
 
         self.set_source_velocity(velocity=velocity)
 
@@ -1023,12 +1059,12 @@ class MPMSolver:
 
     @ti.kernel
     def recover_from_external_array(
-        self,
-        num_particles: ti.i32,
-        pos: ti.ext_arr(),
-        vel: ti.ext_arr(),
-        material: ti.ext_arr(),
-        color: ti.ext_arr(),
+            self,
+            num_particles: ti.i32,
+            pos: ti.ext_arr(),
+            vel: ti.ext_arr(),
+            material: ti.ext_arr(),
+            color: ti.ext_arr(),
     ):
         for i in range(num_particles):
             x = ti.Vector.zero(ti.f32, n=self.dim)
@@ -1056,10 +1092,10 @@ class MPMSolver:
         for s in range(num_slices):
             begin = slice_size * s
             end = min(slice_size * (s + 1), num_particles)
-            self.recover_from_external_array(
-                end - begin,
-                pos[begin:end], vel[begin:end], material[begin:end], color[begin:end]
-            )
+            self.recover_from_external_array(end - begin, pos[begin:end],
+                                             vel[begin:end],
+                                             material[begin:end],
+                                             color[begin:end])
 
     @ti.kernel
     def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
@@ -1092,9 +1128,9 @@ class MPMSolver:
         self.copy_dynamic_nd(np_x, self.x)
         np_v = np.ndarray((self.n_particles[None], self.dim), dtype=np.float32)
         self.copy_dynamic_nd(np_v, self.v)
-        np_material = np.ndarray((self.n_particles[None],), dtype=np.int32)
+        np_material = np.ndarray((self.n_particles[None], ), dtype=np.int32)
         self.copy_dynamic(np_material, self.material)
-        np_color = np.ndarray((self.n_particles[None],), dtype=np.int32)
+        np_color = np.ndarray((self.n_particles[None], ), dtype=np.int32)
         self.copy_dynamic(np_color, self.color)
         return {
             'position': np_x,
