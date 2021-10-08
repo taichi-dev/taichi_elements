@@ -86,23 +86,31 @@ class Renderer:
         ti.root.dense(ti.ij, res).place(self.color_buffer)
 
         self.block_size = 8
-        self.block_offset = [o // self.block_size for o in self.particle_grid_offset]
-        self.particle_bucket = ti.root.pointer(ti.ijk,
-                                               self.particle_grid_res // self.block_size)
+        self.block_offset = [
+            o // self.block_size for o in self.particle_grid_offset
+        ]
+        self.particle_bucket = ti.root.pointer(
+            ti.ijk, self.particle_grid_res // self.block_size)
 
         self.particle_bucket.dense(ti.ijk, self.block_size).dynamic(
             ti.l, self.max_num_particles_per_cell,
             chunk_size=32).place(self.pid,
                                  offset=self.particle_grid_offset + [0])
 
-        self.voxel_block_offset = [o // self.block_size for o in voxel_grid_offset]
-        ti.root.pointer(ti.ijk, self.particle_grid_res // self.block_size).dense(
-            ti.ijk, self.block_size).place(self.voxel_has_particle,
-                                           offset=voxel_grid_offset)
-        voxel_block = ti.root.pointer(ti.ijk, self.voxel_grid_res // self.block_size)
+        self.voxel_block_offset = [
+            o // self.block_size for o in voxel_grid_offset
+        ]
+        ti.root.pointer(ti.ijk,
+                        self.particle_grid_res // self.block_size).dense(
+                            ti.ijk,
+                            self.block_size).place(self.voxel_has_particle,
+                                                   offset=voxel_grid_offset)
+        voxel_block = ti.root.pointer(ti.ijk,
+                                      self.voxel_grid_res // self.block_size)
 
-        voxel_block.dense(ti.ijk, self.block_size).place(self.voxel_grid_density,
-                                                         offset=voxel_grid_offset)
+        voxel_block.dense(ti.ijk,
+                          self.block_size).place(self.voxel_grid_density,
+                                                 offset=voxel_grid_offset)
 
         particle = ti.root.dense(ti.l, self.max_num_particles)
 
@@ -271,7 +279,7 @@ class Renderer:
         pos = ipos * self.dx
         return self.bbox[0][0] <= pos[0] and pos[0] < self.bbox[1][
             0] and self.bbox[0][1] <= pos[1] and pos[1] < self.bbox[1][
-                   1] and self.bbox[0][2] <= pos[2] and pos[2] < self.bbox[1][2]
+                1] and self.bbox[0][2] <= pos[2] and pos[2] < self.bbox[1][2]
 
     # DDA for the particle visualization (render_voxels=False)
     @ti.func
@@ -507,7 +515,7 @@ class Renderer:
                                 self.voxel_grid_density[box_ipos] = 1
                                 ti.append(
                                     self.pid.parent(), box_ipos -
-                                                       ti.Vector(self.particle_grid_offset), p)
+                                    ti.Vector(self.particle_grid_offset), p)
 
     @ti.kernel
     def copy(self, img: ti.ext_arr(), samples: ti.i32):
@@ -516,8 +524,8 @@ class Renderer:
             v = 1.0 * j / res[1]
 
             darken = 1.0 - self.vignette_strength * max((ti.sqrt(
-                (u - self.vignette_center[0]) ** 2 +
-                (v - self.vignette_center[1]) ** 2) - self.vignette_radius), 0)
+                (u - self.vignette_center[0])**2 +
+                (v - self.vignette_center[1])**2) - self.vignette_radius), 0)
 
             for c in ti.static(range(3)):
                 img[i, j, c] = ti.sqrt(self.color_buffer[i, j][c] * darken *

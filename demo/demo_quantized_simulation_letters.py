@@ -39,8 +39,7 @@ write_to_disk = args.out_dir is not None
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
         use_unified_memory=False,
-        device_memory_GB=20
-        )
+        device_memory_GB=20)
 
 max_num_particles = 450000000
 
@@ -87,16 +86,16 @@ def load_mesh(fn, scale, offset):
 # Use 512 for final simulation/render
 R = 256
 
-mpm = MPMSolver(res=(R, R, R),
-                size=1,
-                unbounded=True,
-                dt_scale=1,
-                quant=True,
-                use_g2p2g=True,
-                support_plasticity=False,
-                # adaptive_dt=True,
-                v_clamp_g2p2g=True
-                )
+mpm = MPMSolver(
+    res=(R, R, R),
+    size=1,
+    unbounded=True,
+    dt_scale=1,
+    quant=True,
+    use_g2p2g=True,
+    support_plasticity=False,
+    # adaptive_dt=True,
+    v_clamp_g2p2g=True)
 
 mpm.add_surface_collider(point=(0, 0, 0),
                          normal=(0, 1, 0),

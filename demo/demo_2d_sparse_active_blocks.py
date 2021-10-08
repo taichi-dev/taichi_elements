@@ -33,11 +33,13 @@ for i in range(3):
                  cube_size=[0.1, 0.1],
                  material=MPMSolver.material_elastic)
 
+
 @ti.kernel
 def block_active(vs_field: ti.template(), solver: ti.template()):
     for I in ti.grouped(vs_field):
         blk_I = I // solver.leaf_block_size - solver.block_offset
-        if ti.is_active(solver.block, blk_I) and (I % solver.leaf_block_size).min() != 0:
+        if ti.is_active(solver.block,
+                        blk_I) and (I % solver.leaf_block_size).min() != 0:
             vs_field[I] = [0.11, 0.22, 0.25]
         else:
             vs_field[I] = [0.07, 0.125, 0.23]
