@@ -114,7 +114,7 @@ def main():
             gui.show(output_fn)
         else:
             ti.imwrite(img, output_fn)
-        ti.memory_profiler_print()
+        ti.print_memory_profile_info()
         print(f'Frame rendered. {spp} take {time.time() - t} s.')
 
 
