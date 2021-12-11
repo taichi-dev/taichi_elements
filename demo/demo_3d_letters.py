@@ -12,10 +12,7 @@ with_gui = True
 write_to_disk = True
 
 # Try to run on GPU
-ti.init(arch=ti.cuda,
-        kernel_profiler=True,
-        use_unified_memory=False,
-        device_memory_fraction=0.7)
+ti.init(arch=ti.cuda, kernel_profiler=True, device_memory_fraction=0.7)
 
 max_num_particles = 10000000
 
