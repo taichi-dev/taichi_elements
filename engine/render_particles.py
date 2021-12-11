@@ -54,9 +54,7 @@ def parse_args():
 
 args = parse_args()
 
-ti.init(arch=ti.cuda,
-        use_unified_memory=False,
-        device_memory_GB=args.gpu_memory)
+ti.init(arch=ti.cuda, device_memory_GB=args.gpu_memory)
 
 output_folder = args.out_dir
 os.makedirs(output_folder, exist_ok=True)

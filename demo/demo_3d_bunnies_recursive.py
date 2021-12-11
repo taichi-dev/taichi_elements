@@ -47,10 +47,7 @@ with_gui = args.show
 write_to_disk = args.out_dir is not None
 
 # Try to run on GPU
-ti.init(arch=ti.cuda,
-        kernel_profiler=True,
-        use_unified_memory=False,
-        device_memory_GB=args.gpu_memory)
+ti.init(arch=ti.cuda, kernel_profiler=True, device_memory_GB=args.gpu_memory)
 
 if with_gui:
     gui = ti.GUI("MLS-MPM",

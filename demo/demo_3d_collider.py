@@ -10,7 +10,7 @@ if write_to_disk:
     os.makedirs('outputs', exist_ok=True)
 
 # Try to run on GPU
-ti.init(arch=ti.cuda, device_memory_GB=4.0, use_unified_memory=False)
+ti.init(arch=ti.cuda, device_memory_GB=4.0)
 
 gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
 
