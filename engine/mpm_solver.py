@@ -364,7 +364,7 @@ class MPMSolver:
             C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
             # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
-                dpos = offset.cast(float) - fx
+                dpos = ti.Vector(offset).cast(float) - fx
                 g_v = grid_v_in[base + offset]
                 weight = 1.0
                 for d in ti.static(range(self.dim)):
@@ -554,7 +554,7 @@ class MPMSolver:
 
             # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
-                dpos = (offset.cast(float) - fx) * self.dx
+                dpos = (ti.Vector(offset).cast(float) - fx) * self.dx
                 weight = 1.0
                 for d in ti.static(range(self.dim)):
                     weight *= w[offset[d]][d]
@@ -691,7 +691,7 @@ class MPMSolver:
             new_C = ti.Matrix.zero(ti.f32, self.dim, self.dim)
             # Loop over 3x3 grid node neighborhood
             for offset in ti.static(ti.grouped(self.stencil_range())):
-                dpos = offset.cast(float) - fx
+                dpos = ti.Vector(offset).cast(float) - fx
                 g_v = self.grid_v[base + offset]
                 weight = 1.0
                 for d in ti.static(range(self.dim)):
