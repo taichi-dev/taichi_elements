@@ -6,12 +6,12 @@ from engine.mpm_solver import MPMSolver
 write_to_disk = False
 
 # Try to run on GPU
-ti.init(arch=ti.cpu, device_memory_GB=4.0)
+ti.init(arch=ti.gpu, device_memory_GB=4.0)
 
 # gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
 
 
-mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 16)
+mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 15)
 # dynamic_color = ti.Vector.field(4, dtype=ti.f32)
 # mpm.particle.place(dynamic_color)
 
@@ -52,8 +52,8 @@ def render():
     scene.set_camera(camera)
 
     scene.ambient_light((0, 0, 0))
-
     set_color(mpm.color_with_alpha, material_type_colors, mpm.material)
+
     scene.particles(mpm.x, per_vertex_color=mpm.color_with_alpha, radius=0.02)
 
     scene.point_light(pos=(0.5, 1.5, 0.5), color=(0.5, 0.5, 0.5))
@@ -65,7 +65,17 @@ def render():
 def show_options():
     window.GUI.begin("Solver Property", 0.05, 0.1, 0.2, 0.15)
     window.GUI.text(f"Current particle number {mpm.n_particles[None]}")
-    window.GUI.text(f"Current particle number {mpm.C[None]}")
+    window.GUI.end()
+
+    window.GUI.begin("Camera", 0.05, 0.3, 0.3, 0.3)
+    camera.curr_position[0] = window.GUI.slider_float("camera pos x", camera.curr_position[0], -10, 10)
+    camera.curr_position[1] = window.GUI.slider_float("camera posy", camera.curr_position[1], -10, 10)
+    camera.curr_position[2] = window.GUI.slider_float("camera pos z", camera.curr_position[2], -10, 10)
+
+    camera.curr_lookat[0] = window.GUI.slider_float("camera look at x", camera.curr_lookat[0], -10, 10)
+    camera.curr_lookat[1] = window.GUI.slider_float("camera look at y", camera.curr_lookat[1], -10, 10)
+    camera.curr_lookat[2] = window.GUI.slider_float("camera look at z", camera.curr_lookat[2], -10, 10)
+
     window.GUI.end()
 
 
@@ -74,8 +84,8 @@ window = ti.ui.Window("Real MPM 3D", res, vsync=True)
 canvas = window.get_canvas()
 scene = ti.ui.Scene()
 camera = ti.ui.make_camera()
-camera.position(0.5, 1.0, 1.95)
-camera.lookat(0.5, 0.3, 0.5)
+camera.position(4.7, 3.7, 1.2)
+camera.lookat(3.3, 0.0, 5.2)
 camera.fov(55)
 
 material_type_colors = np.array([
@@ -85,7 +95,7 @@ material_type_colors = np.array([
     [1.0, 1.0, 0.0, 1.0]
 ]
 )
-
+done = False
 for frame in range(1500):
     mpm.step(4e-3)
 
