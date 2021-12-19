@@ -130,6 +130,7 @@ class MPMSolver:
             self.material = ti.field(dtype=ti.i32)
         # Particle color
         self.color = ti.field(dtype=ti.i32)
+        self.color_with_alpha = ti.Vector.field(4, dtype=ti.f32)
         # Plastic deformation volume ratio
         if self.support_plasticity:
             self.Jp = ti.field(dtype=ti.f32)
@@ -250,6 +251,7 @@ class MPMSolver:
         else:
             self.particle.place(self.x, self.v, self.F, self.material,
                                 self.color)
+            self.particle.place(self.color_with_alpha)
             if self.support_plasticity:
                 self.particle.place(self.Jp)
             if not self.use_g2p2g:

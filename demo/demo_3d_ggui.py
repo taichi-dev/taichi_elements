@@ -1,0 +1,95 @@
+import taichi as ti
+import numpy as np
+import utils
+from engine.mpm_solver import MPMSolver
+
+write_to_disk = False
+
+# Try to run on GPU
+ti.init(arch=ti.cpu, device_memory_GB=4.0)
+
+# gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
+
+
+mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 16)
+# dynamic_color = ti.Vector.field(4, dtype=ti.f32)
+# mpm.particle.place(dynamic_color)
+
+mpm.add_ellipsoid(center=[2, 4, 3],
+                  radius=1,
+                  material=MPMSolver.material_snow,
+                  velocity=[0, -10, 0])
+mpm.add_cube(lower_corner=[2, 6, 3],
+             cube_size=[1, 1, 3],
+             material=MPMSolver.material_elastic)
+mpm.add_cube(lower_corner=[2, 8, 3],
+             cube_size=[1, 1, 3],
+             material=MPMSolver.material_sand)
+
+mpm.set_gravity((0, -50, 0))
+
+particles_radius = 0.02
+
+
+@ti.kernel
+def copy_dynamic_to_dense(dynamic_vec: ti.template(), dense_vec: ti.template()):
+    for I in ti.grouped(dynamic_vec):
+        dense_vec[I] = dynamic_vec[I]
+
+
+@ti.kernel
+def set_color(ti_color: ti.template(), material_color: ti.ext_arr(), ti_material: ti.template()):
+    for I in ti.grouped(ti_material):
+        material_id = ti_material[I]
+        color_4d = ti.Vector([0.0, 0.0, 0.0, 1.0])
+        for d in ti.static(range(3)):
+            color_4d[d] = material_color[material_id, d]
+        ti_color[I] = color_4d
+
+
+def render():
+    camera.track_user_inputs(window, movement_speed=0.03, hold_key=ti.ui.RMB)
+    scene.set_camera(camera)
+
+    scene.ambient_light((0, 0, 0))
+
+    set_color(mpm.color_with_alpha, material_type_colors, mpm.material)
+    scene.particles(mpm.x, per_vertex_color=mpm.color_with_alpha, radius=0.02)
+
+    scene.point_light(pos=(0.5, 1.5, 0.5), color=(0.5, 0.5, 0.5))
+    scene.point_light(pos=(0.5, 1.5, 1.5), color=(0.5, 0.5, 0.5))
+
+    canvas.scene(scene)
+
+
+def show_options():
+    window.GUI.begin("Solver Property", 0.05, 0.1, 0.2, 0.15)
+    window.GUI.text(f"Current particle number {mpm.n_particles[None]}")
+    window.GUI.text(f"Current particle number {mpm.C[None]}")
+    window.GUI.end()
+
+
+res = (1920, 1080)
+window = ti.ui.Window("Real MPM 3D", res, vsync=True)
+canvas = window.get_canvas()
+scene = ti.ui.Scene()
+camera = ti.ui.make_camera()
+camera.position(0.5, 1.0, 1.95)
+camera.lookat(0.5, 0.3, 0.5)
+camera.fov(55)
+
+material_type_colors = np.array([
+    [0.1, 0.1, 1.0, 0.8],
+    [236.0 / 255.0, 84.0 / 255.0, 59.0 / 255.0, 1.0],
+    [1.0, 1.0, 1.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0]
+]
+)
+
+for frame in range(1500):
+    mpm.step(4e-3)
+
+    render()
+    show_options()
+    print()
+    window.show()
