@@ -1,6 +1,5 @@
 import taichi as ti
 import numpy as np
-import utils
 from engine.mpm_solver import MPMSolver
 
 write_to_disk = False
@@ -8,12 +7,7 @@ write_to_disk = False
 # Try to run on GPU
 ti.init(arch=ti.gpu, device_memory_GB=4.0)
 
-# gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
-
-
 mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 15)
-# dynamic_color = ti.Vector.field(4, dtype=ti.f32)
-# mpm.particle.place(dynamic_color)
 
 mpm.add_ellipsoid(center=[2, 4, 3],
                   radius=1,
@@ -27,8 +21,6 @@ mpm.add_cube(lower_corner=[2, 8, 3],
              material=MPMSolver.material_sand)
 
 mpm.set_gravity((0, -50, 0))
-
-particles_radius = 0.02
 
 
 @ti.kernel
@@ -47,6 +39,17 @@ def set_color(ti_color: ti.template(), material_color: ti.ext_arr(), ti_material
         ti_color[I] = color_4d
 
 
+res = (1920, 1080)
+window = ti.ui.Window("Real MPM 3D", res, vsync=True)
+canvas = window.get_canvas()
+scene = ti.ui.Scene()
+camera = ti.ui.make_camera()
+camera.position(4.7, 3.7, 1.2)
+camera.lookat(3.3, 0.0, 5.2)
+camera.fov(55)
+particles_radius = 0.05
+
+
 def render():
     camera.track_user_inputs(window, movement_speed=0.03, hold_key=ti.ui.RMB)
     scene.set_camera(camera)
@@ -54,7 +57,7 @@ def render():
     scene.ambient_light((0, 0, 0))
     set_color(mpm.color_with_alpha, material_type_colors, mpm.material)
 
-    scene.particles(mpm.x, per_vertex_color=mpm.color_with_alpha, radius=0.02)
+    scene.particles(mpm.x, per_vertex_color=mpm.color_with_alpha, radius=particles_radius)
 
     scene.point_light(pos=(0.5, 1.5, 0.5), color=(0.5, 0.5, 0.5))
     scene.point_light(pos=(0.5, 1.5, 1.5), color=(0.5, 0.5, 0.5))
@@ -63,8 +66,12 @@ def render():
 
 
 def show_options():
+    global particles_radius
+
     window.GUI.begin("Solver Property", 0.05, 0.1, 0.2, 0.15)
     window.GUI.text(f"Current particle number {mpm.n_particles[None]}")
+    particles_radius = window.GUI.slider_float("particles radius ",
+                                               particles_radius, 0, 0.1)
     window.GUI.end()
 
     window.GUI.begin("Camera", 0.05, 0.3, 0.3, 0.3)
@@ -79,15 +86,6 @@ def show_options():
     window.GUI.end()
 
 
-res = (1920, 1080)
-window = ti.ui.Window("Real MPM 3D", res, vsync=True)
-canvas = window.get_canvas()
-scene = ti.ui.Scene()
-camera = ti.ui.make_camera()
-camera.position(4.7, 3.7, 1.2)
-camera.lookat(3.3, 0.0, 5.2)
-camera.fov(55)
-
 material_type_colors = np.array([
     [0.1, 0.1, 1.0, 0.8],
     [236.0 / 255.0, 84.0 / 255.0, 59.0 / 255.0, 1.0],
@@ -95,7 +93,7 @@ material_type_colors = np.array([
     [1.0, 1.0, 0.0, 1.0]
 ]
 )
-done = False
+
 for frame in range(1500):
     mpm.step(4e-3)
 
