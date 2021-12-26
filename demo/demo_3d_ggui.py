@@ -24,12 +24,6 @@ mpm.set_gravity((0, -50, 0))
 
 
 @ti.kernel
-def copy_dynamic_to_dense(dynamic_vec: ti.template(), dense_vec: ti.template()):
-    for I in ti.grouped(dynamic_vec):
-        dense_vec[I] = dynamic_vec[I]
-
-
-@ti.kernel
 def set_color(ti_color: ti.template(), material_color: ti.ext_arr(), ti_material: ti.template()):
     for I in ti.grouped(ti_material):
         material_id = ti_material[I]
@@ -44,8 +38,8 @@ window = ti.ui.Window("Real MPM 3D", res, vsync=True)
 canvas = window.get_canvas()
 scene = ti.ui.Scene()
 camera = ti.ui.make_camera()
-camera.position(4.7, 3.7, 1.2)
-camera.lookat(3.3, 0.0, 5.2)
+camera.position(4.389, 9.5, -9.5)
+camera.lookat(4.25, 1.89, 1.7)
 camera.fov(55)
 particles_radius = 0.05
 
@@ -76,7 +70,7 @@ def show_options():
 
     window.GUI.begin("Camera", 0.05, 0.3, 0.3, 0.3)
     camera.curr_position[0] = window.GUI.slider_float("camera pos x", camera.curr_position[0], -10, 10)
-    camera.curr_position[1] = window.GUI.slider_float("camera posy", camera.curr_position[1], -10, 10)
+    camera.curr_position[1] = window.GUI.slider_float("camera pos y", camera.curr_position[1], -10, 10)
     camera.curr_position[2] = window.GUI.slider_float("camera pos z", camera.curr_position[2], -10, 10)
 
     camera.curr_lookat[0] = window.GUI.slider_float("camera look at x", camera.curr_lookat[0], -10, 10)
