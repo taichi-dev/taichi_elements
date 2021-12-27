@@ -7,7 +7,7 @@ write_to_disk = False
 # Try to run on GPU
 ti.init(arch=ti.gpu, device_memory_GB=4.0)
 
-mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 15)
+mpm = MPMSolver(res=(64, 64, 64), size=10, max_num_particles=2 ** 15, use_ggui=True)
 
 mpm.add_ellipsoid(center=[2, 4, 3],
                   radius=1,

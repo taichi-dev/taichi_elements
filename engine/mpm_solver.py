@@ -61,7 +61,9 @@ class MPMSolver:
             g2p2g_allowed_cfl=0.9,  # 0.0 for no CFL limit
             water_density=1.0,
             support_plasticity=True,  # Support snow and sand materials
-            use_adaptive_dt=False):
+            use_adaptive_dt=False,
+            use_ggui=False
+    ):
         self.dim = len(res)
         self.quant = quant
         self.use_g2p2g = use_g2p2g
@@ -93,6 +95,7 @@ class MPMSolver:
         self.all_time_max_velocity = 0
         self.support_plasticity = support_plasticity
         self.use_adaptive_dt = use_adaptive_dt
+        self.use_ggui = use_ggui
         self.F_bound = 4.0
 
         # Affine velocity field
@@ -130,7 +133,8 @@ class MPMSolver:
             self.material = ti.field(dtype=ti.i32)
         # Particle color
         self.color = ti.field(dtype=ti.i32)
-        self.color_with_alpha = ti.Vector.field(4, dtype=ti.f32)
+        if self.use_ggui:
+            self.color_with_alpha = ti.Vector.field(4, dtype=ti.f32)
         # Plastic deformation volume ratio
         if self.support_plasticity:
             self.Jp = ti.field(dtype=ti.f32)
@@ -251,11 +255,13 @@ class MPMSolver:
         else:
             self.particle.place(self.x, self.v, self.F, self.material,
                                 self.color)
-            self.particle.place(self.color_with_alpha)
             if self.support_plasticity:
                 self.particle.place(self.Jp)
             if not self.use_g2p2g:
                 self.particle.place(self.C)
+
+        if self.use_ggui:
+            self.particle.place(self.color_with_alpha)
 
         self.total_substeps = 0
         self.unbounded = unbounded
