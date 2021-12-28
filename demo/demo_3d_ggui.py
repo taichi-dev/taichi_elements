@@ -62,13 +62,13 @@ def render():
 def show_options():
     global particles_radius
 
-    window.GUI.begin("Solver Property", 0.05, 0.1, 0.2, 0.15)
+    window.GUI.begin("Solver Property", 0.05, 0.1, 0.2, 0.10)
     window.GUI.text(f"Current particle number {mpm.n_particles[None]}")
     particles_radius = window.GUI.slider_float("particles radius ",
                                                particles_radius, 0, 0.1)
     window.GUI.end()
 
-    window.GUI.begin("Camera", 0.05, 0.3, 0.3, 0.3)
+    window.GUI.begin("Camera", 0.05, 0.3, 0.3, 0.16)
     camera.curr_position[0] = window.GUI.slider_float("camera pos x", camera.curr_position[0], -10, 10)
     camera.curr_position[1] = window.GUI.slider_float("camera pos y", camera.curr_position[1], -10, 10)
     camera.curr_position[2] = window.GUI.slider_float("camera pos z", camera.curr_position[2], -10, 10)
