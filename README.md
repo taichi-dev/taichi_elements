@@ -14,8 +14,12 @@
  - Execute `python3 demo/demo_2d.py` and you will see
 
 <img src="https://github.com/yuanming-hu/public_files/raw/master/graphics/elements/demo_2d.gif">
- 
+
  - Execute `python3 demo_3d.py` and you will see a 3D simulation visualized in 2D
+ - Execute `python3 demo_3d_ggui.py` and you will see a 3D simulation rendered with [GGUI](https://docs.taichi.graphics/lang/articles/misc/ggui). Note that GGUI requires Vulkan so please make sure your platform supports that.
+
+<img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/demo_3d_ggui.gif" style="zoom:40%;" />
+
  - Execute `python3 demo/demo_2d_sparse_active_blocks.py` to get a visual understanding of Taichi sparse computation
 
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/sparse_mpm_active_blocks.gif" height="600px">
@@ -36,8 +40,7 @@ python3 engine/render_particles.py \
      -M 460 \
      --shutter-time 0.0 \
      -r 128
-```
-   
+
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
