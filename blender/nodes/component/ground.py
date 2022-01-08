@@ -27,5 +27,8 @@ class ElementsGroundNode(base.BaseNode):
         direct = self.inputs.new('elements_vector_socket', 'Direction')
         direct.text = 'Direction'
 
+        frict = self.inputs.new('elements_float_socket', 'Friction')
+        frict.text = 'Friction'
+
     def draw_buttons(self, context, layout):
         layout.prop(self, 'surface', text='Surface')

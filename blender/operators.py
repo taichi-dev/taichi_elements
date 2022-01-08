@@ -360,10 +360,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
 
         if cls.colliders:
             for collider in cls.colliders:
+                direct = collider.direction[0]
+                if not direct[0] and not direct[1] and not direct[2]:
+                    direct = (0, 0, 1)
+                frict = collider.friction[0]
+                if frict < 0:
+                    frict = 0
+                elif frict > 1:
+                    frict = 1
                 solv.add_surface_collider(
                     tuple(collider.position[0]),
-                    tuple(collider.direction[0]),
-                    surface=collider.surface
+                    tuple(direct),
+                    surface=collider.surface,
+                    friction=frict
                 )
 
         self.size = size
