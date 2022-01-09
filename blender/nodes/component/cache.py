@@ -12,12 +12,14 @@ def get_cache(socket):
     vel = node.outputs['Velocity']
     col = node.outputs['Hex Color']
     mat = node.outputs['Material']
+    emt = node.outputs['Emitter']
     size = node.outputs['Size']
     folder = node.inputs['Folder'].get_value()[0]
     pos_key = '{0}.{1}'.format(node.name, pos.name)
     vel_key = '{0}.{1}'.format(node.name, vel.name)
     col_key = '{0}.{1}'.format(node.name, col.name)
     mat_key = '{0}.{1}'.format(node.name, mat.name)
+    emt_key = '{0}.{1}'.format(node.name, emt.name)
     size_key = '{0}.{1}'.format(node.name, size.name)
     # scene
     scn = bpy.context.scene
@@ -26,6 +28,7 @@ def get_cache(socket):
         scn.elements_sockets[vel_key] = ()
         scn.elements_sockets[col_key] = ()
         scn.elements_sockets[mat_key] = ()
+        scn.elements_sockets[emt_key] = ()
         scn.elements_sockets[size_key] = (1.0, )    # TODO
         return
     caches = {}
@@ -42,6 +45,7 @@ def get_cache(socket):
         scn.elements_sockets[vel_key] = ()
         scn.elements_sockets[col_key] = ()
         scn.elements_sockets[mat_key] = ()
+        scn.elements_sockets[emt_key] = ()
         scn.elements_sockets[size_key] = (1.0, )    # TODO
         return
 
@@ -49,6 +53,7 @@ def get_cache(socket):
     scn.elements_sockets[vel_key] = caches[folder][particles_io.VEL]
     scn.elements_sockets[col_key] = caches[folder][particles_io.COL]
     scn.elements_sockets[mat_key] = caches[folder][particles_io.MAT]
+    scn.elements_sockets[emt_key] = caches[folder][particles_io.EMT]
     scn.elements_sockets[size_key] = (1.0, )    # TODO
 
 
@@ -63,6 +68,7 @@ class ElementsCacheNode(base.BaseNode):
         'Velocity': get_cache,
         'Hex Color': get_cache,
         'Material': get_cache,
+        'Emitter': get_cache,
         'Size': get_cache
     }
 
@@ -95,6 +101,11 @@ class ElementsCacheNode(base.BaseNode):
         # particle material id
         mat = self.outputs.new('elements_integer_socket', 'Material')
         mat.text = 'Material'
+        mat.hide_value = True
+
+        # particle emitter id
+        mat = self.outputs.new('elements_integer_socket', 'Emitter')
+        mat.text = 'Emitter'
         mat.hide_value = True
 
         # particle size

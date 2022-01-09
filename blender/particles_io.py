@@ -21,12 +21,15 @@ VEL = 1
 COL = 2
 # material id
 MAT = 3
+# emitter id
+EMT = 4
 
 # numpy attributes type
 attr_types = {
     POS: numpy.float32,
     VEL: numpy.float32,
     COL: numpy.int32,
+    EMT: numpy.int32,
     MAT: numpy.int32
 }
 
@@ -35,8 +38,10 @@ attr_names = {
     POS: 'pos',
     VEL: 'vel',
     COL: 'col',
-    MAT: 'mat'
+    MAT: 'mat',
+    EMT: 'emt'
 }
+attr_count = len(attr_names)
 
 
 def write_pars_v0(par_data):
@@ -67,14 +72,14 @@ def write_pars_v1(par_data, fpath, fname):
     data.extend(struct.pack('I', pars_cnt))
     print('Particles count:', pars_cnt)
 
-    for attr_id in range(4):
+    for attr_id in range(attr_count):
        fname_str = '{}_{}.bin'.format(fname, attr_names[attr_id])
        fname_byte = bytes(fname_str, 'utf-8')
        length = len(fname_byte)
        data.extend(struct.pack('I', length))
        data.extend(struct.pack('{}s'.format(length), fname_byte))
 
-    for attr_id in range(4):
+    for attr_id in range(attr_count):
         attr_array = par_data[attr_id]
         attr_array.tofile('{}_{}.bin'.format(fpath, attr_names[attr_id]))
 
@@ -124,7 +129,7 @@ def read_pars_v1(data, caches, offs, folder):
     offs += 4
     caches[folder] = {}
 
-    for attr_id in range(4):
+    for attr_id in range(attr_count):
         file_name_len = struct.unpack('I', data[offs : offs + 4])[0]
         offs += 4
 

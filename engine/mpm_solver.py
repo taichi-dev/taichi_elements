@@ -61,7 +61,8 @@ class MPMSolver:
             water_density=1.0,
             support_plasticity=True,  # Support snow and sand materials
             use_adaptive_dt=False,
-            use_ggui=False
+            use_ggui=False,
+            use_emitter_id=False
     ):
         self.dim = len(res)
         self.quant = quant
@@ -123,6 +124,10 @@ class MPMSolver:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
             self.x = ti.Vector.field(self.dim, dtype=ti.f32)
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=ti.f32)
+
+        self.use_emitter_id = use_emitter_id
+        if self.use_emitter_id:
+            self.emitter_ids = ti.field(dtype=ti.i32)
 
         self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
         # Material id
@@ -251,8 +256,14 @@ class MPMSolver:
                 # No quantization on particle material in 2D
                 self.particle.place(self.material)
             self.particle.place(self.color)
+            if self.use_emitter_id:
+                self.particle.place(self.emitter_ids)
         else:
-            self.particle.place(self.x, self.v, self.F, self.material,
+            if self.use_emitter_id:
+                self.particle.place(self.x, self.v, self.F, self.material,
+                                self.color, self.emitter_ids)
+            else:
+                self.particle.place(self.x, self.v, self.F, self.material,
                                 self.color)
             if self.support_plasticity:
                 self.particle.place(self.Jp)
@@ -803,7 +814,7 @@ class MPMSolver:
             )
 
     @ti.func
-    def seed_particle(self, i, x, material, color, velocity):
+    def seed_particle(self, i, x, material, color, velocity, emmiter_id):
         self.x[i] = x
         self.v[i] = velocity
         self.F[i] = ti.Matrix.identity(ti.f32, self.dim)
@@ -816,6 +827,9 @@ class MPMSolver:
             else:
                 self.Jp[i] = 1
 
+        if ti.static(self.use_emitter_id):
+            self.emitter_ids[i] = emmiter_id
+
     @ti.kernel
     def seed(self, new_particles: ti.i32, new_material: ti.i32, color: ti.i32):
         for i in range(self.n_particles[None],
@@ -826,7 +840,7 @@ class MPMSolver:
                 x[k] = self.source_bound[0][k] + ti.random(
                 ) * self.source_bound[1][k]
             self.seed_particle(i, x, new_material, color,
-                               self.source_velocity[None])
+                               self.source_velocity[None], None)
 
     def set_source_velocity(self, velocity):
         if velocity is not None:
@@ -917,7 +931,7 @@ class MPMSolver:
             x = self.random_point_in_unit_polygon(sides, angle)
             x = self.source_bound[0] + x * self.source_bound[1]
             self.seed_particle(i, x, new_material, color,
-                               self.source_velocity[None])
+                               self.source_velocity[None], None)
 
     @ti.kernel
     def add_texture_2d(
@@ -933,7 +947,7 @@ class MPMSolver:
                 pid = ti.atomic_add(self.n_particles[None], 1)
                 x = ti.Vector([offset_x + i * self.dx, offset_y + j * self.dx])
                 self.seed_particle(pid, x, new_material, color,
-                                   self.source_velocity[None])
+                                   self.source_velocity[None], None)
 
     @ti.func
     def random_point_in_unit_sphere(self):
@@ -954,7 +968,7 @@ class MPMSolver:
             x = self.source_bound[0] + self.random_point_in_unit_sphere(
             ) * self.source_bound[1]
             self.seed_particle(i, x, new_material, color,
-                               self.source_velocity[None])
+                               self.source_velocity[None], None)
 
     def add_ellipsoid(self,
                       center,
@@ -994,8 +1008,13 @@ class MPMSolver:
         self.n_particles[None] += num_particles
 
     @ti.kernel
-    def seed_from_voxels(self, material: ti.i32, color: ti.i32,
-                         sample_density: ti.i32):
+    def seed_from_voxels(
+            self,
+            material: ti.i32,
+            color: ti.i32,
+            sample_density: ti.i32,
+            emmiter_id: ti.u16
+        ):
         for i, j, k in self.voxelizer.voxels:
             inside = 1
             for d in ti.static(range(3)):
@@ -1011,8 +1030,14 @@ class MPMSolver:
                         ]) * (self.dx / self.voxelizer_super_sample
                               ) + self.source_bound[0]
                         p = ti.atomic_add(self.n_particles[None], 1)
-                        self.seed_particle(p, x, material, color,
-                                           self.source_velocity[None])
+                        self.seed_particle(
+                            p,
+                            x,
+                            material,
+                            color,
+                            self.source_velocity[None],
+                            emmiter_id
+                        )
 
     def add_mesh(self,
                  triangles,
@@ -1020,7 +1045,9 @@ class MPMSolver:
                  color=0xFFFFFF,
                  sample_density=None,
                  velocity=None,
-                 translation=None):
+                 translation=None,
+                 emmiter_id=0
+        ):
         assert self.dim == 3
         if sample_density is None:
             sample_density = 2**self.dim
@@ -1035,7 +1062,12 @@ class MPMSolver:
 
         self.voxelizer.voxelize(triangles)
         t = time.time()
-        self.seed_from_voxels(material, color, sample_density)
+        self.seed_from_voxels(
+            material,
+            color,
+            sample_density,
+            emmiter_id
+        )
         ti.sync()
         # print('Voxelization time:', (time.time() - t) * 1000, 'ms')
 
@@ -1051,7 +1083,7 @@ class MPMSolver:
             else:
                 x = ti.Vector([pos[i, 0], pos[i, 1]])
             self.seed_particle(self.n_particles[None] + i, x, new_material,
-                               color, self.source_velocity[None])
+                               color, self.source_velocity[None], None)
 
         self.n_particles[None] += num_particles
 
@@ -1083,7 +1115,7 @@ class MPMSolver:
                 x = ti.Vector([pos[i, 0], pos[i, 1]])
                 v = ti.Vector([vel[i, 0], vel[i, 1]])
             self.seed_particle(self.n_particles[None] + i, x, material[i],
-                               color[i], v)
+                               color[i], v, None)
         self.n_particles[None] += num_particles
 
     def read_restart(
@@ -1139,12 +1171,17 @@ class MPMSolver:
         self.copy_dynamic(np_material, self.material)
         np_color = np.ndarray((self.n_particles[None], ), dtype=np.int32)
         self.copy_dynamic(np_color, self.color)
-        return {
+        particles_data = {
             'position': np_x,
             'velocity': np_v,
             'material': np_material,
             'color': np_color
         }
+        if self.use_emitter_id:
+            np_emitters = np.ndarray((self.n_particles[None], ), dtype=np.int32)
+            self.copy_dynamic(np_emitters, self.emitter_ids)
+            particles_data['emitter_ids'] = np_emitters
+        return particles_data
 
     @ti.kernel
     def clear_particles(self):

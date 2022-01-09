@@ -8,7 +8,7 @@ import bpy, bmesh
 import numpy
 
 # addon modules
-from . import operators, particles_io
+from . import operators
 
 
 # name of particles object
@@ -33,16 +33,15 @@ def get_trees():
 # update particles mesh
 # Function params:
 # obj - particles object, pos - particles positions
-def update_pmesh(obj, pos, mesh_name):
-    # old particles mesh
-    me_old = obj.data
-    me_old.name = 'temp'
+def update_pmesh(obj, pos, mesh_name, emitters):
+    # clear preview geometry
+    me = obj.data
+    me.clear_geometry()
     # new particles mesh
-    me_new = bpy.data.meshes.new(mesh_name)
-
-    me_new.from_pydata(pos, (), ())
-    obj.data = me_new
-    bpy.data.meshes.remove(me_old)
+    me.from_pydata(pos, (), ())
+    if len(emitters):
+        emt_attr = me.attributes.new('emitter_id', 'INT', 'POINT')
+        emt_attr.data.foreach_set('value', emitters)
 
 
 # create particles object
@@ -208,11 +207,12 @@ def create_mesh(node):
     if not me_obj:
         me_obj = create_pobj(obj_name)
     verts = nd_obj.vertices
+    emitters = nd_obj.emitters
     if type(verts) == numpy.ndarray:
         verts = verts.reshape((verts.shape[0] // 3, 3))
-        update_pmesh(me_obj, verts, obj_name)
+        update_pmesh(me_obj, verts, obj_name, emitters)
     else:
-        update_pmesh(me_obj, (), obj_name)
+        update_pmesh(me_obj, (), obj_name, ())
 
 
 # import simulation data

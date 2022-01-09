@@ -162,7 +162,13 @@ def create_emitter(operator, solv, emitter, vel):
     blue = int(emitter.color[0].b * 255)
     color = red | green | blue
     # add emitter
-    solv.add_mesh(triangles=tris, material=ti_mat, color=color, velocity=vel)
+    solv.add_mesh(
+        triangles=tris,
+        material=ti_mat,
+        color=color,
+        velocity=vel,
+        emmiter_id=operator.emitter_indices[emitter]
+    )
     return True
 
 
@@ -222,7 +228,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
                         return self.cancel(bpy.context)
         return True
 
-    def save_particles(self, frame, np_x, np_v, np_color, np_material):
+    def save_particles(self, frame, np_x, np_v, np_color, np_material, np_emitters):
         if not os.path.exists(self.cache_folder):
             os.makedirs(self.cache_folder)
 
@@ -235,7 +241,8 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             particles_io.POS: np_x,
             particles_io.VEL: np_v,
             particles_io.COL: np_color,
-            particles_io.MAT: np_material
+            particles_io.MAT: np_material,
+            particles_io.EMT: np_emitters,
         }
         data = particles_io.write_pars_v1(par_data, pars_fpath, fname)
 
@@ -272,11 +279,19 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             np_v = pars['velocity']
             np_material = pars['material']
             np_color = pars['color']
+            np_emitters = pars['emitter_ids']
             # and then start time stepping
             self.solv.step(1 / self.fps)
             print(np_x)
 
-            self.save_particles(frame, np_x, np_v, np_color, np_material)
+            self.save_particles(
+                frame,
+                np_x,
+                np_v,
+                np_color,
+                np_material,
+                np_emitters
+            )
 
     def init_sim(self):
         # simulation nodes
@@ -348,7 +363,12 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
         mem = self.device_memory_fraction / 100
         ti.init(arch=arch, device_memory_fraction=mem)
         print(f"Creating simulation of res {res}, size {size}")
-        solv = mpm_solver.MPMSolver((res, res, res), size=size, unbounded=True)
+        solv = mpm_solver.MPMSolver(
+            (res, res, res),
+            size=size,
+            unbounded=True,
+            use_emitter_id=True
+        )
 
         solv.set_gravity(tuple(cls.gravity[0]))
 
@@ -357,6 +377,10 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             self.report({'WARNING'}, 'Node tree not have emitters.')
             self.is_finishing = True
             return self.cancel(bpy.context)
+
+        self.emitter_indices = {}
+        for index, emitter in enumerate(self.emitters):
+            self.emitter_indices[emitter] = index
 
         if cls.colliders:
             for collider in cls.colliders:
