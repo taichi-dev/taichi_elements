@@ -40,7 +40,7 @@ python3 engine/render_particles.py \
      -M 460 \
      --shutter-time 0.0 \
      -r 128
-
+ ```
  - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
@@ -55,7 +55,7 @@ python3 engine/render_particles.py \
 ## Installing Taichi for Blender
 (Not sure if it is the standard approach, but it works for now.)
  - Find the Python3 executable bundled in Blender. Open a console in Blender and type in
- ```
+ ```python
  import sys
  print(sys.exec_prefix)
  ```
