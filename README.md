@@ -32,16 +32,16 @@
 - Example:
 
  ```bash
-python3 engine/render_particles.py \
+python3 render_particles.py \
      -i ./path/to/particles \
      -b 0 -e 400 -s 1 \
-     -o ./path/output \
+     -o ./output \
      --gpu-memory 20 \
      -M 460 \
      --shutter-time 0.0 \
      -r 128
  ```
- - Images are in the `rendered` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
+ - Images are in the `outuput/` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
