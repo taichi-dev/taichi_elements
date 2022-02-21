@@ -41,7 +41,7 @@ python3 render_particles.py \
      --shutter-time 0.0 \
      -r 128
  ```
- - Images are in the `outuput/` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
+ - Images are in the `output/` folder. For example, 100 million MPM particles simulated in 8 hours on a V100 GPU:
 
 [[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
