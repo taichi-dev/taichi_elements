@@ -48,7 +48,7 @@ class Voxelizer:
                            triangles: ti.ext_arr()):
         for i in range(num_triangles):
             jitter_scale = ti.cast(0, self.precision)
-            if ti.static(self.precision is ti.f32):
+            if ti.static(self.precision == ti.f32):
                 jitter_scale = 1e-4
             else:
                 jitter_scale = 1e-8
