@@ -1,5 +1,6 @@
 import os
 import taichi as ti
+import math
 import numpy as np
 import utils
 import math
@@ -23,16 +24,23 @@ if write_to_disk:
 
 ti.init(arch=ti.cuda)  # Try to run on GPU
 
-gui = ti.GUI("Taichi Elements", res=512, background_color=0x112F41)
+gui = ti.GUI("Taichi Elements", res=512, background_color=0xaabbcc)
 
 mpm = MPMSolver(res=(128, 128))
 
 for frame in range(500):
     mpm.step(8e-3)
-    mpm.add_cube(lower_corner=[0.1, 0.8],
-                 cube_size=[0.01, 0.05],
-                 velocity=[1, 0],
-                 material=MPMSolver.material_sand)
+
+
+    colors = [0x000000, 0xFFFFFF, 0x5588ff]
+    for i in range(3):
+        f = math.sin(frame * 0.05 + 2 * math.pi / 3 * i)
+        g = math.sin((5 + frame) * 0.02 + 2 * math.pi / 3 * i) + 1
+        mpm.add_cube(lower_corner=[0.5 + 0.3 * f, 0.5 + 0.1 * i * i],
+                     cube_size=[0.02, 0.02 * g],
+                     velocity=[0, 0],
+                     material=MPMSolver.material_sand,
+                     color=colors[i])
     particles = mpm.particle_info()
     gui.circles(particles['position'],
                 radius=1.5,
