@@ -46,9 +46,9 @@ python3 render_particles.py \
 [[Watch on YouTube]](https://youtu.be/klMDVUzFFnk)
 <img src="https://raw.githubusercontent.com/taichi-dev/public_files/master/taichi_elements/100Mparticles.jpg" height="600px">
 
-- Here is a 460-million-particle simulation on a GPU with `24` GB memory. Each particle takes 40 bytes, thanks to [quantization](https://github.com/taichi-dev/quantaichi).
+- Here is a one-billion-particle simulation on a GPU with `80` GB memory. Each particle takes 40 bytes, thanks to [quantization](https://github.com/taichi-dev/quantaichi).
 
-<img src="https://github.com/taichi-dev/public_files/raw/master/taichi_elements/460M.jpg" height="600px">
+https://user-images.githubusercontent.com/2309174/162767279-2ced8a2f-38bd-42d6-9bb8-a827144464ff.mp4
 
 # Using `taichi_elements` in Blender
 
