@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-k', action='store_true', help='keep refreshing')
 
 addon_path = os.environ['BLENDER_USER_ADDON_PATH']
-if addon_path[:-1] == '/':
+if addon_path[-1] == '/':
     addon_path = addon_path[:-1]
 assert addon_path.endswith(os.path.join('scripts', 'addons'))
 
