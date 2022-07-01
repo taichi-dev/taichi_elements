@@ -407,7 +407,7 @@ class Renderer:
 
     @ti.kernel
     def render(self):
-        ti.block_dim(256)
+        ti.loop_config(block_dim=256)
         for u, v in self.color_buffer:
             fov = self.fov[None]
             pos = self.camera_pos[None]
@@ -518,7 +518,7 @@ class Renderer:
                                     ti.Vector(self.particle_grid_offset), p)
 
     @ti.kernel
-    def copy(self, img: ti.ext_arr(), samples: ti.i32):
+    def copy(self, img: ti.types.ndarray(), samples: ti.i32):
         for i, j in self.color_buffer:
             u = 1.0 * i / res[0]
             v = 1.0 * j / res[1]
@@ -532,8 +532,8 @@ class Renderer:
                                        exposure / samples)
 
     @ti.kernel
-    def initialize_particle(self, x: ti.ext_arr(), v: ti.ext_arr(),
-                            color: ti.ext_arr(), begin: ti.i32, end: ti.i32):
+    def initialize_particle(self, x: ti.types.ndarray(), v: ti.types.ndarray(),
+                            color: ti.types.ndarray(), begin: ti.i32, end: ti.i32):
         for i in range(begin, end):
             for c in ti.static(range(3)):
                 self.particle_x[i][c] = x[i - begin, c]

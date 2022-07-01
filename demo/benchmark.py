@@ -35,4 +35,4 @@ for frame in range(1500):
 
     gui.circles(screen_pos, radius=1.1, color=particles['color'])
     gui.show(f'{frame:06d}.png' if write_to_disk else None)
-    ti.print_kernel_profile_info()
+    ti.profiler.print_kernel_profiler_info()

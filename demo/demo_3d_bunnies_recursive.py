@@ -148,7 +148,7 @@ for l in range(LOD):
 
 mpm.set_gravity((0, -25, 0))
 
-print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
+print(f'Per particle space: {mpm.particle._cell_size_bytes} B')
 print(f'Total bunnies: {total_bunnies}')
 print(f'Total particles: {mpm.n_particles[None] / 1e6:.4f} M')
 
