@@ -133,7 +133,7 @@ simulation = load_mesh('simulation.ply', scale=scale, offset=(0.5, 0.6, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
-print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
+print(f'Per particle space: {mpm.particle._cell_size_bytes} B')
 
 
 def visualize(particles, frame, output_dir=None):

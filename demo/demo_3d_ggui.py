@@ -24,7 +24,7 @@ mpm.set_gravity((0, -50, 0))
 
 
 @ti.kernel
-def set_color(ti_color: ti.template(), material_color: ti.ext_arr(), ti_material: ti.template()):
+def set_color(ti_color: ti.template(), material_color: ti.types.ndarray(), ti_material: ti.template()):
     for I in ti.grouped(ti_material):
         material_id = ti_material[I]
         color_4d = ti.Vector([0.0, 0.0, 0.0, 1.0])

@@ -45,7 +45,7 @@ class Voxelizer:
 
     @ti.kernel
     def voxelize_triangles(self, num_triangles: ti.i32,
-                           triangles: ti.ext_arr()):
+                           triangles: ti.types.ndarray()):
         for i in range(num_triangles):
             jitter_scale = ti.cast(0, self.precision)
             if ti.static(self.precision == ti.f32):

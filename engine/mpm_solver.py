@@ -104,22 +104,14 @@ class MPMSolver:
         # Deformation gradient
 
         if quant:
-            ci21 = ti.type_factory.custom_int(21, True)
-            cft = ti.type_factory.custom_float(significand_type=ci21,
-                                               scale=1 / (2**19))
-            self.x = ti.Vector.field(self.dim, dtype=cft)
+            qft = ti.types.quant.fixed(frac=21, range=2.0)
+            self.x = ti.Vector.field(self.dim, dtype=qft)
 
-            cu6 = ti.type_factory.custom_int(7, False)
-            ci19 = ti.type_factory.custom_int(19, True)
-            cft = ti.type_factory.custom_float(significand_type=ci19,
-                                               exponent_type=cu6)
-            self.v = ti.Vector.field(self.dim, dtype=cft)
+            qft = ti.types.quant.float(exp=7, frac=19)
+            self.v = ti.Vector.field(self.dim, dtype=qft)
 
-            ci16 = ti.type_factory.custom_int(16, True)
-            cft = ti.type_factory.custom_float(significand_type=ci16,
-                                               scale=(self.F_bound + 0.1) /
-                                               (2**15))
-            self.F = ti.Matrix.field(self.dim, self.dim, dtype=cft)
+            qft = ti.types.quant.fixed(16, range=(self.F_bound + 0.1))
+            self.F = ti.Matrix.field(self.dim, self.dim, dtype=qft)
         else:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
             self.x = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -132,7 +124,7 @@ class MPMSolver:
         self.last_time_final_particles = ti.field(dtype=ti.i32, shape=())
         # Material id
         if quant and self.dim == 3:
-            self.material = ti.field(dtype=ti.quant.int(16, False))
+            self.material = ti.field(dtype=ti.types.quant.int(16, False))
         else:
             self.material = ti.field(dtype=ti.i32)
         # Particle color
@@ -349,7 +341,7 @@ class MPMSolver:
         :param offset:
         :return:
         """
-        ti.block_dim(64)
+        ti.loop_config(block_dim=64)
         for p in self.x:
             base = int(ti.floor(self.x[p] * self.inv_dx - 0.5)) \
                    - ti.Vector(list(self.offset))
@@ -360,7 +352,7 @@ class MPMSolver:
     @ti.kernel
     def g2p2g(self, dt: ti.f32, pid: ti.template(), grid_v_in: ti.template(),
               grid_v_out: ti.template(), grid_m_out: ti.template()):
-        ti.block_dim(256)
+        ti.loop_config(block_dim=256)
         ti.no_activate(self.particle)
         if ti.static(self.use_bls):
             ti.block_local(grid_m_out)
@@ -484,7 +476,7 @@ class MPMSolver:
     @ti.kernel
     def p2g(self, dt: ti.f32):
         ti.no_activate(self.particle)
-        ti.block_dim(256)
+        ti.loop_config(block_dim=256)
         if ti.static(self.use_bls):
             for d in ti.static(range(self.dim)):
                 ti.block_local(self.grid_v.get_scalar_field(d))
@@ -690,7 +682,7 @@ class MPMSolver:
 
     @ti.kernel
     def g2p(self, dt: ti.f32):
-        ti.block_dim(256)
+        ti.loop_config(block_dim=256)
         if ti.static(self.use_bls):
             for d in ti.static(range(self.dim)):
                 ti.block_local(self.grid_v.get_scalar_field(d))
@@ -804,9 +796,9 @@ class MPMSolver:
         print()
 
         if print_stat:
-            ti.print_kernel_profile_info()
+            ti.profiler.print_kernel_profiler_info()
             try:
-                ti.print_memory_profile_info()
+                ti.profiler.print_memory_profiler_info()
             except:
                 pass
             cur_frame_velocity = self.compute_max_velocity()
@@ -942,7 +934,7 @@ class MPMSolver:
             self,
             offset_x: ti.f32,
             offset_y: ti.f32,
-            texture: ti.ext_arr(),
+            texture: ti.types.ndarray(),
             new_material: ti.i32,
             color: ti.i32,
     ):
@@ -1077,7 +1069,7 @@ class MPMSolver:
 
     @ti.kernel
     def seed_from_external_array(self, num_particles: ti.i32,
-                                 pos: ti.ext_arr(), new_material: ti.i32,
+                                 pos: ti.types.ndarray(), new_material: ti.i32,
                                  color: ti.i32):
 
         for i in range(num_particles):
@@ -1104,10 +1096,10 @@ class MPMSolver:
     def recover_from_external_array(
             self,
             num_particles: ti.i32,
-            pos: ti.ext_arr(),
-            vel: ti.ext_arr(),
-            material: ti.ext_arr(),
-            color: ti.ext_arr(),
+            pos: ti.types.ndarray(),
+            vel: ti.types.ndarray(),
+            material: ti.types.ndarray(),
+            color: ti.types.ndarray(),
     ):
         for i in range(num_particles):
             x = ti.Vector.zero(ti.f32, n=self.dim)
@@ -1141,25 +1133,25 @@ class MPMSolver:
                                              color[begin:end])
 
     @ti.kernel
-    def copy_dynamic_nd(self, np_x: ti.ext_arr(), input_x: ti.template()):
+    def copy_dynamic_nd(self, np_x: ti.types.ndarray(), input_x: ti.template()):
         for i in self.x:
             for j in ti.static(range(self.dim)):
                 np_x[i, j] = input_x[i][j]
 
     @ti.kernel
-    def copy_dynamic(self, np_x: ti.ext_arr(), input_x: ti.template()):
+    def copy_dynamic(self, np_x: ti.types.ndarray(), input_x: ti.template()):
         for i in self.x:
             np_x[i] = input_x[i]
 
     @ti.kernel
-    def copy_ranged(self, np_x: ti.ext_arr(), input_x: ti.template(),
+    def copy_ranged(self, np_x: ti.types.ndarray(), input_x: ti.template(),
                     begin: ti.i32, end: ti.i32):
         ti.no_activate(self.particle)
         for i in range(begin, end):
             np_x[i - begin] = input_x[i]
 
     @ti.kernel
-    def copy_ranged_nd(self, np_x: ti.ext_arr(), input_x: ti.template(),
+    def copy_ranged_nd(self, np_x: ti.types.ndarray(), input_x: ti.template(),
                        begin: ti.i32, end: ti.i32):
         ti.no_activate(self.particle)
         for i in range(begin, end):

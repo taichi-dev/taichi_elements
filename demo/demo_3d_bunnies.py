@@ -35,7 +35,7 @@ write_to_disk = args.out_dir is not None
 # Try to run on GPU
 ti.init(arch=ti.cuda,
         kernel_profiler=True,
-        device_memory_GB=3.0)
+        device_memory_GB=7)
 
 max_num_particles = 50000000
 stop_seeding_at = 150
@@ -113,7 +113,7 @@ simulation = load_mesh('bunny_low.ply', scale=scale, offset=(0.5, 0.6, 0.5))
 
 mpm.set_gravity((0, -25, 0))
 
-print(f'Per particle space: {mpm.particle.cell_size_bytes} B')
+print(f'Per particle space: {mpm.particle._cell_size_bytes} B')
 
 mpm.add_cube(lower_corner=(-bound, 0, -bound / 4 * thickness),
              cube_size=(bound * 0.3, 0.35, bound / 2 * thickness),
