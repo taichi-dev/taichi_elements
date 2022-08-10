@@ -104,13 +104,13 @@ class MPMSolver:
         # Deformation gradient
 
         if quant:
-            qft = ti.types.quant.fixed(frac=21, range=2.0)
+            qft = ti.types.quant.fixed(21, max_value=2.0)
             self.x = ti.Vector.field(self.dim, dtype=qft)
 
             qft = ti.types.quant.float(exp=7, frac=19)
             self.v = ti.Vector.field(self.dim, dtype=qft)
 
-            qft = ti.types.quant.fixed(16, range=(self.F_bound + 0.1))
+            qft = ti.types.quant.fixed(16, max_value=(self.F_bound + 0.1))
             self.F = ti.Matrix.field(self.dim, self.dim, dtype=qft)
         else:
             self.v = ti.Vector.field(self.dim, dtype=ti.f32)
@@ -218,33 +218,43 @@ class MPMSolver:
                 self.particle.place(self.C)
             if self.support_plasticity:
                 self.particle.place(self.Jp)
-            self.particle.bit_struct(num_bits=64).place(self.x)
-            self.particle.bit_struct(num_bits=64).place(self.v,
-                                                        shared_exponent=True)
+            bitpack = ti.BitpackedFields(max_num_bits=64)
+            bitpack.place(self.x)
+            self.particle.place(bitpack)
+            bitpack = ti.BitpackedFields(max_num_bits=64)
+            bitpack.place(self.v, shared_exponent=True)
+            self.particle.place(bitpack)
 
             if self.dim == 3:
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(0, 0),
-                    self.F.get_scalar_field(0, 1))
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(0, 2),
-                    self.F.get_scalar_field(1, 0))
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(1, 1),
-                    self.F.get_scalar_field(1, 2))
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(2, 0),
-                    self.F.get_scalar_field(2, 1))
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(2, 2), self.material)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(0, 0),
+                              self.F.get_scalar_field(0, 1))
+                self.particle.place(bitpack)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(0, 2),
+                              self.F.get_scalar_field(1, 0))
+                self.particle.place(bitpack)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(1, 1),
+                              self.F.get_scalar_field(1, 2))
+                self.particle.place(bitpack)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(2, 0),
+                              self.F.get_scalar_field(2, 1))
+                self.particle.place(bitpack)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(2, 2), self.material)
+                self.particle.place(bitpack)
             else:
                 assert self.dim == 2
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(0, 0),
-                    self.F.get_scalar_field(0, 1))
-                self.particle.bit_struct(num_bits=32).place(
-                    self.F.get_scalar_field(1, 0),
-                    self.F.get_scalar_field(1, 1))
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(0, 0),
+                              self.F.get_scalar_field(0, 1))
+                self.particle.place(bitpack)
+                bitpack = ti.BitpackedFields(max_num_bits=32)
+                bitpack.place(self.F.get_scalar_field(1, 0),
+                              self.F.get_scalar_field(1, 1))
+                self.particle.place(bitpack)
                 # No quantization on particle material in 2D
                 self.particle.place(self.material)
             self.particle.place(self.color)

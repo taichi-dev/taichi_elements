@@ -92,6 +92,7 @@ mpm = MPMSolver(
     dt_scale=1,
     quant=True,
     use_g2p2g=True,
+    use_bls=False,
     support_plasticity=False,
     # adaptive_dt=True,
     v_clamp_g2p2g=True)
