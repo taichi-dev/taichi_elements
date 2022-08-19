@@ -1,2 +1,2 @@
-taichi==1.0.3
+taichi==1.1.0
 plyfile
