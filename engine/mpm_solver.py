@@ -309,6 +309,7 @@ class MPMSolver:
             self.grid_m = self.grid_m[0]
             self.pid = self.pid[0]
 
+    @ti.func
     def stencil_range(self):
         return ti.ndrange(*((3, ) * self.dim))
 
@@ -354,7 +355,7 @@ class MPMSolver:
         ti.loop_config(block_dim=64)
         for p in self.x:
             base = int(ti.floor(self.x[p] * self.inv_dx - 0.5)) \
-                   - ti.Vector(list(self.offset))
+                   - ti.Vector(self.offset)
             # Pid grandparent is `block`
             base_pid = ti.rescale_index(grid_m, pid.parent(2), base)
             ti.append(pid.parent(), base_pid, p)
@@ -406,7 +407,7 @@ class MPMSolver:
             for D in ti.static(range(self.dim)):
                 base[D] = ti.assume_in_range(base[D], Im[D], -1, 2)
 
-            fx = self.x[p] * self.inv_dx - base.cast(float)
+            fx = self.x[p] * self.inv_dx - float(base)
             # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
             w2 = [0.5 * (1.5 - fx)**2, 0.75 - (fx - 1)**2, 0.5 * (fx - 0.5)**2]
             # Deformation gradient update
