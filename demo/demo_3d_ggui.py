@@ -89,7 +89,7 @@ material_type_colors = np.array([
 ]
 )
 
-for frame in range(1500):
+while window.running:
     mpm.step(4e-3)
 
     render()
