@@ -38,7 +38,7 @@ def get_cache(socket):
     path = bpy.path.abspath(os.path.join(folder, name))
 
     if os.path.exists(path):
-        particles_io.read_pars(path, caches, folder, socket.name)
+        particles_io.read_pars(path, caches, folder)
 
     else:
         scn.elements_sockets[pos_key] = ()

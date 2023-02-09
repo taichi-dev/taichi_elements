@@ -241,7 +241,7 @@ class ELEMENTS_OT_SimulateParticles(bpy.types.Operator):
             particles_io.MAT: np_material,
             particles_io.EMT: np_emitters,
         }
-        data = particles_io.write_pars_v1(par_data, pars_fpath, fname)
+        data = particles_io.write_pars(par_data, pars_fpath, fname)
 
         with open(pars_fpath + '.bin', 'wb') as file:
             file.write(data)

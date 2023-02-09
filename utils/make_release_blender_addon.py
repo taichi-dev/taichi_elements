@@ -2,6 +2,7 @@ import os
 import sys
 import zipfile
 
+
 # taichi elements repository path
 repo_path = os.path.dirname(os.path.abspath(os.curdir))
 os.chdir(repo_path)
@@ -51,4 +52,4 @@ with zipfile.ZipFile(rpath, 'w') as z:
     os.chdir(os.path.join(repo_path, ENGINE_FOLDER))
     write_files(z, os.path.join(OUT_FOLDER, ENGINE_FOLDER))
 
-print('Done.')
+input('Done. Press Enter...')

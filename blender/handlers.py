@@ -83,7 +83,6 @@ def create_pobj(name):
     return par_obj
 
 
-# get outputs nodes
 def get_output_nodes():
     mesh_nodes = []
 

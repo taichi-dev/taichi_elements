@@ -1,18 +1,6 @@
 import bpy
 
 
-# socket colors
-cols = {
-    'INT': (0.25, 0.25, 0.25, 1.0),
-    'FLOAT': (0.5, 0.5, 0.5, 1.0),
-    'VECTOR': (0.25, 0.25, 0.8, 1.0),
-    'STRUCT': (0.0, 1.0, 0.0, 1.0),
-    'ADD': (0.0, 0.0, 0.0, 0.25),
-    'STRING': (1.0, 0.5, 0.0, 1.0),
-    'COLOR': (0.8, 0.8, 0.0, 1.0)
-}
-
-
 # get reroute input socket
 def get_socket(socket):
     node = socket.node
@@ -28,20 +16,23 @@ def get_socket(socket):
 
 def get_socket_value(socket):
     node = socket.node
+    result = [socket.default, ]
+
     if hasattr(node, 'get_value'):
         get_value_func = node.get_value.get(socket.name, None)
-        if not get_value_func:
-            return [socket.default, ]
-        else:
+
+        if get_value_func:
             get_value_func(socket)
             key = '{0}.{1}'.format(node.name, socket.name)
             scn = bpy.context.scene
             value = scn.elements_sockets.get(key, None)
-            if key is None:
+
+            if value is None:
                 raise BaseException('Cannot find socket value: {}'.format(key))
-            return value
-    else:
-        return [socket.default, ]
+
+            result = value
+
+    return result
 
 
 class ElementsBaseSocket(bpy.types.NodeSocket):
@@ -50,22 +41,38 @@ class ElementsBaseSocket(bpy.types.NodeSocket):
     split_factor = 0.5
 
     def get_value(self):
-        if not self.is_output and len(self.links):
+        result = [self.default, ]
+
+        if len(self.links) and not self.is_output:
             from_socket = self.links[0].from_socket
+
             if from_socket.node.bl_idname == 'NodeReroute':
                 from_socket = get_socket(from_socket)
-                if from_socket is None:
-                    return [self.default, ]
-            if from_socket.bl_idname == self.bl_idname:
-                if hasattr(from_socket, 'get_value'):
-                    return get_socket_value(from_socket)
-            else:
-                return [self.default, ]
-        else:
-            return [self.default, ]
+
+            if from_socket:
+                if from_socket.bl_idname == self.bl_idname:
+                    if hasattr(from_socket, 'get_value'):
+                        result = get_socket_value(from_socket)
+
+        return result
+
+
+    def draw_color(self, context, node):
+        return self.color
 
     def draw(self, context, layout, node, text):
-        if (not len(self.links) or self.is_output) and not self.hide_value:
+        draw_value = True
+
+        if len(self.links):
+            draw_value = False
+
+        if self.is_output:
+            draw_value = True
+
+        if self.hide_value:
+            draw_value = False
+
+        if draw_value:
             if self.text:
                 row = layout.split(factor=self.split_factor)
                 row.label(text=self.text)
@@ -82,9 +89,7 @@ class ElementsIntegerSocket(ElementsBaseSocket):
 
     default: bpy.props.IntProperty(default=0)
     text: bpy.props.StringProperty(default='Integer')
-
-    def draw_color(self, context, node):
-        return cols['INT']
+    color = (0.25, 0.25, 0.25, 1.0)
 
 
 class ElementsFloatSocket(ElementsBaseSocket):
@@ -92,27 +97,59 @@ class ElementsFloatSocket(ElementsBaseSocket):
 
     default: bpy.props.FloatProperty(default=0.0, precision=4)
     text: bpy.props.StringProperty(default='Float')
-
-    def draw_color(self, context, node):
-        return cols['FLOAT']
+    color = (0.5, 0.5, 0.5, 1.0)
 
 
 class ElementsVectorSocket(ElementsBaseSocket):
     bl_idname = 'elements_vector_socket'
 
     default: bpy.props.FloatVectorProperty(
-        default=(0.0, 0.0, 0.0), size=3, precision=4
+        default=(0.0, 0.0, 0.0),
+        size=3,
+        precision=4
     )
     text: bpy.props.StringProperty(default='Float')
+    color = (0.25, 0.25, 0.8, 1.0)
 
-    def draw_color(self, context, node):
-        return cols['VECTOR']
+
+class ElementsFolderSocket(ElementsBaseSocket):
+    bl_idname = 'elements_folder_socket'
+
+    default: bpy.props.StringProperty(subtype='DIR_PATH')
+    text: bpy.props.StringProperty(default='Folder')
+    color = (1.0, 0.5, 0.0, 1.0)
+    split_factor = 0.35
+
+
+class ElementsColorSocket(ElementsBaseSocket):
+    bl_idname = 'elements_color_socket'
+
+    default: bpy.props.FloatVectorProperty(
+        subtype='COLOR',
+        min=0.0,
+        max=1.0,
+        size=3,
+        default=(0.8, 0.8, 0.8)
+    )
+    text: bpy.props.StringProperty(default='Float')
+    color = (0.8, 0.8, 0.0, 1.0)
+
+
+class ElementsAddSocket(ElementsBaseSocket):
+    bl_idname = 'elements_add_socket'
+
+    text: bpy.props.StringProperty(default='')
+    color = (0.0, 0.0, 0.0, 0.25)
+
+    def draw(self, context, layout, node, text):
+        layout.label(text=self.text)
 
 
 class ElementsStructSocket(ElementsBaseSocket):
     bl_idname = 'elements_struct_socket'
 
     text: bpy.props.StringProperty(default='Value')
+    color = (0.0, 1.0, 0.0, 1.0)
 
     def get_value(self):
         if not self.is_output and len(self.links):
@@ -126,47 +163,8 @@ class ElementsStructSocket(ElementsBaseSocket):
         else:
             return None
 
-    def draw_color(self, context, node):
-        return cols['STRUCT']
-
     def draw(self, context, layout, node, text):
         layout.label(text=self.text)
-
-
-class ElementsAddSocket(bpy.types.NodeSocket):
-    bl_idname = 'elements_add_socket'
-
-    text: bpy.props.StringProperty(default='')
-
-    def draw_color(self, context, node):
-        return cols['ADD']
-
-    def draw(self, context, layout, node, text):
-        layout.label(text=self.text)
-
-
-class ElementsFolderSocket(ElementsBaseSocket):
-    bl_idname = 'elements_folder_socket'
-
-    default: bpy.props.StringProperty(subtype='DIR_PATH')
-    text: bpy.props.StringProperty(default='Folder')
-
-    split_factor = 0.35
-
-    def draw_color(self, context, node):
-        return cols['STRING']
-
-
-class ElementsColorSocket(ElementsBaseSocket):
-    bl_idname = 'elements_color_socket'
-
-    default: bpy.props.FloatVectorProperty(
-        subtype='COLOR', min=0.0, max=1.0, size=3, default=(0.8, 0.8, 0.8)
-    )
-    text: bpy.props.StringProperty(default='Float')
-
-    def draw_color(self, context, node):
-        return cols['COLOR']
 
 
 socket_classes = [

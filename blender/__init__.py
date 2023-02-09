@@ -1,10 +1,9 @@
-# necessary for Blender to detect this addon
 bl_info = {
     'name': 'Taichi Elements',
     'description': 'High-Performance Multi-Material Continuum Physics Engine',
     'author': 'Taichi Elements Developers',
     'version': (0, 0, 0),
-    'blender': (2, 82, 0),
+    'blender': (3, 4, 1),
     'location': 'Taichi Elements Window',
     'warning': 'Work in progress',
     'support': 'COMMUNITY',
@@ -13,23 +12,12 @@ bl_info = {
     'category': 'Physics'
 }
 
-use_blender = False
 
-try:
-    # If inside blender, act as an addon
-    import bpy
-
-    use_blender = True
-except:
-    pass
-
-if use_blender:
+def register():
     from . import addon
+    addon.register()
 
-    def register():
-        addon.register()
 
-    def unregister():
-        addon.unregister()
-
-# Otherwise act as a PyPI package
+def unregister():
+    from . import addon
+    addon.unregister()
