@@ -51,7 +51,7 @@ def write_pars_v0(par_data):
     # particles count
     pars_cnt = len(par_data[POS])
     data.extend(struct.pack('I', pars_cnt))
-    print('Particles count:', pars_cnt)
+    # print('Particles count:', pars_cnt)
 
     # par_i - particles index
     for par_i in range(pars_cnt):
@@ -70,7 +70,7 @@ def write_pars_v1(par_data, fpath, fname):
     # particles count
     pars_cnt = par_data[POS].shape[0]
     data.extend(struct.pack('I', pars_cnt))
-    print('Particles count:', pars_cnt)
+    # print('Particles count:', pars_cnt)
 
     for attr_id in range(attr_count):
        fname_str = '{}_{}.bin'.format(fname, attr_names[attr_id])
@@ -164,4 +164,4 @@ def read_pars(file_path, caches, folder, attr_name):
 
     end_time = time.time()
     total_time = end_time - start_time
-    print('read particles {}: {:.4f} seconds'.format(attr_name.lower(), total_time))
+    # print('read particles {}: {:.4f} seconds'.format(attr_name.lower(), total_time))
