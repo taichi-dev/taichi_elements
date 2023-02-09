@@ -21,7 +21,6 @@ WARN_NOT_SIM_NODE = 'Node tree does not have "Simulation" node.'
 mpm_solver.USE_IN_BLENDER = True
 IMPORT_NODES = (
     'elements_particles_mesh_node',
-    'elements_particles_system_node'
 )
 
 
@@ -68,9 +67,7 @@ def get_tree_obj(node_tree):
         if node.bl_idname == 'elements_simulation_node':
             tree.sim_nds[node.name] = node
         elif node.bl_idname in IMPORT_NODES:
-            if node.bl_idname == 'elements_particles_system_node':
-                import_type = 'PAR_SYS'
-            elif node.bl_idname == 'elements_particles_mesh_node':
+            if node.bl_idname == 'elements_particles_mesh_node':
                 import_type = 'PAR_MESH'
             node.get_class()
             tree.imp_nds[node.name] = node, import_type

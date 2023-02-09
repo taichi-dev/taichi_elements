@@ -1,4 +1,3 @@
-import bpy
 import nodeitems_utils
 
 from . import nodes
@@ -16,12 +15,11 @@ def get_categs_data():
     data = {}
 
     for node in nodes.node_classes:
-        if not data.get(node.category, None):
-            data[node.category] = []
-        data[node.category].append(node.bl_idname)
+        data.setdefault(node.category, []).append(node.bl_idname)
 
     # key - category name, values - node identifier
     data['Layout'] = ['NodeFrame', 'NodeReroute']
+
     return data
 
 
