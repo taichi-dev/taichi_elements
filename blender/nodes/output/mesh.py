@@ -10,6 +10,10 @@ def get_pos_value(socket):
     verts_key = '{0}.{1}'.format(node.name, verts.name)
     scn.elements_sockets[verts_key] = verts.get_value()
 
+    vels = node.inputs['Velocity']
+    vels_key = '{0}.{1}'.format(node.name, vels.name)
+    scn.elements_sockets[vels_key] = vels.get_value()
+
     emit = node.inputs['Emitters']
     emit_key = '{0}.{1}'.format(node.name, emit.name)
     scn.elements_sockets[emit_key] = emit.get_value()
@@ -39,6 +43,10 @@ class ElementsMeshNode(base.BaseNode):
 
         verts = self.inputs.new('elements_vector_socket', 'Vertices')
         verts.text = 'Vertices'
+        verts.hide_value = True
+
+        verts = self.inputs.new('elements_vector_socket', 'Velocity')
+        verts.text = 'Velocity'
         verts.hide_value = True
 
         emitters = self.inputs.new('elements_integer_socket', 'Emitters')

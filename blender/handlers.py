@@ -9,7 +9,7 @@ import numpy
 OBJ_NAME = 'taichi_elements_particles'
 
 
-def update_pmesh(obj, pos, emitters):
+def update_pmesh(obj, pos, vel, emitters):
     me = obj.data
 
     pos_count = len(pos) // 3
@@ -42,8 +42,16 @@ def update_pmesh(obj, pos, emitters):
     me.update()
 
     if len(emitters) > 1:
-        emt_attr = me.attributes.new('emitter_id', 'INT', 'POINT')
+        emt_attr = me.attributes.get('ti_emitter')
+        if not emt_attr:
+            emt_attr = me.attributes.new('ti_emitter', 'INT', 'POINT')
         emt_attr.data.foreach_set('value', emitters)
+
+    if len(vel) == len(pos):
+        vel_attr = me.attributes.get('ti_velocity')
+        if not vel_attr:
+            vel_attr = me.attributes.new('ti_velocity', 'FLOAT_VECTOR', 'POINT')
+        vel_attr.data.foreach_set('vector', vel)
 
 
 # create particles object
@@ -89,12 +97,13 @@ def create_mesh(node):
         me_obj = create_pobj(obj_name)
 
     verts = node_obj.vertices
+    vels = node_obj.velocity
     emitters = node_obj.emitters
 
     if type(verts) == numpy.ndarray:
-        update_pmesh(me_obj, verts, emitters)
+        update_pmesh(me_obj, verts, vels, emitters)
     else:
-        update_pmesh(me_obj, (), ())
+        update_pmesh(me_obj, (), (), ())
 
 
 CURRENT_FRAME = None
