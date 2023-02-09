@@ -36,8 +36,8 @@ def update_pmesh(obj, pos, vel, emitters):
 
     elif pos_count < verts_count:
         me.clear_geometry()
-        pos = pos.reshape((pos.shape[0] // 3, 3))
-        me.from_pydata(pos, (), ())
+        me.vertices.add(pos_count)
+        me.vertices.foreach_set('co', pos)
 
     me.update()
 
@@ -50,7 +50,11 @@ def update_pmesh(obj, pos, vel, emitters):
     if len(vel) == len(pos):
         vel_attr = me.attributes.get('ti_velocity')
         if not vel_attr:
-            vel_attr = me.attributes.new('ti_velocity', 'FLOAT_VECTOR', 'POINT')
+            vel_attr = me.attributes.new(
+                'ti_velocity',
+                'FLOAT_VECTOR',
+                'POINT'
+            )
         vel_attr.data.foreach_set('vector', vel)
 
 
